@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Lega — Fantacalcio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================
+     COME MODIFICARE I DATI DELLA LEGA
+     Cerca il blocco "LEAGUE_DATA" nel tag <script> in fondo
+     al file: lì trovi classifica, calendario e regole già
+     pronti da sostituire con i tuoi.
+     ========================================================= */
+
+  :root{
+    --pitch: #0F3D2E;
+    --pitch-dark: #0A2A20;
+    --chalk: #F5F2EA;
+    --gazzetta: #E8548C;
+    --gazzetta-dark: #C93E70;
+    --amber: #FFB627;
+    --ink: #0B241C;
+    --line: rgba(245,242,234,0.14);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  body{
+    background: var(--pitch);
+    color: var(--chalk);
+    font-family:'Work Sans', sans-serif;
+    line-height:1.5;
+  }
+
+  /* sottile texture "erba" di sfondo */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image: repeating-linear-gradient(
+      90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px,
+      transparent 2px, transparent 64px
+    );
+    pointer-events:none;
+    z-index:0;
+  }
+
+  h1,h2,h3, .display{
+    font-family:'Anton', sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+  }
+
+  .mono{ font-family:'Space Mono', monospace; }
+
+  a{ color:inherit; }
+
+  /* ---------- NAV ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    background: var(--pitch-dark);
+    border-bottom:2px solid var(--gazzetta);
+  }
+  .nav-inner{
+    max-width:1100px; margin:0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px;
+  }
+  .logo{
+    font-family:'Anton', sans-serif;
+    font-size:1.4rem;
+    letter-spacing:0.03em;
+    display:flex; align-items:center; gap:10px;
+  }
+  .logo .dot{
+    width:10px; height:10px; border-radius:50%;
+    background:var(--gazzetta);
+    box-shadow:0 0 0 3px rgba(232,84,140,0.25);
+  }
+  nav ul{
+    list-style:none; display:flex; gap:6px;
+  }
+  nav a{
+    display:block;
+    text-decoration:none;
+    font-size:0.85rem;
+    font-weight:600;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    padding:9px 14px;
+    border-radius:2px;
+    color:var(--chalk);
+    opacity:0.75;
+    transition:opacity .15s, background .15s;
+  }
+  nav a:hover{ opacity:1; background:rgba(255,255,255,0.06); }
+  .burger{ display:none; }
+
+  @media (max-width:720px){
+    nav ul{ gap:2px; }
+    nav a{ padding:8px 9px; font-size:0.72rem; }
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative; z-index:1;
+    max-width:1100px; margin:0 auto;
+    padding:64px 24px 40px;
+    display:grid;
+    grid-template-columns:1.1fr 0.9fr;
+    gap:40px;
+    align-items:center;
+  }
+  @media (max-width:820px){ .hero{ grid-template-columns:1fr; padding-top:40px; } }
+
+  .eyebrow{
+    font-family:'Space Mono', monospace;
+    font-size:0.78rem;
+    letter-spacing:0.14em;
+    color:var(--amber);
+    text-transform:uppercase;
+    margin-bottom:14px;
+  }
+  .hero h1{
+    font-size:clamp(2.4rem, 6vw, 4.2rem);
+    line-height:0.98;
+    color:var(--chalk);
+  }
+  .hero h1 span{ color:var(--gazzetta); }
+  .hero p{
+    margin-top:18px;
+    max-width:44ch;
+    color:rgba(245,242,234,0.78);
+    font-size:1.02rem;
+  }
+
+  /* scoreboard card nell'hero */
+  .scoreboard{
+    background:var(--ink);
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+  }
+  .scoreboard-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 18px;
+    background:var(--gazzetta-dark);
+    font-family:'Space Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+  }
+  .scoreboard-body{ padding:8px 0; }
+  .sb-row{
+    display:grid;
+    grid-template-columns:40px 1fr auto;
+    gap:10px;
+    padding:9px 18px;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+    font-size:0.92rem;
+  }
+  .sb-row:last-child{ border-bottom:none; }
+  .sb-row .pos{ font-family:'Space Mono', monospace; color:rgba(245,242,234,0.5); }
+  .sb-row.lead .pos{ color:var(--amber); font-weight:700; }
+  .sb-row .pts{ font-family:'Space Mono', monospace; font-weight:700; color:var(--amber); }
+  .sb-row.lead{ background:rgba(255,182,39,0.06); }
+
+  /* ---------- SECTIONS ---------- */
+  main{ position:relative; z-index:1; }
+  section{
+    max-width:1100px; margin:0 auto;
+    padding:64px 24px;
+    border-top:1px solid var(--line);
+  }
+  .section-head{
+    display:flex; align-items:baseline; gap:16px;
+    margin-bottom:32px;
+  }
+  .section-num{
+    font-family:'Space Mono', monospace;
+    color:var(--gazzetta);
+    font-size:0.85rem;
+  }
+  section h2{ font-size:clamp(1.6rem, 3.4vw, 2.4rem); }
+
+  /* ---------- CLASSIFICA TABLE ---------- */
+  .table-wrap{
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:left;
+    font-family:'Space Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:rgba(245,242,234,0.5);
+    padding:12px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:12px 16px;
+    border-bottom:1px solid var(--line);
+    font-size:0.94rem;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:rgba(255,255,255,0.03); }
+  td.pos, th.pos{ width:48px; font-family:'Space Mono', monospace; color:rgba(245,242,234,0.6); }
+  tr.top3 td.pos{ color:var(--amber); font-weight:700; }
+  td.pts{ font-family:'Space Mono', monospace; font-weight:700; text-align:right; color:var(--amber); }
+  th.pts{ text-align:right; }
+  .team-cell{ display:flex; align-items:center; gap:10px; }
+  .badge{
+    width:26px; height:26px; border-radius:50%;
+    background:var(--gazzetta);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Mono', monospace; font-size:0.68rem; font-weight:700;
+    color:var(--ink); flex-shrink:0;
+  }
+
+  /* ---------- CALENDARIO ---------- */
+  .giornata{
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--line);
+    border-radius:4px;
+    margin-bottom:16px;
+    overflow:hidden;
+  }
+  .giornata-head{
+    padding:12px 18px;
+    background:rgba(255,255,255,0.04);
+    font-family:'Space Mono', monospace;
+    font-size:0.78rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    display:flex; justify-content:space-between;
+    color:rgba(245,242,234,0.75);
+  }
+  .match{
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    gap:12px;
+    padding:12px 18px;
+    border-top:1px solid var(--line);
+    font-size:0.94rem;
+  }
+  .match .home{ text-align:right; }
+  .match .score{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    color:var(--amber);
+    background:var(--ink);
+    padding:4px 10px;
+    border-radius:3px;
+    min-width:56px;
+    text-align:center;
+  }
+  .match .score.tbd{ color:rgba(245,242,234,0.4); font-weight:400; }
+
+  /* ---------- REGOLAMENTO ---------- */
+  .rules{
+    display:grid;
+    gap:2px;
+    background:var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .rule{
+    background:var(--pitch-dark);
+    padding:18px 20px;
+    display:grid;
+    grid-template-columns:36px 1fr;
+    gap:16px;
+  }
+  .rule .n{
+    font-family:'Space Mono', monospace;
+    color:var(--gazzetta);
+    font-weight:700;
+  }
+  .rule h3{
+    font-family:'Work Sans', sans-serif;
+    text-transform:none;
+    font-size:1rem;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .rule p{ color:rgba(245,242,234,0.72); font-size:0.92rem; }
+
+  /* ---------- MINIGIOCO ---------- */
+  .placeholder-card{
+    border:2px dashed var(--line);
+    border-radius:4px;
+    padding:48px 24px;
+    text-align:center;
+  }
+  .placeholder-card .tag{
+    display:inline-block;
+    font-family:'Space Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--pitch);
+    background:var(--amber);
+    padding:4px 10px;
+    border-radius:3px;
+    margin-bottom:16px;
+  }
+  .placeholder-card p{
+    color:rgba(245,242,234,0.65);
+    max-width:46ch; margin:8px auto 0;
+    font-size:0.94rem;
+  }
+
+  footer{
+    text-align:center;
+    padding:32px 24px 48px;
+    font-family:'Space Mono', monospace;
+    font-size:0.75rem;
+    color:rgba(245,242,234,0.4);
+    position:relative; z-index:1;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav-inner">
+    <div class="logo"><span class="dot"></span> LA LEGA</div>
+    <nav>
+      <ul>
+        <li><a href="#classifica">Classifica</a></li>
+        <li><a href="#calendario">Calendario</a></li>
+        <li><a href="#regolamento">Regolamento</a></li>
+        <li><a href="#minigioco">Minigioco</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Stagione in corso</div>
+      <h1>Chi comanda<br>la <span>classifica?</span></h1>
+      <p>Il sito ufficiale della nostra lega: punteggi aggiornati, calendario delle giornate, regolamento e — a breve — un minigioco tutto nostro.</p>
+    </div>
+    <div class="scoreboard" id="hero-scoreboard">
+      <div class="scoreboard-head">
+        <span>Top 5</span>
+        <span id="hero-giornata">Giornata —</span>
+      </div>
+      <div class="scoreboard-body" id="hero-scoreboard-body"></div>
+    </div>
+  </div>
+
+  <section id="classifica">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>Classifica</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="pos">#</th>
+            <th>Squadra</th>
+            <th>G</th>
+            <th>V</th>
+            <th>N</th>
+            <th>P</th>
+            <th class="pts">Punti</th>
+          </tr>
+        </thead>
+        <tbody id="classifica-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="calendario">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>Calendario &amp; risultati</h2>
+    </div>
+    <div id="calendario-list"></div>
+  </section>
+
+  <section id="regolamento">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>Regolamento</h2>
+    </div>
+    <div class="rules" id="regole-list"></div>
+  </section>
+
+  <section id="minigioco">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2>Minigioco</h2>
+    </div>
+    <div class="placeholder-card">
+      <span class="tag">In arrivo</span>
+      <h3 style="font-family:'Work Sans'; text-transform:none; font-weight:600; font-size:1.1rem;">Questa sezione è pronta ad accogliere il vostro minigioco</h3>
+      <p>Appena la struttura del gioco è definita, qui verranno mostrate regole, punteggi e classifica dedicata — nello stesso stile del resto del sito.</p>
+    </div>
+  </section>
+</main>
+
+<footer>La Lega — sito gestito a mano, con amore e qualche imprecazione sulle formazioni.</footer>
+
+<script>
+/* =====================================================================
+   LEAGUE_DATA — MODIFICA QUI I DATI DELLA TUA LEGA
+   Sostituisci i valori qui sotto con quelli reali. Ogni volta che
+   aggiorni una giornata, basta modificare questo blocco e ripubblicare
+   il file (nessuna programmazione richiesta oltre a questo).
+   ===================================================================== */
+
+const LEAGUE_DATA = {
+  giornataCorrente: 1,
+
+  // Aggiungi tutte le squadre della lega (ne servono più di 12).
+  // "sq" = nome squadra, "pt" = punti, "g/v/n/p" = giocate/vittorie/pareggi/perse
+  classifica: [
+    { sq: "Squadra 1",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 2",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 3",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 4",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 5",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 6",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 7",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 8",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 9",  pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 10", pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 11", pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 12", pt: 0, g: 0, v: 0, n: 0, p: 0 },
+    { sq: "Squadra 13", pt: 0, g: 0, v: 0, n: 0, p: 0 },
+  ],
+
+  // Una voce per ogni giornata. "home"/"away" i nomi delle squadre,
+  // "scoreHome"/"scoreAway" = null finché la partita non è giocata.
+  calendario: [
+    {
+      giornata: 1,
+      partite: [
+        { home: "Squadra 1", away: "Squadra 2", scoreHome: null, scoreAway: null },
+        { home: "Squadra 3", away: "Squadra 4", scoreHome: null, scoreAway: null },
+        { home: "Squadra 5", away: "Squadra 6", scoreHome: null, scoreAway: null },
+      ]
+    },
+    {
+      giornata: 2,
+      partite: [
+        { home: "Squadra 2", away: "Squadra 3", scoreHome: null, scoreAway: null },
+        { home: "Squadra 4", away: "Squadra 5", scoreHome: null, scoreAway: null },
+      ]
+    }
+  ],
+
+  // Regole della lega: aggiungi/rimuovi/modifica liberamente.
+  regolamento: [
+    { titolo: "Formazione", testo: "Modulo libero tra quelli previsti dal classico fantacalcio a 8 ruoli o 3-4-3 classico, da definire in lega." },
+    { titolo: "Scadenza formazioni", testo: "Le formazioni vanno inviate entro l'orario di inizio della prima partita della giornata." },
+    { titolo: "Mercato", testo: "Le sessioni di calciomercato si aprono due volte a stagione, con budget da definire." },
+    { titolo: "Sostituzioni", testo: "Massimo 3 cambi a giornata, con giocatori in panchina nello stesso ruolo." },
+    { titolo: "Penalità", testo: "Formazione non inviata in tempo = 0 punti automatico per la giornata." },
+  ]
+};
+
+/* ===================================================================== */
+
+function renderClassifica(){
+  const ordinata = [...LEAGUE_DATA.classifica].sort((a,b)=> b.pt - a.pt);
+  const body = document.getElementById('classifica-body');
+  body.innerHTML = ordinata.map((r, i) => `
+    <tr class="${i < 3 ? 'top3' : ''}">
+      <td class="pos">${i+1}</td>
+      <td><div class="team-cell"><span class="badge">${r.sq.slice(0,2).toUpperCase()}</span>${r.sq}</div></td>
+      <td>${r.g}</td>
+      <td>${r.v}</td>
+      <td>${r.n}</td>
+      <td>${r.p}</td>
+      <td class="pts">${r.pt}</td>
+    </tr>
+  `).join('');
+
+  // hero scoreboard: top 5
+  const top5 = ordinata.slice(0,5);
+  document.getElementById('hero-giornata').textContent = 'Giornata ' + LEAGUE_DATA.giornataCorrente;
+  document.getElementById('hero-scoreboard-body').innerHTML = top5.map((r, i) => `
+    <div class="sb-row ${i===0 ? 'lead' : ''}">
+      <span class="pos">${i+1}</span>
+      <span>${r.sq}</span>
+      <span class="pts">${r.pt}</span>
+    </div>
+  `).join('');
+}
+
+function renderCalendario(){
+  const list = document.getElementById('calendario-list');
+  list.innerHTML = LEAGUE_DATA.calendario.map(g => `
+    <div class="giornata">
+      <div class="giornata-head">
+        <span>Giornata ${g.giornata}</span>
+        <span>${g.giornata === LEAGUE_DATA.giornataCorrente ? 'In corso' : (g.giornata < LEAGUE_DATA.giornataCorrente ? 'Conclusa' : 'Da giocare')}</span>
+      </div>
+      ${g.partite.map(m => `
+        <div class="match">
+          <span class="home">${m.home}</span>
+          <span class="score ${m.scoreHome === null ? 'tbd' : ''}">${m.scoreHome === null ? 'vs' : m.scoreHome + ' - ' + m.scoreAway}</span>
+          <span>${m.away}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function renderRegolamento(){
+  const list = document.getElementById('regole-list');
+  list.innerHTML = LEAGUE_DATA.regolamento.map((r, i) => `
+    <div class="rule">
+      <span class="n">${String(i+1).padStart(2,'0')}</span>
+      <div>
+        <h3>${r.titolo}</h3>
+        <p>${r.testo}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+renderClassifica();
+renderCalendario();
+renderRegolamento();
+</script>
+
+</body>
+</html>
