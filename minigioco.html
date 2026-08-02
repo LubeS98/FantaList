@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FantaList — Minigioco</title>
+<meta name="theme-color" content="#0A2A20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Minigioco">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Gestione del minigioco della lega: pronostici dei partecipanti, approvazioni e risultati di giornata.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================================
+   FANTALIST — MINIGIOCO
+   Identità visiva ereditata dal sito "La Lega": verde campo, rosa Gazzetta,
+   ambra da tabellone. Anton per i titoli, Work Sans per il testo,
+   Space Mono per numeri, orari e codici.
+   ========================================================================= */
+:root{
+  --pitch:#0F3D2E;
+  --pitch-dark:#0A2A20;
+  --ink:#0B241C;
+  --chalk:#F5F2EA;
+  --chalk-soft:rgba(245,242,234,0.72);
+  --chalk-mute:rgba(245,242,234,0.45);
+  --gazzetta:#E8548C;
+  --gazzetta-dark:#C93E70;
+  --amber:#FFB627;
+  --line:rgba(245,242,234,0.14);
+  --ok:#57C98A;
+  --ko:#F2635F;
+  --radius:4px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  background:var(--pitch);
+  color:var(--chalk);
+  font-family:'Work Sans',system-ui,sans-serif;
+  line-height:1.5;
+  min-height:100vh;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,0.025) 0 2px,transparent 2px 64px);
+}
+h1,h2,h3,.display{font-family:'Anton',sans-serif; text-transform:uppercase; letter-spacing:0.02em; font-weight:400;}
+.mono{font-family:'Space Mono',monospace;}
+a{color:var(--amber);}
+:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important;}}
+
+/* ---------- SMARTPHONE ----------
+   iOS Safari ingrandisce la pagina quando si tocca un campo con testo
+   sotto i 16px: qui li portiamo a 16px per evitarlo. In più diamo aria
+   sotto la barra di navigazione e bersagli grandi abbastanza per il dito. */
+@media (max-width:820px){
+  input[type=text],input[type=password],input[type=datetime-local],input[type=number],select,textarea{font-size:16px;}
+  .btn{padding:13px 18px;}
+  .btn-sm{padding:9px 13px; font-size:0.8rem;}
+  .team-btn{padding:12px 11px;}
+  .btn-link{padding:6px 2px;}
+  body{padding-bottom:env(safe-area-inset-bottom);}
+  .topbar-inner{padding:12px 16px;}
+}
+@media (max-width:420px){
+  .team-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));}
+}
+
+/* ---------- TOPBAR ---------- */
+.topbar{
+  position:sticky; top:0; z-index:60;
+  background:var(--pitch-dark); border-bottom:2px solid var(--gazzetta);
+}
+.topbar-inner{
+  max-width:1080px; margin:0 auto; padding:14px 20px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:10px; font-family:'Anton',sans-serif; font-size:1.25rem; letter-spacing:0.03em;}
+.brand .dot{width:10px; height:10px; border-radius:50%; background:var(--gazzetta); box-shadow:0 0 0 3px rgba(232,84,140,0.25);}
+.brand small{display:block; font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:0.16em; color:var(--chalk-mute); text-transform:uppercase; margin-top:2px;}
+.who{display:flex; align-items:center; gap:10px; font-size:0.85rem;}
+.who .badge-user{
+  font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;
+  background:rgba(255,182,39,0.12); color:var(--amber); border:1px solid rgba(255,182,39,0.35);
+  padding:4px 9px; border-radius:2px;
+}
+.who .badge-user.admin{background:rgba(232,84,140,0.14); color:var(--gazzetta); border-color:rgba(232,84,140,0.4);}
+
+/* ---------- LAYOUT ---------- */
+.shell{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:26px 20px 90px;}
+.stack{display:flex; flex-direction:column; gap:18px;}
+.grid-2{display:grid; grid-template-columns:1.15fr 0.85fr; gap:18px; align-items:start;}
+@media (max-width:860px){.grid-2{grid-template-columns:1fr;}}
+
+.panel{background:var(--ink); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+.panel-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  padding:13px 18px; border-bottom:1px solid var(--line); background:rgba(245,242,234,0.03);
+}
+.panel-head h2{font-size:1.02rem;}
+.panel-head .eyebrow{font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:0.14em; color:var(--amber); text-transform:uppercase;}
+.panel-body{padding:18px;}
+.panel-body > * + *{margin-top:14px;}
+.note{font-size:0.87rem; color:var(--chalk-soft);}
+.note-dim{font-size:0.8rem; color:var(--chalk-mute);}
+.empty{
+  border:1px dashed var(--line); border-radius:var(--radius); padding:22px 18px; text-align:center;
+  color:var(--chalk-mute); font-size:0.88rem;
+}
+
+/* ---------- TABS ---------- */
+.tabs{display:flex; gap:4px; flex-wrap:wrap; margin-bottom:18px; border-bottom:1px solid var(--line); padding-bottom:10px;}
+.tab{
+  font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase;
+  padding:9px 14px; border-radius:2px; border:1px solid transparent; background:transparent;
+  color:var(--chalk-mute); cursor:pointer;
+}
+.tab:hover{color:var(--chalk); background:rgba(245,242,234,0.06);}
+.tab.on{color:var(--ink); background:var(--amber); font-weight:700;}
+.tab .count{
+  display:inline-block; margin-left:7px; background:var(--gazzetta); color:var(--chalk);
+  border-radius:10px; padding:0 6px; font-size:0.66rem;
+}
+.tab.on .count{background:var(--ink); color:var(--amber);}
+
+/* ---------- BUTTONS ---------- */
+button{font-family:'Work Sans',sans-serif; cursor:pointer; border:none; border-radius:2px; transition:filter .15s, background .15s, color .15s;}
+button:disabled{opacity:0.42; cursor:not-allowed;}
+.btn{padding:11px 18px; font-size:0.92rem; font-weight:600;}
+.btn-primary{background:var(--amber); color:var(--ink);}
+.btn-primary:hover:not(:disabled){filter:brightness(1.08);}
+.btn-pink{background:var(--gazzetta); color:var(--chalk);}
+.btn-pink:hover:not(:disabled){background:var(--gazzetta-dark);}
+.btn-ghost{background:transparent; border:1px solid var(--line); color:var(--chalk-soft); padding:10px 16px; font-size:0.88rem;}
+.btn-ghost:hover:not(:disabled){border-color:var(--amber); color:var(--amber);}
+.btn-sm{padding:7px 12px; font-size:0.78rem; font-weight:600;}
+.btn-ok{background:rgba(87,201,138,0.14); border:1px solid rgba(87,201,138,0.45); color:var(--ok);}
+.btn-ok:hover:not(:disabled){background:var(--ok); color:var(--ink);}
+.btn-ko{background:rgba(242,99,95,0.12); border:1px solid rgba(242,99,95,0.42); color:var(--ko);}
+.btn-ko:hover:not(:disabled){background:var(--ko); color:var(--ink);}
+.btn-ok.on{background:var(--ok); color:var(--ink);}
+.btn-ko.on{background:var(--ko); color:var(--ink);}
+.btn-row{display:flex; gap:8px; flex-wrap:wrap;}
+.btn-link{background:none; border:none; color:var(--amber); font-size:0.8rem; text-decoration:underline; padding:2px;}
+
+/* ---------- FORMS ---------- */
+label.field{display:block;}
+label.field span{
+  display:block; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--chalk-mute); margin-bottom:6px;
+}
+input[type=text],input[type=password],input[type=datetime-local],input[type=number],select,textarea{
+  width:100%; background:var(--pitch-dark); border:1px solid var(--line); color:var(--chalk);
+  padding:11px 13px; border-radius:2px; font-size:0.95rem; font-family:'Work Sans',sans-serif;
+}
+input::placeholder,textarea::placeholder{color:rgba(245,242,234,0.3);}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--amber); outline-offset:1px;}
+input[type=file]{color:var(--chalk-soft); font-size:0.85rem; max-width:100%;}
+input[type=file]::file-selector-button{
+  background:var(--amber); color:var(--ink); border:none; padding:9px 14px; border-radius:2px;
+  font-weight:700; font-family:'Work Sans',sans-serif; cursor:pointer; margin-right:10px;
+}
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+@media (max-width:620px){.form-grid{grid-template-columns:1fr;}}
+.checkline{display:flex; align-items:flex-start; gap:9px; font-size:0.88rem; color:var(--chalk-soft);}
+.checkline input{margin-top:3px; accent-color:var(--amber);}
+
+/* ---------- GATE (login / registrazione / setup) ---------- */
+.gate{max-width:460px; margin:40px auto 0;}
+.gate .lead{text-align:center; margin-bottom:22px;}
+.gate .lead h1{font-size:clamp(2rem,7vw,2.9rem); line-height:0.98;}
+.gate .lead h1 em{font-style:normal; color:var(--gazzetta);}
+.gate .lead p{color:var(--chalk-soft); margin-top:10px; font-size:0.94rem;}
+.switcher{display:flex; gap:0; border:1px solid var(--line); border-radius:2px; overflow:hidden; margin-bottom:18px;}
+.switcher button{flex:1; padding:11px; background:transparent; color:var(--chalk-mute); font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase;}
+.switcher button.on{background:var(--gazzetta); color:var(--chalk); font-weight:700;}
+
+/* ---------- SCHEDINA (elemento firma) ---------- */
+.slip{
+  position:relative; background:var(--chalk); color:var(--ink);
+  border-radius:2px; padding:22px 20px 20px; margin-top:8px; overflow:hidden;
+}
+.slip::before{
+  content:""; position:absolute; top:-1px; left:0; right:0; height:9px;
+  background-image:radial-gradient(circle at 8px 0, var(--ink) 5px, transparent 5.5px);
+  background-size:16px 9px; background-repeat:repeat-x;
+}
+.slip.on-pitch::before{background-image:radial-gradient(circle at 8px 0, var(--pitch) 5px, transparent 5.5px);}
+.slip-head{
+  display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap;
+  border-bottom:2px solid var(--ink); padding-bottom:9px; margin-bottom:14px;
+}
+.slip-head .who-slip{font-family:'Anton',sans-serif; font-size:1.25rem; text-transform:uppercase;}
+.slip-head .code{font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; color:rgba(11,36,28,0.6);}
+.slip-pick{display:flex; align-items:center; gap:11px; font-family:'Anton',sans-serif; font-size:1.6rem; text-transform:uppercase;}
+.slip-pick .dot{width:15px; height:15px; border-radius:50%; flex:none; box-shadow:0 0 0 1px rgba(11,36,28,0.35);}
+.slip-meta{font-family:'Space Mono',monospace; font-size:0.72rem; color:rgba(11,36,28,0.62); margin-top:6px;}
+.stamp{
+  position:absolute; right:14px; bottom:14px; transform:rotate(-11deg);
+  font-family:'Anton',sans-serif; font-size:0.9rem; letter-spacing:0.16em; text-transform:uppercase;
+  border:3px double currentColor; border-radius:3px; padding:5px 12px; opacity:0.85;
+}
+.stamp.ok{color:#1E7F4E;}
+.stamp.pending{color:#B07600;}
+.stamp.ko{color:#B3312D;}
+.stamp.win{color:#1E7F4E;}
+.stamp.lose{color:#B3312D;}
+
+/* ---------- SELETTORE SQUADRE ---------- */
+.team-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:8px;}
+.team-btn{
+  display:flex; align-items:center; gap:8px; text-align:left;
+  background:var(--pitch-dark); border:1px solid var(--line); color:var(--chalk);
+  padding:10px 11px; font-size:0.86rem; font-weight:500; border-radius:2px;
+}
+.team-btn .dot{width:11px; height:11px; border-radius:50%; flex:none;}
+.team-btn:hover:not(:disabled){border-color:var(--amber);}
+.team-btn.on{background:var(--amber); color:var(--ink); border-color:var(--amber); font-weight:700;}
+.team-btn.used{opacity:0.32; text-decoration:line-through; cursor:not-allowed;}
+
+/* ---------- RIGHE RICHIESTA (tabellone) ---------- */
+.board{display:flex; flex-direction:column; gap:8px;}
+.req{
+  display:grid; grid-template-columns:1.1fr 1fr auto; gap:12px; align-items:center;
+  background:var(--pitch-dark); border:1px solid var(--line); border-left:3px solid var(--line);
+  border-radius:2px; padding:12px 14px;
+}
+.req.pending{border-left-color:var(--amber);}
+.req.approved{border-left-color:var(--ok);}
+.req.rejected{border-left-color:var(--ko);}
+.req.missing{border-left-color:rgba(245,242,234,0.2); opacity:0.75;}
+.req .p-name{font-weight:600; font-size:0.95rem;}
+.req .p-sub{font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--chalk-mute); letter-spacing:0.06em;}
+.req .p-team{display:flex; align-items:center; gap:9px; font-size:0.95rem;}
+.req .p-team .dot{width:11px; height:11px; border-radius:50%; flex:none;}
+.req .p-actions{display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;}
+@media (max-width:700px){
+  .req{grid-template-columns:1fr; align-items:flex-start;}
+  .req .p-actions{justify-content:flex-start;}
+}
+.tag{
+  font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase;
+  padding:3px 7px; border-radius:2px; border:1px solid currentColor; white-space:nowrap;
+}
+.tag.ok{color:var(--ok);} .tag.pending{color:var(--amber);} .tag.ko{color:var(--ko);} .tag.mute{color:var(--chalk-mute);}
+.warn-inline{color:var(--ko); font-size:0.76rem; font-family:'Space Mono',monospace;}
+
+/* ---------- TABELLE / STORICO ---------- */
+.table-scroll{overflow-x:auto;}
+table{width:100%; border-collapse:collapse; font-size:0.88rem;}
+.code-cell{letter-spacing:0.08em; color:var(--amber); cursor:pointer; user-select:all;}
+.code-cell.hidden-code{letter-spacing:0.16em; color:var(--chalk-mute); cursor:pointer; user-select:none;}
+th{
+  text-align:left; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--chalk-mute); padding:9px 10px; border-bottom:1px solid var(--line);
+}
+td{padding:10px; border-bottom:1px solid var(--line);}
+tr:last-child td{border-bottom:none;}
+td.num{font-family:'Space Mono',monospace; color:var(--chalk-mute);}
+.out-row{opacity:0.5;}
+.chip-mini{
+  display:inline-flex; align-items:center; gap:5px; font-family:'Space Mono',monospace; font-size:0.66rem;
+  background:rgba(245,242,234,0.06); padding:3px 7px; border-radius:2px; margin:2px 3px 2px 0;
+}
+.chip-mini .dot{width:8px; height:8px; border-radius:50%;}
+.res-win{color:var(--ok); font-weight:700;}
+.res-lose{color:var(--ko); font-weight:700;}
+
+/* ---------- SCOREBOARD ---------- */
+.scoreboard{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; background:var(--line);}
+.sb-cell{background:var(--ink); padding:15px 14px;}
+.sb-cell .k{font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--chalk-mute);}
+.sb-cell .v{font-family:'Anton',sans-serif; font-size:1.9rem; line-height:1.1; color:var(--amber); margin-top:3px;}
+.sb-cell .v.small{font-size:1.1rem; color:var(--chalk);}
+.sb-cell.alert .v{color:var(--gazzetta);}
+
+/* ---------- BANNER / TOAST / MODALE ---------- */
+.banner{border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:2px; padding:12px 15px; font-size:0.87rem; color:var(--chalk-soft); background:rgba(255,182,39,0.06);}
+.banner.err{border-left-color:var(--ko); background:rgba(242,99,95,0.08); color:#FFD3D1;}
+.banner.ok{border-left-color:var(--ok); background:rgba(87,201,138,0.08); color:#CFF3E0;}
+.toast-wrap{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:200; display:flex; flex-direction:column; gap:8px; width:min(420px,calc(100% - 32px));}
+.toast{background:var(--ink); border:1px solid var(--line); border-left:3px solid var(--amber); padding:12px 15px; font-size:0.87rem; box-shadow:0 12px 34px rgba(0,0,0,0.45); border-radius:2px;}
+.toast.err{border-left-color:var(--ko);} .toast.ok{border-left-color:var(--ok);}
+.overlay{position:fixed; inset:0; background:rgba(5,20,14,0.76); display:flex; align-items:center; justify-content:center; padding:20px; z-index:300;}
+.modal{background:var(--ink); border:1px solid var(--line); border-top:3px solid var(--gazzetta); border-radius:2px; padding:22px; width:min(420px,100%); box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.modal h3{font-size:1.1rem; margin-bottom:8px;}
+.modal p{font-size:0.88rem; color:var(--chalk-soft); margin-bottom:14px;}
+.modal .btn-row{justify-content:flex-end; margin-top:16px;}
+.hidden{display:none !important;}
+.spinner{display:inline-block; width:14px; height:14px; border:2px solid rgba(245,242,234,0.25); border-top-color:var(--amber); border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+footer.site{max-width:1080px; margin:0 auto; padding:0 20px 40px; color:var(--chalk-mute); font-size:0.75rem; font-family:'Space Mono',monospace; letter-spacing:0.06em;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="dot"></span>
+      <span>FantaList<small>Minigioco · ultimo in piedi</small></span>
+    </div>
+    <div class="who" id="who"></div>
+  </div>
+</div>
+
+<main class="shell" id="app"><div class="empty">Caricamento…</div></main>
+<footer class="site" id="foot"></footer>
+<div class="toast-wrap" id="toasts"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* =========================================================================
+   1. CONFIGURAZIONE — L'UNICO BLOCCO DA MODIFICARE A MANO
+   -------------------------------------------------------------------------
+   Per far funzionare il sito online (più persone, più dispositivi) serve un
+   archivio condiviso. Il modo più semplice e gratuito è Supabase:
+   crea un progetto, esegui la query SQL che trovi nel README, poi incolla
+   qui sotto l'URL del progetto e la chiave "anon public".
+   Finché restano vuoti il sito funziona lo stesso, ma i dati restano
+   solo su questo dispositivo (utile per provarlo).
+   ========================================================================= */
+const CONFIG = {
+  supabaseUrl:     "https://blnrucninethpwvhlcsc.supabase.co",           // es. "https://abcdefgh.supabase.co"
+  supabaseAnonKey: "sb_publishable_89xr7FlglRmI6xWdsbmEwQ_Yrkc1lDF",           // la chiave "anon public" del progetto
+  tableName:       "fantalist_kv"
+};
+
+/* =========================================================================
+   2. ARCHIVIO — un semplice magazzino chiave/valore con tre modalità
+   ========================================================================= */
+const Store = (() => {
+  let mode = 'local', sb = null;
+
+  function readLocalCfg(){
+    try { return JSON.parse(localStorage.getItem('fantalist.backend') || 'null'); } catch(e){ return null; }
+  }
+  function writeLocalCfg(cfg){
+    if(cfg) localStorage.setItem('fantalist.backend', JSON.stringify(cfg));
+    else localStorage.removeItem('fantalist.backend');
+  }
+  function init(){
+    const cfg = (CONFIG.supabaseUrl && CONFIG.supabaseAnonKey) ? CONFIG : readLocalCfg();
+    if(cfg && cfg.supabaseUrl && cfg.supabaseAnonKey){
+      sb = { url: String(cfg.supabaseUrl).trim().replace(/\/+$/,'').replace(/\/rest\/v1$/i,''), key: cfg.supabaseAnonKey, table: cfg.tableName || 'fantalist_kv' };
+      mode = 'supabase';
+    } else if(typeof window.storage === 'object' && window.storage && typeof window.storage.get === 'function'){
+      mode = 'artifact';
+    } else {
+      mode = 'local';
+    }
+    return mode;
+  }
+  const H = () => ({ apikey: sb.key, Authorization: 'Bearer ' + sb.key, 'Content-Type': 'application/json' });
+  async function sbFetch(path, opts){
+    const r = await fetch(sb.url + '/rest/v1/' + sb.table + path, opts);
+    if(!r.ok){
+      let msg = 'HTTP ' + r.status;
+      try { const j = await r.json(); msg = j.message || j.hint || msg; } catch(e){}
+      throw new Error(msg);
+    }
+    return r;
+  }
+
+  const LP = 'fl:';
+  return {
+    init, mode: () => mode, config: () => sb,
+    setConfig(cfg){ writeLocalCfg(cfg); },
+    clearConfig(){ writeLocalCfg(null); },
+
+    async get(key){
+      try{
+        if(mode === 'supabase'){
+          const r = await sbFetch('?k=eq.' + encodeURIComponent(key) + '&select=v', { headers: H() });
+          const j = await r.json();
+          return j.length ? JSON.parse(j[0].v) : null;
+        }
+        if(mode === 'artifact'){
+          const r = await window.storage.get(key, true);
+          return (r && r.value) ? JSON.parse(r.value) : null;
+        }
+        const raw = localStorage.getItem(LP + key);
+        return raw ? JSON.parse(raw) : null;
+      }catch(e){
+        if(mode === 'supabase') throw e;
+        return null;   // chiave inesistente: le altre modalità lanciano eccezione
+      }
+    },
+
+    async set(key, value){
+      const s = JSON.stringify(value);
+      if(mode === 'supabase'){
+        await sbFetch('', { method:'POST', headers:{ ...H(), Prefer:'resolution=merge-duplicates,return=minimal' },
+                            body: JSON.stringify({ k:key, v:s }) });
+        return;
+      }
+      if(mode === 'artifact'){ await window.storage.set(key, s, true); return; }
+      localStorage.setItem(LP + key, s);
+    },
+
+    async del(key){
+      if(mode === 'supabase'){ await sbFetch('?k=eq.' + encodeURIComponent(key), { method:'DELETE', headers:H() }); return; }
+      if(mode === 'artifact'){ try{ await window.storage.delete(key, true); }catch(e){} return; }
+      localStorage.removeItem(LP + key);
+    },
+
+    /* restituisce [{key, value}] per tutte le chiavi che iniziano con "prefix" */
+    async list(prefix){
+      if(mode === 'supabase'){
+        const r = await sbFetch('?k=like.' + encodeURIComponent(prefix + '*') + '&select=k,v', { headers:H() });
+        const j = await r.json();
+        return j.map(row => { try{ return { key: row.k, value: JSON.parse(row.v) }; }catch(e){ return null; } }).filter(Boolean);
+      }
+      if(mode === 'artifact'){
+        let keys = [];
+        try{ const res = await window.storage.list(prefix, true); keys = (res && res.keys) ? res.keys : []; }catch(e){ keys = []; }
+        const out = [];
+        for(const k of keys){
+          try{ const r = await window.storage.get(k, true); if(r && r.value) out.push({ key:k, value: JSON.parse(r.value) }); }catch(e){}
+        }
+        return out;
+      }
+      const out = [];
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.startsWith(LP + prefix)){
+          try{ out.push({ key:k.slice(LP.length), value: JSON.parse(localStorage.getItem(k)) }); }catch(e){}
+        }
+      }
+      return out;
+    }
+  };
+})();
+
+/* Chiavi usate nell'archivio (niente spazi, slash o virgolette) */
+const K = {
+  meta:  'meta',
+  user:  u => 'user-' + u,
+  claim: pid => 'claim-' + pid,
+  req:   (r, pid) => 'req-r' + r + '-' + pid,
+  reqPrefix: r => 'req-r' + r + '-',
+  res:   (r, tid) => 'res-r' + r + '-' + tid,
+  resPrefix: r => 'res-r' + r + '-'
+};
+
+/* =========================================================================
+   3. PASSWORD — PBKDF2 (SHA-256, 150.000 giri) con sale casuale per utente
+   ========================================================================= */
+const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+const fromHex = hex => new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b,16)));
+function randomHex(n){ const a = new Uint8Array(n); crypto.getRandomValues(a); return toHex(a); }
+
+async function derive(password, saltHex, iterations = 150000){
+  if(!crypto.subtle) throw new Error('Il browser non supporta la cifratura richiesta: apri il sito su https.');
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name:'PBKDF2', salt: fromHex(saltHex), iterations, hash:'SHA-256' }, key, 256);
+  return toHex(bits);
+}
+
+/* =========================================================================
+   4. SQUADRE, NOMI, UTILITÀ
+   ========================================================================= */
+const TEAM_COLORS = {
+  atalanta:'#1B5EA6', bologna:'#8E1B2E', cagliari:'#A3122B', como:'#0B4DA2', cremonese:'#8B1F2E',
+  empoli:'#1E86C7', fiorentina:'#6B32A0', genoa:'#C8102E', hellasverona:'#F2C400', inter:'#1264B4',
+  juventus:'#D9D9D9', lazio:'#7FC4EC', lecce:'#E8B123', milan:'#E2071B', monza:'#D91C3D',
+  napoli:'#1C8FDB', parma:'#F4D53A', pisa:'#0A4C9E', roma:'#8E1F2F', salernitana:'#9C1B2E',
+  sassuolo:'#1FA35A', torino:'#7B2038', udinese:'#B7B7B7', venezia:'#E8722C', verona:'#F2C400',
+  frosinone:'#F2C400', palermo:'#E39BC0', sampdoria:'#1B4F9C', spezia:'#1A1A1A'
+};
+const FALLBACK = ['#1B5EA6','#8E1B2E','#0B4DA2','#6B32A0','#C8102E','#1C8FDB','#E8722C','#7B2038','#1FA35A','#D91C3D'];
+const DEFAULT_TEAMS = ['Atalanta','Bologna','Cagliari','Como','Empoli','Fiorentina','Genoa','Inter','Juventus','Lazio',
+  'Lecce','Milan','Monza','Napoli','Parma','Roma','Torino','Udinese','Venezia','Verona'];
+
+const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+const teamColor = (name, i) => TEAM_COLORS[slug(name).replace(/-/g,'')] || FALLBACK[i % FALLBACK.length];
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const isPlaceholder = n => /^partecipante\s*\d+$/i.test(String(n).trim());
+
+/* Codice di accesso facile da dettare al telefono: niente caratteri ambigui. */
+function generateCode(){
+  const A = 'abcdefghijkmnpqrstuvwxyz', N = '23456789';
+  const pick = set => set[Math.floor(Math.random() * set.length)];
+  let out = '';
+  for(let i=0;i<4;i++) out += pick(A);
+  for(let i=0;i<3;i++) out += pick(N);
+  return out;
+}
+
+function el(html){ const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+function fmtDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  if(isNaN(d)) return '—';
+  return d.toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+function toInputDT(iso){
+  if(!iso) return '';
+  const d = new Date(iso); if(isNaN(d)) return '';
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function copyText(text){
+  const done = () => toast('Copiato negli appunti.', 'ok');
+  if(navigator.clipboard?.writeText){ navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done)); }
+  else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){ toast('Copia non riuscita: seleziona il testo a mano.', 'err'); }
+  ta.remove();
+}
+
+function toast(message, kind = ''){
+  const box = el(`<div class="toast ${kind}">${esc(message)}</div>`);
+  document.getElementById('toasts').appendChild(box);
+  setTimeout(() => box.remove(), 4200);
+}
+function modal({ title, message, input = null, placeholder = '', prefill = '', confirmText = 'Conferma', cancelText = 'Annulla' }){
+  return new Promise(resolve => {
+    const ov = el(`<div class="overlay"></div>`);
+    const box = el(`
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3>${esc(title)}</h3>
+        ${message ? `<p>${esc(message)}</p>` : ''}
+        ${input ? `<input type="${input}" placeholder="${esc(placeholder)}" value="${esc(prefill)}">` : ''}
+        <div class="btn-row">
+          <button class="btn btn-ghost" data-x>${esc(cancelText)}</button>
+          <button class="btn btn-primary" data-y>${esc(confirmText)}</button>
+        </div>
+      </div>`);
+    ov.appendChild(box); document.body.appendChild(ov);
+    const inp = box.querySelector('input');
+    if(inp) setTimeout(() => { inp.focus(); inp.select(); }, 40);
+    const done = v => { ov.remove(); resolve(v); };
+    box.querySelector('[data-x]').onclick = () => done(input ? null : false);
+    box.querySelector('[data-y]').onclick = () => done(input ? inp.value : true);
+    if(inp) inp.onkeydown = e => { if(e.key === 'Enter') done(inp.value); if(e.key === 'Escape') done(null); };
+    ov.onclick = e => { if(e.target === ov) done(input ? null : false); };
+  });
+}
+const confirmBox = message => modal({ title:'Confermi?', message, confirmText:'Sì, procedi' });
+const alertBox   = message => modal({ title:'Attenzione', message, confirmText:'Ho capito', cancelText:'Chiudi' });
+
+/* =========================================================================
+   5. STATO
+   ========================================================================= */
+const S = {
+  meta: null,          // partita condivisa
+  me: null,            // utente collegato su questo dispositivo
+  requests: {},        // playerId -> richiesta della giornata in corso
+  results: {},         // teamId   -> 'win' | 'lose'
+  users: [],           // elenco account (solo per l'organizzatore)
+  claims: {},          // playerId -> username
+  tab: null,
+  gateTab: 'login',
+  busy: false,
+  offline: false
+};
+
+function emptyMeta(){
+  return {
+    createdAt: new Date().toISOString(),
+    teams: DEFAULT_TEAMS.map((n,i) => ({ id: slug(n), name: n, color: teamColor(n,i) })),
+    players: [],        // {id, name, usedTeamIds[], eliminated, eliminatedRound, rowIndex}
+    round: 1,
+    phase: 'setup',     // setup | playing | finished
+    deadline: null,
+    autoApprove: false,
+    history: [],        // [{round, entries:[{playerId,teamId,result}], eliminatedIds:[]}]
+    winners: [],
+    fileName: null,
+    sheetName: null,
+    originalB64: null
+  };
+}
+
+const team = id => (S.meta?.teams || []).find(t => t.id === id) || { id, name: id || '—', color:'#8A8A8A' };
+const player = id => (S.meta?.players || []).find(p => p.id === id) || null;
+const activePlayers = () => (S.meta?.players || []).filter(p => !p.eliminated);
+const isAdmin = () => S.me?.role === 'admin';
+const myPlayer = () => S.me?.playerId ? player(S.me.playerId) : null;
+const deadlinePassed = () => !!(S.meta?.deadline && new Date(S.meta.deadline) < new Date());
+
+function availableTeams(p){
+  const used = new Set(p.usedTeamIds || []);
+  return (S.meta.teams || []).map(t => ({ ...t, used: used.has(t.id) }));
+}
+function approvedPicks(){
+  const out = {};
+  for(const [pid, r] of Object.entries(S.requests)) if(r.status === 'approved') out[pid] = r.teamId;
+  return out;
+}
+function allApproved(){
+  const a = activePlayers();
+  const ap = approvedPicks();
+  return a.length > 0 && a.every(p => ap[p.id]);
+}
+function allResulted(){
+  const ap = approvedPicks();
+  const ids = [...new Set(Object.values(ap))];
+  return ids.length > 0 && ids.every(t => S.results[t]);
+}
+
+/* =========================================================================
+   6. CARICAMENTO E SALVATAGGIO
+   ========================================================================= */
+async function saveMeta(){
+  S.meta.updatedAt = new Date().toISOString();
+  await Store.set(K.meta, S.meta);
+}
+async function loadMeta(){
+  const m = await Store.get(K.meta);
+  S.meta = m ? { ...emptyMeta(), ...m } : null;
+}
+async function loadRound(){
+  S.requests = {}; S.results = {};
+  if(!S.meta || S.meta.phase !== 'playing') return;
+  const r = S.meta.round;
+  const reqs = await Store.list(K.reqPrefix(r));
+  reqs.forEach(({ key, value }) => { S.requests[key.slice(K.reqPrefix(r).length)] = value; });
+  const res = await Store.list(K.resPrefix(r));
+  res.forEach(({ key, value }) => { S.results[key.slice(K.resPrefix(r).length)] = value; });
+}
+async function loadClaims(){
+  S.claims = {};
+  (await Store.list('claim-')).forEach(({ key, value }) => { S.claims[key.slice('claim-'.length)] = value; });
+}
+async function loadUsers(){
+  S.users = (await Store.list('user-')).map(x => x.value);
+}
+
+async function refresh(silent = true){
+  try{
+    await loadMeta();
+    await loadRound();
+    S.offline = false;
+    if(isAdmin()) await loadUsers();
+  }catch(e){
+    S.offline = true;
+    if(!silent) toast('Archivio non raggiungibile: ' + e.message, 'err');
+  }
+  render();
+}
+
+/* =========================================================================
+   7. ACCOUNT
+   ========================================================================= */
+const SESSION_KEY = 'fantalist.session';
+
+async function findUser(username){
+  return await Store.get(K.user(slug(username)));
+}
+/* Il nome utente di un partecipante non si sceglie: è il suo nome nel file Excel,
+   normalizzato (Peppe Verbaro -> peppe-verbaro). Così l'organizzatore sa sempre
+   con quale nome accede ciascuno. */
+function usernameFor(p){ return String(p.id).replace(/^p-/, ''); }
+
+async function createUser({ username, password, role, playerId, displayName }){
+  const u = slug(username);
+  if(u.length < 3) throw new Error('Il nome utente deve avere almeno 3 caratteri.');
+  if(password.length < 6) throw new Error('Il codice di accesso deve avere almeno 6 caratteri.');
+  if(await findUser(u)) throw new Error('Questo nome utente è già stato preso.');
+  const salt = randomHex(16);
+  const rec = {
+    username: u, displayName: displayName || username, role: role || 'player',
+    playerId: playerId || null, salt, hash: await derive(password, salt),
+    password,                                  // leggibile: serve all'organizzatore
+    createdAt: new Date().toISOString()
+  };
+  await Store.set(K.user(u), rec);
+  if(playerId) await Store.set(K.claim(playerId), u);
+  return rec;
+}
+async function login(username, password){
+  const rec = await findUser(username);
+  if(!rec) throw new Error('Nome utente o password non validi.');
+  const h = await derive(password, rec.salt);
+  if(h !== rec.hash) throw new Error('Nome utente o password non validi.');
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: rec.username, verifier: h }));
+  S.me = rec;
+  return rec;
+}
+async function restoreSession(){
+  let s = null;
+  try{ s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }catch(e){}
+  if(!s) return null;
+  const rec = await findUser(s.username);
+  if(rec && rec.hash === s.verifier){ S.me = rec; return rec; }
+  localStorage.removeItem(SESSION_KEY);
+  return null;
+}
+function logout(){
+  localStorage.removeItem(SESSION_KEY);
+  S.me = null; S.tab = null;
+  render();
+}
+async function changePassword(username, newPassword){
+  const rec = await findUser(username);
+  if(!rec) throw new Error('Account non trovato.');
+  if(newPassword.length < 6) throw new Error('Il codice di accesso deve avere almeno 6 caratteri.');
+  rec.salt = randomHex(16);
+  rec.hash = await derive(newPassword, rec.salt);
+  rec.password = newPassword;
+  await Store.set(K.user(rec.username), rec);
+  if(S.me && S.me.username === rec.username){
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ username: rec.username, verifier: rec.hash }));
+    S.me = rec;
+  }
+  return rec;
+}
+
+/* =========================================================================
+   8. RICHIESTE DI PRONOSTICO
+   ========================================================================= */
+async function submitRequest(playerId, teamId, byAdmin = false){
+  const p = player(playerId);
+  if(!p) throw new Error('Partecipante non trovato.');
+  if((p.usedTeamIds || []).includes(teamId)) throw new Error('Questa squadra è già stata usata da ' + p.name + '.');
+  if(!byAdmin && deadlinePassed()) throw new Error('Il termine per questa giornata è scaduto: scrivi all\'organizzatore.');
+  const prev = S.requests[playerId];
+  const rec = {
+    teamId,
+    status: (byAdmin || S.meta.autoApprove) ? 'approved' : 'pending',
+    note: '',
+    sentAt: new Date().toISOString(),
+    sentBy: S.me ? S.me.username : 'sistema',
+    decidedAt: (byAdmin || S.meta.autoApprove) ? new Date().toISOString() : null,
+    decidedBy: (byAdmin || S.meta.autoApprove) ? (S.me ? S.me.username : 'sistema') : null,
+    history: [ ...((prev && prev.history) || []), ...(prev ? [{ teamId: prev.teamId, status: prev.status, at: prev.sentAt }] : []) ]
+  };
+  await Store.set(K.req(S.meta.round, playerId), rec);
+  S.requests[playerId] = rec;
+}
+async function decideRequest(playerId, status, note = ''){
+  const rec = S.requests[playerId];
+  if(!rec) return;
+  rec.status = status; rec.note = note;
+  rec.decidedAt = new Date().toISOString();
+  rec.decidedBy = S.me ? S.me.username : 'organizzatore';
+  await Store.set(K.req(S.meta.round, playerId), rec);
+  S.requests[playerId] = rec;
+}
+async function setResult(teamId, result){
+  if(S.results[teamId] === result){
+    await Store.del(K.res(S.meta.round, teamId));
+    delete S.results[teamId];
+  } else {
+    await Store.set(K.res(S.meta.round, teamId), result);
+    S.results[teamId] = result;
+  }
+}
+
+async function closeRound(){
+  if(!allApproved() || !allResulted()) return;
+  const ap = approvedPicks();
+  const entries = [], eliminatedIds = [];
+  activePlayers().forEach(p => {
+    const teamId = ap[p.id];
+    const result = S.results[teamId];
+    entries.push({ playerId: p.id, teamId, result });
+    p.usedTeamIds = [ ...(p.usedTeamIds || []), teamId ];
+    if(result === 'lose'){ p.eliminated = true; p.eliminatedRound = S.meta.round; eliminatedIds.push(p.id); }
+  });
+  S.meta.history.push({ round: S.meta.round, entries, eliminatedIds, closedAt: new Date().toISOString() });
+
+  const still = activePlayers();
+  if(still.length <= 1){
+    S.meta.phase = 'finished';
+    S.meta.winners = still.length === 1 ? [still[0].id] : eliminatedIds;
+  } else {
+    S.meta.round += 1;
+  }
+  S.meta.deadline = null;
+  await saveMeta();
+  await loadRound();
+  toast(S.meta.phase === 'finished' ? 'Minigioco concluso.' : 'Giornata chiusa. Si riparte dalla ' + S.meta.round + '.', 'ok');
+  render();
+}
+
+async function reopenRound(){
+  const last = S.meta.history[S.meta.history.length - 1];
+  if(!last) return;
+  if(S.meta.phase === 'finished'){ S.meta.phase = 'playing'; S.meta.winners = []; }
+  else { S.meta.round = last.round; }
+  last.entries.forEach(e => {
+    const p = player(e.playerId);
+    if(!p) return;
+    const i = (p.usedTeamIds || []).lastIndexOf(e.teamId);
+    if(i >= 0) p.usedTeamIds.splice(i, 1);
+    if(p.eliminatedRound === last.round){ p.eliminated = false; p.eliminatedRound = null; }
+  });
+  S.meta.history.pop();
+  await saveMeta();
+  await loadRound();
+  toast('Giornata ' + last.round + ' riaperta.', 'ok');
+  render();
+}
+
+/* =========================================================================
+   9. FOGLIO EXCEL — lettura e scrittura (formato FantaList_2627.xlsx)
+   Il foglio "Minigioco" ha: colonna Partecipanti, una colonna per squadra
+   (X = squadra già usata) e una colonna per giornata ("V (Squadra)" se la
+   squadra ha vinto, "NV (Squadra)" se non ha vinto).
+   ========================================================================= */
+function b64FromBuffer(buffer){
+  let bin = ''; const bytes = new Uint8Array(buffer), chunk = 0x8000;
+  for(let i=0;i<bytes.length;i+=chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  return btoa(bin);
+}
+function parseGrid(ws){
+  if(!ws || !ws['!ref']) return null;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const scan = row => {
+    let partCol = null; const teams = [], giornate = [];
+    for(let c = range.s.c; c <= range.e.c; c++){
+      const cell = ws[XLSX.utils.encode_cell({ r: row, c })];
+      if(!cell || cell.v == null || cell.v === '') continue;
+      const label = String(cell.v).trim();
+      if(/^partecipant/i.test(label)) partCol = c;
+      else if(/^giornata\s*\d+/i.test(label)) giornate.push({ col:c, num: parseInt(label.match(/\d+/)[0], 10) });
+      else teams.push({ col:c, name: label });
+    }
+    return { partCol, teams, giornate };
+  };
+  for(let r = range.s.r; r <= Math.min(range.s.r + 3, range.e.r); r++){
+    const res = scan(r);
+    if(res.partCol != null && res.teams.length > 0){
+      res.giornate.sort((a,b) => a.num - b.num);
+      return { range, headerRow: r, firstDataRow: r + 1, ...res };
+    }
+  }
+  return null;
+}
+function readEligibleNames(wb){
+  /* Foglio "Partecipanti e Premi": tiene solo chi ha la x sulla quota minigiochi */
+  const name = wb.SheetNames.find(n => /partecipant/i.test(n) && !/minigioco/i.test(n));
+  if(!name) return null;
+  const ws = wb.Sheets[name];
+  if(!ws || !ws['!ref']) return null;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let r = range.s.r; r <= Math.min(range.s.r + 4, range.e.r); r++){
+    let nameCol = null, quotaCol = null;
+    for(let c = range.s.c; c <= range.e.c; c++){
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if(!cell || cell.v == null) continue;
+      const lbl = String(cell.v).trim();
+      if(/^partecipant/i.test(lbl) && nameCol === null) nameCol = c;
+      else if(/minigioch/i.test(lbl)) quotaCol = c;
+    }
+    if(nameCol !== null && quotaCol !== null){
+      const set = new Set();
+      for(let rr = r + 1; rr <= range.e.r; rr++){
+        const n = ws[XLSX.utils.encode_cell({ r: rr, c: nameCol })];
+        const q = ws[XLSX.utils.encode_cell({ r: rr, c: quotaCol })];
+        if(n && n.v && q && String(q.v).trim().toLowerCase() === 'x') set.add(String(n.v).trim().toLowerCase());
+      }
+      return set.size ? set : null;
+    }
+  }
+  return null;
+}
+
+async function importWorkbook(file, opts){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array' });
+  const sheetName = wb.SheetNames.find(n => /minigioco/i.test(n)) || wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const grid = parseGrid(ws);
+  if(!grid) throw new Error('Nel foglio "' + sheetName + '" non trovo la riga di intestazione con "Partecipanti" e i nomi delle squadre.');
+
+  const teams = grid.teams.map((t,i) => ({ id: slug(t.name), name: t.name, color: teamColor(t.name, i) }));
+  const eligible = opts.onlyPaying ? readEligibleNames(wb) : null;
+
+  const players = []; const seen = new Set(); let maxRound = 0;
+  const historyByRound = {};
+
+  for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+    const cell = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
+    if(!cell || cell.t === 'e' || cell.v == null) continue;
+    const name = String(cell.v).trim();
+    if(!name) continue;
+    if(opts.skipPlaceholders && isPlaceholder(name)) continue;
+    if(eligible && !eligible.has(name.toLowerCase())) continue;
+
+    let id = 'p-' + slug(name), n = 2;
+    while(seen.has(id)) id = 'p-' + slug(name) + '-' + (n++);
+    seen.add(id);
+
+    const p = { id, name, usedTeamIds: [], eliminated: false, eliminatedRound: null, rowIndex: r };
+
+    const marked = [];
+    grid.teams.forEach((t,i) => {
+      const c = ws[XLSX.utils.encode_cell({ r, c: t.col })];
+      if(c && c.v != null && String(c.v).trim().toUpperCase() === 'X') marked.push(teams[i].id);
+    });
+
+    const entries = [];
+    grid.giornate.forEach(g => {
+      const c = ws[XLSX.utils.encode_cell({ r, c: g.col })];
+      if(!c || c.v == null) return;
+      const m = String(c.v).trim().match(/^(V|NV)\s*\(([^)]+)\)$/i);
+      if(!m) return;
+      const label = m[2].trim();
+      const t = teams.find(x => x.name.toLowerCase() === label.toLowerCase()) || teams.find(x => x.id === slug(label));
+      if(!t) return;
+      entries.push({ round: g.num, teamId: t.id, result: m[1].toUpperCase() === 'V' ? 'win' : 'lose' });
+      if(g.num > maxRound) maxRound = g.num;
+    });
+    entries.sort((a,b) => a.round - b.round);
+
+    p.usedTeamIds = entries.map(e => e.teamId);
+    const lost = entries.find(e => e.result === 'lose');
+    if(lost){ p.eliminated = true; p.eliminatedRound = lost.round; }
+
+    entries.forEach(e => {
+      (historyByRound[e.round] = historyByRound[e.round] || []).push({ playerId: p.id, teamId: e.teamId, result: e.result });
+    });
+
+    /* una X su una squadra senza esito = pronostico già dato per la giornata in corso */
+    const usedSet = new Set(p.usedTeamIds);
+    p._pending = !p.eliminated ? (marked.find(t => !usedSet.has(t)) || null) : null;
+    players.push(p);
+  }
+  if(!players.length) throw new Error('Nessun partecipante trovato nel foglio "' + sheetName + '".');
+
+  const history = Object.keys(historyByRound).map(k => {
+    const entries = historyByRound[k];
+    return { round: parseInt(k,10), entries, eliminatedIds: entries.filter(e => e.result === 'lose').map(e => e.playerId) };
+  }).sort((a,b) => a.round - b.round);
+
+  const meta = { ...emptyMeta(), ...(S.meta || {}) };
+  meta.teams = teams;
+  meta.players = players.map(p => { const c = { ...p }; delete c._pending; return c; });
+  meta.history = history;
+  meta.round = maxRound + 1;
+  meta.deadline = null;
+  meta.fileName = file.name;
+  meta.sheetName = sheetName;
+  meta.originalB64 = b64FromBuffer(buf);
+
+  const alive = players.filter(p => !p.eliminated);
+  if(players.length >= 2 && alive.length <= 1){
+    meta.phase = 'finished';
+    meta.winners = alive.length === 1 ? [alive[0].id] : [];
+  } else {
+    meta.phase = 'playing';
+    meta.winners = [];
+  }
+
+  S.meta = meta;
+  await saveMeta();
+
+  /* le X senza esito diventano richieste già approvate della giornata in corso */
+  if(meta.phase === 'playing'){
+    for(const p of players){
+      if(!p._pending) continue;
+      await Store.set(K.req(meta.round, p.id), {
+        teamId: p._pending, status:'approved', note:'Importata dal file Excel',
+        sentAt: new Date().toISOString(), sentBy:'excel',
+        decidedAt: new Date().toISOString(), decidedBy:'excel', history: []
+      });
+    }
+  }
+  await loadRound();
+  await loadClaims();
+  return { players: players.length, teams: teams.length, round: meta.round, sheetName };
+}
+
+function buildWorkbook(){
+  let wb, ws, grid;
+  if(S.meta.originalB64){
+    wb = XLSX.read(S.meta.originalB64, { type:'base64' });
+    ws = wb.Sheets[S.meta.sheetName] || wb.Sheets[wb.SheetNames.find(n => /minigioco/i.test(n)) || wb.SheetNames[0]];
+    grid = parseGrid(ws);
+  }
+  if(!grid){
+    const header = ['Partecipanti', ...S.meta.teams.map(t => t.name)];
+    const last = Math.max(S.meta.round, ...S.meta.history.map(h => h.round), 1);
+    for(let n=1;n<=last;n++) header.push('Giornata ' + n);
+    const aoa = [['Tabella Minigioco - disponibilità'], header, ...S.meta.players.map(p => [p.name])];
+    ws = XLSX.utils.aoa_to_sheet(aoa);
+    wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Minigioco Attivo');
+    grid = parseGrid(ws);
+    S.meta.players.forEach((p,i) => { if(p.rowIndex == null) p.rowIndex = grid.firstDataRow + i; });
+  }
+
+  /* assicura una colonna per ogni giornata giocata o in corso */
+  const needed = Math.max(S.meta.round, ...S.meta.history.map(h => h.round), 1);
+  let lastCol = Math.max(grid.partCol, ...grid.teams.map(t => t.col), ...grid.giornate.map(g => g.col).concat([-1]));
+  const have = new Set(grid.giornate.map(g => g.num));
+  for(let n=1;n<=needed;n++){
+    if(!have.has(n)){
+      lastCol += 1;
+      ws[XLSX.utils.encode_cell({ r: grid.headerRow, c: lastCol })] = { t:'s', v:'Giornata ' + n };
+      grid.giornate.push({ col: lastCol, num: n });
+    }
+  }
+  grid.giornate.sort((a,b) => a.num - b.num);
+
+  const byName = {};
+  for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+    const c = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
+    if(c && c.v != null) byName[String(c.v).trim().toLowerCase()] = r;
+  }
+  let appendRow = Math.max(grid.range.e.r, grid.firstDataRow - 1);
+  const ap = approvedPicks();
+
+  S.meta.players.forEach(p => {
+    let row = byName[p.name.toLowerCase()];
+    if(row == null){ row = ++appendRow; ws[XLSX.utils.encode_cell({ r: row, c: grid.partCol })] = { t:'s', v: p.name }; }
+
+    const used = new Set(p.usedTeamIds || []);
+    if(!p.eliminated && ap[p.id]) used.add(ap[p.id]);
+    grid.teams.forEach(t => {
+      const addr = XLSX.utils.encode_cell({ r: row, c: t.col });
+      if(used.has(slug(t.name))) ws[addr] = { t:'s', v:'X' }; else delete ws[addr];
+    });
+
+    grid.giornate.forEach(g => {
+      const addr = XLSX.utils.encode_cell({ r: row, c: g.col });
+      const h = S.meta.history.find(h => h.round === g.num);
+      const e = h && h.entries.find(x => x.playerId === p.id);
+      if(e) ws[addr] = { t:'s', v: (e.result === 'win' ? 'V' : 'NV') + ' (' + team(e.teamId).name + ')' };
+      else delete ws[addr];
+    });
+  });
+
+  const maxRow = Math.max(grid.range.e.r, appendRow);
+  const maxCol = Math.max(grid.range.e.c, lastCol);
+  ws['!ref'] = XLSX.utils.encode_range({ s:{ r: grid.range.s.r, c: grid.range.s.c }, e:{ r: maxRow, c: maxCol } });
+  return wb;
+}
+function downloadWorkbook(){
+  try{
+    const wb = buildWorkbook();
+    const base = (S.meta.fileName || 'FantaList.xlsx').replace(/\.xlsx?$/i, '');
+    XLSX.writeFile(wb, base + '_G' + S.meta.round + '.xlsx');
+    toast('File Excel scaricato.', 'ok');
+  }catch(e){ toast('Non riesco a generare il file: ' + e.message, 'err'); }
+}
+
+/* =========================================================================
+   10. SCHERMATE — accesso, registrazione, prima configurazione
+   ========================================================================= */
+function storageBanner(){
+  const m = Store.mode();
+  if(m === 'supabase') return '';
+  if(m === 'artifact') return `<div class="banner">Stai usando l'anteprima: i dati sono condivisi tra chi apre questa stessa anteprima. Per il sito pubblico collega un archivio Supabase (istruzioni nel README).</div>`;
+  return `<div class="banner err">Archivio non collegato: quello che salvi resta <strong>solo su questo dispositivo</strong>. Per far giocare tutti serve un archivio condiviso — <button class="btn-link" data-cfg>collega Supabase</button>.</div>`;
+}
+function wireStorageBanner(root){
+  const b = root.querySelector('[data-cfg]');
+  if(b) b.onclick = openBackendSetup;
+}
+async function openBackendSetup(){
+  const ov = el(`<div class="overlay"></div>`);
+  ov.appendChild(el(`
+    <div class="modal">
+      <h3>Collega l'archivio condiviso</h3>
+      <p>Incolla i due valori del tuo progetto Supabase (li trovi in Project settings → API). Restano salvati su questo dispositivo; per il sito pubblico incollali anche nel blocco CONFIG in cima al file.</p>
+      <label class="field" style="margin-bottom:12px;"><span>URL del progetto</span><input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co"></label>
+      <label class="field"><span>Chiave anon public</span><input type="text" id="cfg-key" placeholder="eyJhbGciOi…"></label>
+      <div class="btn-row"><button class="btn btn-ghost" data-x>Annulla</button><button class="btn btn-primary" data-y>Collega</button></div>
+    </div>`));
+  document.body.appendChild(ov);
+  const cfg = Store.config();
+  if(cfg){ ov.querySelector('#cfg-url').value = cfg.url; ov.querySelector('#cfg-key').value = cfg.key; }
+  ov.querySelector('[data-x]').onclick = () => ov.remove();
+  ov.querySelector('[data-y]').onclick = () => {
+    const url = ov.querySelector('#cfg-url').value.trim();
+    const key = ov.querySelector('#cfg-key').value.trim();
+    if(!url || !key){ toast('Servono entrambi i valori.', 'err'); return; }
+    Store.setConfig({ supabaseUrl:url, supabaseAnonKey:key, tableName: CONFIG.tableName });
+    location.reload();
+  };
+}
+
+function renderGate(){
+  const wrap = el(`<div class="gate stack"></div>`);
+  const first = S.users.length === 0;
+
+  wrap.appendChild(el(`
+    <div class="lead">
+      <h1>Il minigioco<br><em>si gioca qui</em></h1>
+      <p>${first
+        ? 'Nessun account ancora. Crea quello dell\'organizzatore: sarà l\'unico a poter approvare i pronostici e chiudere le giornate.'
+        : 'Accedi con il tuo nome utente per inviare il pronostico della giornata.'}</p>
+    </div>`));
+
+  const sb = el(`<div>${storageBanner()}</div>`);
+  if(sb.firstElementChild){ wireStorageBanner(sb); wrap.appendChild(sb); }
+
+  if(first){
+    const box = el(`
+      <div class="panel"><div class="panel-head"><h2>Crea l'organizzatore</h2><span class="eyebrow">passo 1 di 2</span></div>
+        <div class="panel-body">
+          <label class="field"><span>Nome utente</span><input type="text" id="su-user" placeholder="salvo" autocomplete="username"></label>
+          <label class="field"><span>Codice di accesso</span><input type="password" id="su-pass" placeholder="almeno 6 caratteri" autocomplete="new-password"></label>
+          <label class="field"><span>Ripeti il codice</span><input type="password" id="su-pass2" autocomplete="new-password"></label>
+          <button class="btn btn-primary" id="su-go" style="width:100%;">Crea l'account e continua</button>
+        </div>
+      </div>`);
+    box.querySelector('#su-go').onclick = async (ev) => {
+      const u = box.querySelector('#su-user').value.trim();
+      const p = box.querySelector('#su-pass').value;
+      const p2 = box.querySelector('#su-pass2').value;
+      if(p !== p2){ toast('I due codici non coincidono.', 'err'); return; }
+      ev.target.disabled = true; ev.target.innerHTML = '<span class="spinner"></span> Creo l\'account…';
+      try{
+        await createUser({ username:u, password:p, role:'admin', displayName:u });
+        await login(u, p);
+        await loadUsers();
+        if(!S.meta){ S.meta = emptyMeta(); await saveMeta(); }
+        toast('Account creato. Ora carica il file del minigioco.', 'ok');
+        render();
+      }catch(e){ toast(e.message, 'err'); ev.target.disabled = false; ev.target.textContent = 'Crea l\'account e continua'; }
+    };
+    wrap.appendChild(box);
+    return wrap;
+  }
+
+  const sw = el(`
+    <div class="switcher">
+      <button data-t="login" class="${S.gateTab==='login'?'on':''}">Accedi</button>
+      <button data-t="register" class="${S.gateTab==='register'?'on':''}">Primo accesso</button>
+    </div>`);
+  sw.querySelectorAll('button').forEach(b => b.onclick = () => { S.gateTab = b.dataset.t; render(); });
+  wrap.appendChild(sw);
+
+  if(S.gateTab === 'login'){
+    const box = el(`
+      <div class="panel"><div class="panel-body">
+        <label class="field"><span>Nome utente</span><input type="text" id="li-user" placeholder="il tuo nome, es. peppe verbaro" autocomplete="username"></label>
+        <label class="field"><span>Codice di accesso</span><input type="password" id="li-pass" autocomplete="current-password"></label>
+        <button class="btn btn-primary" id="li-go" style="width:100%;">Accedi</button>
+        <p class="note-dim">Il nome utente è il tuo nome come sta nel file della lega: puoi scriverlo con le maiuscole e gli spazi. Codice dimenticato? Chiedilo all'organizzatore, lo vede dalla sua schermata.</p>
+      </div></div>`);
+    const go = async (ev) => {
+      const btn = box.querySelector('#li-go');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Verifico…';
+      try{
+        await login(box.querySelector('#li-user').value.trim(), box.querySelector('#li-pass').value);
+        await refresh(false);
+        toast('Bentornato, ' + S.me.displayName + '.', 'ok');
+      }catch(e){ toast(e.message, 'err'); btn.disabled = false; btn.textContent = 'Accedi'; }
+    };
+    box.querySelector('#li-go').onclick = go;
+    box.querySelectorAll('input').forEach(i => i.onkeydown = e => { if(e.key === 'Enter') go(); });
+    wrap.appendChild(box);
+  } else {
+    const free = (S.meta?.players || []).filter(p => !S.claims[p.id]);
+    const box = el(`
+      <div class="panel"><div class="panel-body">
+        ${!S.meta || !S.meta.players.length
+          ? `<div class="empty">L'organizzatore non ha ancora caricato l'elenco dei partecipanti. Riprova più tardi.</div>`
+          : free.length === 0
+            ? `<div class="empty">Tutti i partecipanti hanno già un account. Se non riesci ad accedere, chiedi all'organizzatore di azzerarti la password.</div>`
+            : `
+        <label class="field"><span>Chi sei</span>
+          <select id="rg-player">${free.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>Il tuo nome utente</span>
+          <input type="text" id="rg-user" value="${usernameFor(free[0])}" readonly autocomplete="username"></label>
+        <label class="field"><span>Codice di accesso</span><input type="password" id="rg-pass" placeholder="almeno 6 caratteri" autocomplete="new-password"></label>
+        <button class="btn btn-primary" id="rg-go" style="width:100%;">Crea il mio accesso</button>
+        <p class="note-dim">Il nome utente non si sceglie: è il tuo nome come compare nel file della lega. L'organizzatore vede i codici di accesso di tutti, quindi usane uno solo per il minigioco.</p>`}
+      </div></div>`);
+    const sel = box.querySelector('#rg-player');
+    if(sel) sel.onchange = () => { box.querySelector('#rg-user').value = usernameFor(player(sel.value)); };
+    const go = box.querySelector('#rg-go');
+    if(go) go.onclick = async () => {
+      const pid = sel.value;
+      const u = usernameFor(player(pid));
+      const p = box.querySelector('#rg-pass').value;
+      go.disabled = true; go.innerHTML = '<span class="spinner"></span> Creo l\'accesso…';
+      try{
+        await loadClaims();
+        if(S.claims[pid]) throw new Error('Questo nome è appena stato collegato da qualcun altro.');
+        await createUser({ username:u, password:p, role:'player', playerId:pid, displayName: player(pid).name });
+        await login(u, p);
+        await loadUsers(); await loadClaims();
+        await refresh(false);
+        toast('Accesso creato. Buon minigioco!', 'ok');
+      }catch(e){ toast(e.message, 'err'); go.disabled = false; go.textContent = 'Crea il mio accesso'; }
+    };
+    wrap.appendChild(box);
+  }
+  return wrap;
+}
+
+/* =========================================================================
+   11. SCHERMATE — pezzi riutilizzabili
+   ========================================================================= */
+function scoreboard(){
+  const alive = activePlayers().length, total = S.meta.players.length;
+  const sent = Object.keys(S.requests).length;
+  const pending = Object.values(S.requests).filter(r => r.status === 'pending').length;
+  const missing = activePlayers().filter(p => !S.requests[p.id]).length;
+  return el(`
+    <div class="panel"><div class="scoreboard">
+      <div class="sb-cell"><div class="k">Giornata</div><div class="v">${S.meta.phase === 'finished' ? 'FINE' : String(S.meta.round).padStart(2,'0')}</div></div>
+      <div class="sb-cell"><div class="k">In gioco</div><div class="v">${alive}<span style="font-size:1rem; color:var(--chalk-mute);">/${total}</span></div></div>
+      <div class="sb-cell ${pending ? 'alert' : ''}"><div class="k">Da approvare</div><div class="v">${pending}</div></div>
+      <div class="sb-cell ${missing ? 'alert' : ''}"><div class="k">Non pervenuti</div><div class="v">${missing}</div></div>
+      <div class="sb-cell"><div class="k">Termine</div><div class="v small mono">${S.meta.deadline ? fmtDate(S.meta.deadline) : 'libero'}</div></div>
+    </div></div>`);
+}
+
+function slipFor(p, req, opts = {}){
+  const t = req ? team(req.teamId) : null;
+  const stamp = !req ? ''
+    : req.status === 'approved' ? '<div class="stamp ok">Registrato</div>'
+    : req.status === 'pending'  ? '<div class="stamp pending">In attesa</div>'
+    : '<div class="stamp ko">Respinto</div>';
+  return el(`
+    <div class="slip ${opts.onPitch ? 'on-pitch' : ''}">
+      <div class="slip-head">
+        <span class="who-slip">${esc(p.name)}</span>
+        <span class="code">G${String(S.meta.round).padStart(2,'0')} · ${req ? fmtDate(req.sentAt) : 'nessun invio'}</span>
+      </div>
+      ${req ? `
+        <div class="slip-pick"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}</div>
+        <div class="slip-meta">Inviato da ${esc(req.sentBy)}${req.decidedBy ? ' · deciso da ' + esc(req.decidedBy) : ''}</div>
+        ${req.note ? `<div class="slip-meta" style="color:#B3312D;">Nota: ${esc(req.note)}</div>` : ''}`
+      : `<div class="slip-pick" style="opacity:0.35;">— — —</div>
+         <div class="slip-meta">Nessun pronostico inviato per questa giornata.</div>`}
+      ${stamp}
+    </div>`);
+}
+
+function teamPicker(p, selected, onPick){
+  const wrap = el(`<div class="team-grid"></div>`);
+  availableTeams(p).forEach(t => {
+    const b = el(`<button class="team-btn ${t.used ? 'used' : ''} ${t.id === selected ? 'on' : ''}" data-team="${t.id}" ${t.used ? 'disabled' : ''}>
+        <span class="dot" style="background:${t.color}"></span>${esc(t.name)}</button>`);
+    if(!t.used) b.onclick = () => onPick(t.id);
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
+/* =========================================================================
+   12. SCHERMATA — la mia schedina (partecipante)
+   ========================================================================= */
+function viewMine(){
+  const wrap = el(`<div class="stack"></div>`);
+  const p = myPlayer();
+  if(!p){
+    wrap.appendChild(el(`<div class="empty">Il tuo account non è collegato a nessun partecipante. Chiedi all'organizzatore di collegarlo dalla sezione Partecipanti.</div>`));
+    return wrap;
+  }
+  if(S.meta.phase === 'finished'){ wrap.appendChild(viewWinner()); return wrap; }
+  if(p.eliminated){
+    wrap.appendChild(el(`
+      <div class="panel"><div class="panel-body" style="text-align:center; padding:34px 20px;">
+        <h2 style="font-size:1.6rem; color:var(--ko);">Eliminato alla giornata ${p.eliminatedRound}</h2>
+        <p class="note">Il tuo minigioco finisce qui. Puoi continuare a seguire chi resta in piedi dalla sezione Lega.</p>
+      </div></div>`));
+    wrap.appendChild(myHistoryPanel(p));
+    return wrap;
+  }
+
+  const req = S.requests[p.id];
+  let selected = req ? req.teamId : null;
+  const closed = deadlinePassed();
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head">
+        <div><span class="eyebrow">Giornata ${S.meta.round}</span><h2>La tua schedina</h2></div>
+        <span class="tag ${req ? (req.status === 'approved' ? 'ok' : req.status === 'pending' ? 'pending' : 'ko') : 'mute'}">
+          ${req ? (req.status === 'approved' ? 'registrata' : req.status === 'pending' ? 'in attesa' : 'respinta') : 'da inviare'}</span>
+      </div>
+      <div class="panel-body"></div>
+    </div>`);
+  const body = panel.querySelector('.panel-body');
+  body.appendChild(slipFor(p, req));
+
+  if(req && req.status === 'rejected' && req.note)
+    body.appendChild(el(`<div class="banner err">L'organizzatore ha respinto il pronostico: ${esc(req.note)}. Scegline un altro qui sotto.</div>`));
+  if(closed)
+    body.appendChild(el(`<div class="banner err">Il termine di invio è scaduto (${fmtDate(S.meta.deadline)}). Per cambiare, scrivi all'organizzatore.</div>`));
+  else if(S.meta.deadline)
+    body.appendChild(el(`<div class="banner">Hai tempo fino al <strong class="mono">${fmtDate(S.meta.deadline)}</strong>.</div>`));
+
+  if(!closed){
+    body.appendChild(el(`<p class="note">${req && req.status === 'approved'
+      ? 'Puoi ancora cambiare idea: il nuovo pronostico tornerà in attesa di approvazione.'
+      : 'Scegli la squadra su cui punti. Quelle sbarrate le hai già usate nelle giornate precedenti.'}</p>`));
+    const picker = teamPicker(p, selected, id => {
+      selected = id;
+      picker.querySelectorAll('.team-btn').forEach(b => b.classList.toggle('on', b.dataset.team === id));
+      send.disabled = false;
+    });
+    body.appendChild(picker);
+    var send = el(`<button class="btn btn-primary" style="width:100%;" ${selected ? '' : 'disabled'}>${req ? 'Aggiorna il pronostico' : 'Invia il pronostico'}</button>`);
+    send.onclick = async () => {
+      if(!selected) return;
+      send.disabled = true; send.innerHTML = '<span class="spinner"></span> Invio…';
+      try{
+        await submitRequest(p.id, selected);
+        toast(S.meta.autoApprove ? 'Pronostico registrato.' : 'Pronostico inviato: aspetta l\'approvazione.', 'ok');
+        render();
+      }catch(e){ toast(e.message, 'err'); send.disabled = false; send.textContent = 'Invia il pronostico'; }
+    };
+    body.appendChild(send);
+  }
+  wrap.appendChild(panel);
+  wrap.appendChild(myHistoryPanel(p));
+  return wrap;
+}
+
+function myHistoryPanel(p){
+  const rows = S.meta.history.map(h => {
+    const e = h.entries.find(x => x.playerId === p.id);
+    return e ? { round: h.round, ...e } : null;
+  }).filter(Boolean);
+  const used = (p.usedTeamIds || []).length;
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Il tuo percorso</h2><span class="eyebrow">${used} usate · ${Math.max(S.meta.teams.length - used, 0)} ancora disponibili</span></div>
+      <div class="panel-body"></div>
+    </div>`);
+  const body = panel.querySelector('.panel-body');
+  if(!rows.length){ body.appendChild(el(`<div class="empty">Nessuna giornata giocata finora.</div>`)); return panel; }
+  body.appendChild(el(`
+    <table><thead><tr><th>G</th><th>Squadra</th><th style="text-align:right;">Esito</th></tr></thead>
+      <tbody>${rows.map(r => `
+        <tr><td class="num">G${String(r.round).padStart(2,'0')}</td>
+            <td><span class="chip-mini"><span class="dot" style="background:${team(r.teamId).color}"></span>${esc(team(r.teamId).name)}</span></td>
+            <td style="text-align:right;" class="${r.result === 'win' ? 'res-win' : 'res-lose'}">${r.result === 'win' ? 'Vittoria' : 'Non vince'}</td></tr>`).join('')}
+      </tbody></table>`));
+  return panel;
+}
+
+/* =========================================================================
+   13. SCHERMATA — richieste di pronostico (organizzatore)
+   ========================================================================= */
+async function pickTeamFor(p){
+  return new Promise(resolve => {
+    const ov = el(`<div class="overlay"></div>`);
+    const box = el(`
+      <div class="modal" style="width:min(560px,100%);">
+        <h3>Pronostico per ${esc(p.name)}</h3>
+        <p>Scegli tu la squadra: viene registrata subito come approvata.</p>
+        <div class="btn-row" style="justify-content:flex-end;"><button class="btn btn-ghost" data-x>Annulla</button></div>
+      </div>`);
+    const picker = teamPicker(p, S.requests[p.id]?.teamId, id => { ov.remove(); resolve(id); });
+    box.insertBefore(picker, box.querySelector('.btn-row'));
+    picker.style.marginBottom = '14px';
+    ov.appendChild(box); document.body.appendChild(ov);
+    box.querySelector('[data-x]').onclick = () => { ov.remove(); resolve(null); };
+    ov.onclick = e => { if(e.target === ov){ ov.remove(); resolve(null); } };
+  });
+}
+
+function viewRequests(){
+  const wrap = el(`<div class="stack"></div>`);
+  const active = activePlayers();
+  const pending = active.filter(p => S.requests[p.id]?.status === 'pending');
+  const missing = active.filter(p => !S.requests[p.id] || S.requests[p.id].status === 'rejected');
+
+  /* controlli di giornata */
+  const ctl = el(`
+    <div class="panel">
+      <div class="panel-head"><div><span class="eyebrow">Giornata ${S.meta.round}</span><h2>Regole d'invio</h2></div></div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <label class="field"><span>Termine per l'invio</span><input type="datetime-local" id="dl" value="${toInputDT(S.meta.deadline)}"></label>
+          <div style="display:flex; align-items:flex-end; gap:8px;">
+            <button class="btn btn-ghost" id="dl-save">Salva termine</button>
+            <button class="btn btn-ghost" id="dl-clear">Togli</button>
+          </div>
+        </div>
+        <label class="checkline"><input type="checkbox" id="auto" ${S.meta.autoApprove ? 'checked' : ''}>
+          <span>Approva da solo i pronostici validi. Lascialo spento se vuoi controllarli uno per uno.</span></label>
+      </div>
+    </div>`);
+  ctl.querySelector('#dl-save').onclick = async () => {
+    const v = ctl.querySelector('#dl').value;
+    S.meta.deadline = v ? new Date(v).toISOString() : null;
+    await saveMeta(); toast('Termine aggiornato.', 'ok'); render();
+  };
+  ctl.querySelector('#dl-clear').onclick = async () => { S.meta.deadline = null; await saveMeta(); toast('Termine rimosso.', 'ok'); render(); };
+  ctl.querySelector('#auto').onchange = async (e) => { S.meta.autoApprove = e.target.checked; await saveMeta(); toast(e.target.checked ? 'Approvazione automatica attiva.' : 'Approvazione manuale attiva.', 'ok'); };
+  wrap.appendChild(ctl);
+
+  /* tabellone richieste */
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Richieste ricevute</h2>
+        <div class="btn-row">
+          ${pending.length ? `<button class="btn btn-sm btn-ok" id="all-ok">Approva tutte (${pending.length})</button>` : ''}
+          ${missing.length ? `<button class="btn btn-sm btn-ghost" id="copy">Copia promemoria</button>` : ''}
+        </div>
+      </div>
+      <div class="panel-body"><div class="board"></div></div>
+    </div>`);
+  const board = panel.querySelector('.board');
+
+  active.forEach(p => {
+    const req = S.requests[p.id];
+    const state = req ? req.status : 'missing';
+    const t = req ? team(req.teamId) : null;
+    const dup = req ? Object.entries(S.requests).filter(([id, r]) => r.teamId === req.teamId && r.status !== 'rejected').length : 0;
+    const invalid = req && (p.usedTeamIds || []).includes(req.teamId);
+    const row = el(`
+      <div class="req ${state}">
+        <div>
+          <div class="p-name">${esc(p.name)}</div>
+          <div class="p-sub">${req ? 'inviato ' + fmtDate(req.sentAt) + ' · da ' + esc(req.sentBy) : 'nessuna richiesta'}</div>
+        </div>
+        <div>
+          ${req ? `<div class="p-team"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}
+                   ${dup > 1 ? `<span class="tag mute">in ${dup}</span>` : ''}</div>
+                   ${invalid ? `<div class="warn-inline">Squadra già usata in una giornata precedente.</div>` : ''}
+                   ${req.note ? `<div class="p-sub">nota: ${esc(req.note)}</div>` : ''}`
+                 : `<span class="tag mute">in attesa di risposta</span>`}
+        </div>
+        <div class="p-actions"></div>
+      </div>`);
+    const acts = row.querySelector('.p-actions');
+
+    if(state === 'pending'){
+      const ok = el(`<button class="btn btn-sm btn-ok">Approva</button>`);
+      ok.onclick = async () => { await decideRequest(p.id, 'approved'); toast('Approvato: ' + p.name + ' → ' + t.name, 'ok'); render(); };
+      const ko = el(`<button class="btn btn-sm btn-ko">Respingi</button>`);
+      ko.onclick = async () => {
+        const note = await modal({ title:'Respingi il pronostico', message:'Scrivi il motivo: ' + p.name + ' lo vedrà e potrà rifare la scelta.', input:'text', placeholder:'es. squadra già usata', confirmText:'Respingi' });
+        if(note === null) return;
+        await decideRequest(p.id, 'rejected', note); toast('Richiesta respinta.', ''); render();
+      };
+      acts.append(ok, ko);
+    } else if(state === 'approved'){
+      acts.appendChild(el(`<span class="tag ok">registrato</span>`));
+      const undo = el(`<button class="btn btn-sm btn-ghost">Annulla</button>`);
+      undo.onclick = async () => { await decideRequest(p.id, 'pending'); render(); };
+      acts.appendChild(undo);
+    } else {
+      acts.appendChild(el(`<span class="tag ${state === 'rejected' ? 'ko' : 'mute'}">${state === 'rejected' ? 'respinto' : 'manca'}</span>`));
+    }
+    const setBtn = el(`<button class="btn btn-sm btn-ghost">Scegli tu</button>`);
+    setBtn.onclick = async () => {
+      const tid = await pickTeamFor(p);
+      if(!tid) return;
+      try{ await submitRequest(p.id, tid, true); toast(p.name + ' → ' + team(tid).name, 'ok'); render(); }
+      catch(e){ toast(e.message, 'err'); }
+    };
+    acts.appendChild(setBtn);
+    board.appendChild(row);
+  });
+
+  const allOk = panel.querySelector('#all-ok');
+  if(allOk) allOk.onclick = async () => {
+    allOk.disabled = true;
+    for(const p of pending) await decideRequest(p.id, 'approved');
+    toast(pending.length + ' pronostici approvati.', 'ok'); render();
+  };
+  const copy = panel.querySelector('#copy');
+  if(copy) copy.onclick = () => {
+    const txt = `Minigioco — giornata ${S.meta.round}\nManca ancora il pronostico di: ${missing.map(p => p.name).join(', ')}.` +
+      (S.meta.deadline ? `\nTermine: ${fmtDate(S.meta.deadline)}.` : '');
+    navigator.clipboard?.writeText(txt).then(() => toast('Promemoria copiato.', 'ok'), () => toast('Copia non riuscita.', 'err'));
+  };
+  wrap.appendChild(panel);
+  return wrap;
+}
+
+/* =========================================================================
+   14. SCHERMATA — risultati e chiusura giornata (organizzatore)
+   ========================================================================= */
+function viewResults(){
+  const wrap = el(`<div class="stack"></div>`);
+  const ap = approvedPicks();
+  const byTeam = new Map();
+  Object.entries(ap).forEach(([pid, tid]) => { (byTeam.get(tid) || byTeam.set(tid, []).get(tid)).push(pid); });
+
+  if(!allApproved())
+    wrap.appendChild(el(`<div class="banner">Mancano ancora dei pronostici approvati: puoi già segnare i risultati delle squadre note, ma la giornata si chiude solo quando ci sono tutti.</div>`));
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><div><span class="eyebrow">Giornata ${S.meta.round}</span><h2>Esito delle squadre</h2></div></div>
+      <div class="panel-body"><p class="note">Segna se la squadra ha vinto: l'esito vale per tutti quelli che l'hanno scelta. Ricliccando togli il segno.</p><div class="board"></div></div>
+    </div>`);
+  const board = panel.querySelector('.board');
+
+  if(byTeam.size === 0){
+    board.appendChild(el(`<div class="empty">Nessun pronostico approvato per questa giornata.</div>`));
+  } else {
+    [...byTeam.entries()].sort((a,b) => team(a[0]).name.localeCompare(team(b[0]).name)).forEach(([tid, pids]) => {
+      const t = team(tid), cur = S.results[tid];
+      const row = el(`
+        <div class="req ${cur === 'win' ? 'approved' : cur === 'lose' ? 'rejected' : 'pending'}">
+          <div class="p-team"><span class="dot" style="background:${t.color}"></span><strong>${esc(t.name)}</strong></div>
+          <div class="p-sub">${pids.map(id => esc(player(id)?.name || '?')).join(' · ')}</div>
+          <div class="p-actions">
+            <button class="btn btn-sm btn-ok ${cur === 'win' ? 'on' : ''}" data-r="win">Ha vinto</button>
+            <button class="btn btn-sm btn-ko ${cur === 'lose' ? 'on' : ''}" data-r="lose">Non ha vinto</button>
+          </div>
+        </div>`);
+      row.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => {
+        b.disabled = true;
+        try{ await setResult(tid, b.dataset.r); render(); }catch(e){ toast('Salvataggio non riuscito.', 'err'); b.disabled = false; }
+      });
+      board.appendChild(row);
+    });
+  }
+  wrap.appendChild(panel);
+
+  const ready = allApproved() && allResulted();
+  const outCount = Object.entries(ap).filter(([pid, tid]) => S.results[tid] === 'lose').length;
+  const close = el(`
+    <div class="panel"><div class="panel-body" style="display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;">
+      <div>
+        <h2 style="font-size:1rem;">Chiudi la giornata ${S.meta.round}</h2>
+        <p class="note">${ready
+          ? `Alla chiusura ${outCount === 0 ? 'nessuno viene eliminato' : outCount === 1 ? '1 partecipante viene eliminato' : outCount + ' partecipanti vengono eliminati'} e si passa alla giornata successiva.`
+          : 'Servono tutti i pronostici approvati e tutti gli esiti segnati.'}</p>
+      </div>
+      <button class="btn btn-primary" id="close-round" ${ready ? '' : 'disabled'}>Chiudi la giornata</button>
+    </div></div>`);
+  close.querySelector('#close-round').onclick = async () => {
+    if(!await confirmBox('Chiudo la giornata ' + S.meta.round + '. Gli esiti diventano definitivi e le squadre usate non saranno più scegliibili.')) return;
+    await closeRound();
+  };
+  wrap.appendChild(close);
+  return wrap;
+}
+
+/* =========================================================================
+   15. SCHERMATA — partecipanti e account (organizzatore)
+   ========================================================================= */
+function viewPlayers(){
+  const wrap = el(`<div class="stack"></div>`);
+  const placeholders = S.meta.players.filter(p => isPlaceholder(p.name));
+  wrap.appendChild(el(`<div class="banner">I codici di accesso sono in chiaro: puoi leggerli, copiarli e cambiarli tu. Ricordalo ai partecipanti — qui dentro non deve finire una password che usano altrove.</div>`));
+
+  const add = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Aggiungi un partecipante</h2>
+        ${placeholders.length ? `<button class="btn btn-sm btn-ghost" id="rm-ph">Rimuovi ${placeholders.length} segnaposto</button>` : ''}</div>
+      <div class="panel-body"><div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="np" placeholder="Nome e cognome" style="flex:1; min-width:200px;">
+        <button class="btn btn-primary" id="np-go">Aggiungi</button>
+      </div></div>
+    </div>`);
+  const doAdd = async () => {
+    const name = add.querySelector('#np').value.trim();
+    if(!name) return;
+    let id = 'p-' + slug(name), n = 2;
+    while(player(id)) id = 'p-' + slug(name) + '-' + (n++);
+    S.meta.players.push({ id, name, usedTeamIds:[], eliminated:false, eliminatedRound:null, rowIndex:null });
+    if(S.meta.phase === 'setup') S.meta.phase = 'playing';
+    await saveMeta(); add.querySelector('#np').value = ''; toast(name + ' aggiunto.', 'ok'); render();
+  };
+  add.querySelector('#np-go').onclick = doAdd;
+  add.querySelector('#np').onkeydown = e => { if(e.key === 'Enter') doAdd(); };
+  const rmPh = add.querySelector('#rm-ph');
+  if(rmPh) rmPh.onclick = async () => {
+    if(!await confirmBox('Rimuovo i ' + placeholders.length + ' nomi segnaposto ("partecipante N")?')) return;
+    S.meta.players = S.meta.players.filter(p => !isPlaceholder(p.name));
+    await saveMeta(); toast('Segnaposto rimossi.', 'ok'); render();
+  };
+  wrap.appendChild(add);
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Partecipanti e accessi</h2>
+        <div class="btn-row">
+          <button class="btn btn-sm btn-ghost" id="mk-all">Crea gli accessi mancanti</button>
+          <button class="btn btn-sm btn-ghost" id="cp-all">Copia tutti</button>
+          <button class="btn btn-sm btn-ghost" id="tg-all">Mostra i codici</button>
+        </div></div>
+      <div class="panel-body" style="padding:0;"><div class="table-scroll"><table>
+        <thead><tr><th>Partecipante</th><th>Nome utente</th><th>Codice</th><th>Squadre usate</th><th style="text-align:right;">Azioni</th></tr></thead>
+        <tbody></tbody></table></div></div>
+    </div>`);
+  const tb = panel.querySelector('tbody');
+  S.meta.players.forEach(p => {
+    const u = S.users.find(u => u.playerId === p.id);
+    const tr = el(`
+      <tr class="${p.eliminated ? 'out-row' : ''}">
+        <td><strong>${esc(p.name)}</strong>${p.eliminated ? `<div class="p-sub">eliminato G${p.eliminatedRound}</div>` : ''}</td>
+        <td><span class="mono" style="font-size:0.78rem;">${esc(u ? u.username : usernameFor(p))}</span>${u && u.role === 'admin' ? ' <span class="tag ok">organizzatore</span>' : ''}</td>
+        <td>${u ? (u.password
+              ? `<span class="code-cell mono" data-code="${esc(u.password)}">••••••</span>`
+              : `<span class="note-dim">creato prima: illeggibile</span>`)
+            : `<span class="tag mute">nessun accesso</span>`}</td>
+        <td>${(p.usedTeamIds || []).length ? (p.usedTeamIds || []).map(t => `<span class="chip-mini"><span class="dot" style="background:${team(t).color}"></span>${esc(team(t).name)}</span>`).join('') : '<span class="note-dim">—</span>'}</td>
+        <td style="text-align:right;"><div class="p-actions" style="justify-content:flex-end;"></div></td>
+      </tr>`);
+    const acts = tr.querySelector('.p-actions');
+    if(u){
+      const cp = el(`<button class="btn btn-sm btn-ghost">Copia</button>`);
+      cp.onclick = () => copyText(`${p.name} — nome utente: ${u.username} · codice: ${u.password || '(illeggibile, rigeneralo)'}`);
+      acts.appendChild(cp);
+      const rp = el(`<button class="btn btn-sm btn-ghost">Cambia codice</button>`);
+      rp.onclick = async () => {
+        const np = await modal({ title:'Codice di ' + p.name, message:'Scrivi il nuovo codice, oppure lascia com\'è quello proposto.', input:'text', placeholder:'almeno 6 caratteri', confirmText:'Imposta', prefill: generateCode() });
+        if(np === null) return;
+        try{ await changePassword(u.username, np); await loadUsers(); toast('Codice aggiornato: ' + np, 'ok'); render(); }
+        catch(e){ toast(e.message, 'err'); }
+      };
+      acts.appendChild(rp);
+      const un = el(`<button class="btn btn-sm btn-ghost">Scollega</button>`);
+      un.onclick = async () => {
+        if(!await confirmBox('Scollego l\'account "' + u.username + '" da ' + p.name + '? L\'account viene eliminato e il nome torna libero.')) return;
+        await Store.del(K.user(u.username)); await Store.del(K.claim(p.id));
+        await loadUsers(); await loadClaims(); toast('Account eliminato.', 'ok'); render();
+      };
+      acts.appendChild(un);
+    } else {
+      const mk = el(`<button class="btn btn-sm btn-ok">Crea accesso</button>`);
+      mk.onclick = async () => {
+        const code = await modal({ title:'Accesso per ' + p.name, message:'Nome utente: ' + usernameFor(p) + '. Questo è il codice che gli comunicherai.', input:'text', confirmText:'Crea', prefill: generateCode() });
+        if(code === null) return;
+        try{
+          await createUser({ username: usernameFor(p), password: code, role:'player', playerId: p.id, displayName: p.name });
+          await loadUsers(); await loadClaims();
+          copyText(`${p.name} — nome utente: ${usernameFor(p)} · codice: ${code}`);
+          toast('Accesso creato e copiato.', 'ok'); render();
+        }catch(e){ toast(e.message, 'err'); }
+      };
+      acts.appendChild(mk);
+    }
+    if(!u && !S.me.playerId){
+      const link = el(`<button class="btn btn-sm btn-ghost">Sono io</button>`);
+      link.onclick = async () => {
+        S.me.playerId = p.id;
+        await Store.set(K.user(S.me.username), S.me);
+        await Store.set(K.claim(p.id), S.me.username);
+        await loadUsers(); await loadClaims(); toast('Collegato a ' + p.name + '.', 'ok'); render();
+      };
+      acts.appendChild(link);
+    }
+    const del = el(`<button class="btn btn-sm btn-ko">Elimina</button>`);
+    del.onclick = async () => {
+      if(!await confirmBox('Elimino ' + p.name + ' dal minigioco? Sparisce anche dallo storico delle giornate future.')) return;
+      S.meta.players = S.meta.players.filter(x => x.id !== p.id);
+      await saveMeta();
+      if(u){ await Store.del(K.user(u.username)); await Store.del(K.claim(p.id)); await loadUsers(); }
+      toast('Partecipante eliminato.', 'ok'); render();
+    };
+    acts.appendChild(del);
+    tb.appendChild(tr);
+  });
+
+  /* i codici restano coperti finché non li chiedi: capita di condividere lo schermo */
+  let shown = false;
+  const applyMask = () => {
+    panel.querySelectorAll('.code-cell').forEach(c => {
+      c.textContent = shown ? c.dataset.code : '••••••';
+      c.classList.toggle('hidden-code', !shown);
+    });
+    panel.querySelector('#tg-all').textContent = shown ? 'Nascondi i codici' : 'Mostra i codici';
+  };
+  panel.querySelector('#tg-all').onclick = () => { shown = !shown; applyMask(); };
+  panel.querySelectorAll('.code-cell').forEach(c => c.onclick = () => copyText(c.dataset.code));
+  applyMask();
+
+  panel.querySelector('#cp-all').onclick = () => {
+    const lines = S.meta.players.map(p => {
+      const u = S.users.find(u => u.playerId === p.id);
+      return `${p.name} — utente: ${u ? u.username : usernameFor(p)} · codice: ${u ? (u.password || '(illeggibile)') : '(da creare)'}`;
+    });
+    copyText('Accessi al minigioco\n' + lines.join('\n'));
+  };
+
+  panel.querySelector('#mk-all').onclick = async () => {
+    const missing = S.meta.players.filter(p => !S.users.find(u => u.playerId === p.id));
+    if(!missing.length){ toast('Hanno già tutti un accesso.', ''); return; }
+    if(!await confirmBox('Creo l\'accesso per ' + missing.length + ' partecipanti, con un codice generato per ciascuno?')) return;
+    const created = [];
+    for(const p of missing){
+      const code = generateCode();
+      try{
+        await createUser({ username: usernameFor(p), password: code, role:'player', playerId: p.id, displayName: p.name });
+        created.push(`${p.name} — utente: ${usernameFor(p)} · codice: ${code}`);
+      }catch(e){ toast(p.name + ': ' + e.message, 'err'); }
+    }
+    await loadUsers(); await loadClaims();
+    if(created.length) copyText('Accessi al minigioco\n' + created.join('\n'));
+    toast(created.length + ' accessi creati e copiati.', 'ok');
+    render();
+  };
+
+  wrap.appendChild(panel);
+  return wrap;
+}
+
+/* =========================================================================
+   16. SCHERMATA — lega e storico (tutti)
+   ========================================================================= */
+function viewLeague(){
+  const wrap = el(`<div class="stack"></div>`);
+  if(S.meta.phase === 'finished') wrap.appendChild(viewWinner());
+
+  const alive = activePlayers(), out = S.meta.players.filter(p => p.eliminated);
+  const hidePicks = !isAdmin() && !allApproved() && S.meta.phase === 'playing';
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Chi è ancora in piedi</h2><span class="eyebrow">${alive.length} su ${S.meta.players.length}</span></div>
+      <div class="panel-body" style="padding:0;"><table>
+        <thead><tr><th>Partecipante</th><th>Giornate superate</th><th style="text-align:right;">Giornata ${S.meta.round}</th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>`);
+  const tb = panel.querySelector('tbody');
+  const rank = [...alive].sort((a,b) => (b.usedTeamIds?.length || 0) - (a.usedTeamIds?.length || 0) || a.name.localeCompare(b.name));
+  rank.forEach(p => {
+    const r = S.requests[p.id];
+    const cell = !r ? '<span class="tag mute">manca</span>'
+      : hidePicks ? '<span class="tag ok">inviato</span>'
+      : `<span class="chip-mini"><span class="dot" style="background:${team(r.teamId).color}"></span>${esc(team(r.teamId).name)}</span> <span class="tag ${r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'pending' : 'ko'}">${r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'attesa' : 'respinto'}</span>`;
+    tb.appendChild(el(`<tr><td><strong>${esc(p.name)}</strong></td><td class="num">${(p.usedTeamIds || []).length}</td><td style="text-align:right;">${cell}</td></tr>`));
+  });
+  out.sort((a,b) => (b.eliminatedRound || 0) - (a.eliminatedRound || 0)).forEach(p => {
+    tb.appendChild(el(`<tr class="out-row"><td><strong>${esc(p.name)}</strong></td><td class="num">${(p.usedTeamIds || []).length}</td><td style="text-align:right;"><span class="tag ko">fuori G${p.eliminatedRound}</span></td></tr>`));
+  });
+  if(hidePicks) panel.querySelector('.panel-body').appendChild(el(`<p class="note-dim" style="padding:12px 18px;">Le squadre scelte restano coperte finché non hanno inviato tutti.</p>`));
+  wrap.appendChild(panel);
+
+  const hist = el(`<div class="panel"><div class="panel-head"><h2>Giornate giocate</h2></div><div class="panel-body"></div></div>`);
+  const hb = hist.querySelector('.panel-body');
+  if(!S.meta.history.length){ hb.appendChild(el(`<div class="empty">Nessuna giornata chiusa finora.</div>`)); }
+  else {
+    [...S.meta.history].reverse().forEach(h => {
+      const box = el(`
+        <div class="panel" style="border-color:var(--line);">
+          <div class="panel-head" style="background:transparent;"><h2 style="font-size:0.92rem;">Giornata ${h.round}</h2>
+            <span class="eyebrow">${h.eliminatedIds.length ? h.eliminatedIds.length + ' eliminati' : 'nessun eliminato'}</span></div>
+          <div class="panel-body" style="padding:0;"><table><tbody>${h.entries.map(e => `
+            <tr><td>${esc(player(e.playerId)?.name || '—')}</td>
+                <td><span class="chip-mini"><span class="dot" style="background:${team(e.teamId).color}"></span>${esc(team(e.teamId).name)}</span></td>
+                <td style="text-align:right;" class="${e.result === 'win' ? 'res-win' : 'res-lose'}">${e.result === 'win' ? 'V' : 'NV'}</td></tr>`).join('')}
+          </tbody></table></div>
+        </div>`);
+      hb.appendChild(box);
+    });
+  }
+  wrap.appendChild(hist);
+  return wrap;
+}
+
+function viewWinner(){
+  const names = S.meta.winners.map(id => player(id)?.name || '—');
+  return el(`
+    <div class="panel" style="border-color:var(--amber);">
+      <div class="panel-body" style="text-align:center; padding:40px 22px;">
+        <div class="eyebrow">Minigioco concluso</div>
+        <h2 style="font-size:clamp(1.8rem,6vw,2.8rem); color:var(--amber); margin:8px 0;">${names.length ? esc(names.join(' · ')) : 'Nessun vincitore'}</h2>
+        <p class="note">${names.length > 1
+          ? 'Eliminati nella stessa giornata: il montepremi si divide.'
+          : names.length === 1 ? 'Ultimo in piedi. Montepremi suo.' : 'Tutti eliminati senza superstiti.'}</p>
+      </div>
+    </div>`);
+}
+
+/* =========================================================================
+   17. SCHERMATA — file Excel (organizzatore)
+   ========================================================================= */
+function importPanel(compact){
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>${compact ? 'Ricarica il file' : 'Carica il file del minigioco'}</h2><span class="eyebrow">.xlsx</span></div>
+      <div class="panel-body">
+        <p class="note">Il file viene letto così: la colonna <strong>Partecipanti</strong> dà i nomi, le colonne delle squadre con la <strong>X</strong> le squadre già usate, le colonne <strong>Giornata N</strong> gli esiti nel formato <span class="mono">V (Inter)</span> o <span class="mono">NV (Inter)</span>. Il minigioco riparte dalla prima giornata libera.</p>
+        <label class="checkline"><input type="checkbox" id="imp-ph" checked><span>Salta i nomi segnaposto ("partecipante 12", ecc.)</span></label>
+        <label class="checkline"><input type="checkbox" id="imp-pay" checked><span>Tieni solo chi ha la x su "Quota MiniGiochi" nel foglio dei partecipanti</span></label>
+        <input type="file" id="imp-file" accept=".xlsx,.xlsm">
+        ${compact ? `<div class="banner err">Ricaricare il file sostituisce partecipanti, storico e giornata in corso. Gli account restano, ma solo se i nomi non cambiano.</div>` : ''}
+      </div>
+    </div>`);
+  panel.querySelector('#imp-file').onchange = async (e) => {
+    const f = e.target.files[0];
+    if(!f) return;
+    const opts = { skipPlaceholders: panel.querySelector('#imp-ph').checked, onlyPaying: panel.querySelector('#imp-pay').checked };
+    try{
+      const res = await importWorkbook(f, opts);
+      toast(`Caricati ${res.players} partecipanti e ${res.teams} squadre dal foglio "${res.sheetName}". Si riparte dalla giornata ${res.round}.`, 'ok');
+      S.tab = isAdmin() ? 'requests' : 'mine';
+      render();
+    }catch(err){ toast(err.message, 'err'); e.target.value = ''; }
+  };
+  return panel;
+}
+
+function viewExcel(){
+  const wrap = el(`<div class="stack"></div>`);
+  wrap.appendChild(el(`
+    <div class="panel">
+      <div class="panel-head"><h2>File collegato</h2>${S.meta.fileName ? `<span class="eyebrow mono">${esc(S.meta.fileName)}</span>` : ''}</div>
+      <div class="panel-body">
+        <p class="note">${S.meta.fileName
+          ? `Il sito lavora sulla copia del file <strong>${esc(S.meta.fileName)}</strong> (foglio "${esc(S.meta.sheetName || '')}"). Scarica la versione aggiornata quando vuoi: contiene le X delle squadre usate e gli esiti di ogni giornata chiusa, con il resto del file intatto.`
+          : 'Nessun file caricato: il download genera comunque un foglio con la stessa struttura.'}</p>
+        <div class="btn-row" id="dl-row"></div>
+      </div>
+    </div>`));
+  const dl = el(`<button class="btn btn-primary">Scarica il file aggiornato</button>`);
+  dl.onclick = downloadWorkbook;
+  wrap.querySelector('#dl-row').appendChild(dl);
+  wrap.appendChild(importPanel(true));
+
+  if(S.meta.history.length){
+    const back = el(`
+      <div class="panel"><div class="panel-body" style="display:flex; justify-content:space-between; gap:14px; align-items:center; flex-wrap:wrap;">
+        <div><h2 style="font-size:1rem;">Riapri l'ultima giornata</h2>
+          <p class="note">Annulla la chiusura della giornata ${S.meta.history[S.meta.history.length-1].round}: esiti ed eliminazioni tornano modificabili.</p></div>
+        <button class="btn btn-ghost" id="reopen">Riapri G${S.meta.history[S.meta.history.length-1].round}</button>
+      </div></div>`);
+    back.querySelector('#reopen').onclick = async () => {
+      if(!await confirmBox('Riapro l\'ultima giornata chiusa?')) return;
+      await reopenRound();
+    };
+    wrap.appendChild(back);
+  }
+  return wrap;
+}
+
+/* =========================================================================
+   18. SCHERMATA — impostazioni
+   ========================================================================= */
+function viewSettings(){
+  const wrap = el(`<div class="stack"></div>`);
+  const sb = el(`<div>${storageBanner()}</div>`);
+  if(sb.firstElementChild){ wireStorageBanner(sb); wrap.appendChild(sb); }
+
+  const acc = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Il tuo account</h2><span class="eyebrow mono">${esc(S.me.username)}</span></div>
+      <div class="panel-body">
+        <label class="field"><span>Nuovo codice di accesso</span><input type="password" id="pw1" autocomplete="new-password"></label>
+        <label class="field"><span>Ripeti</span><input type="password" id="pw2" autocomplete="new-password"></label>
+        <button class="btn btn-ghost" id="pw-go">Cambia codice</button>
+      </div>
+    </div>`);
+  acc.querySelector('#pw-go').onclick = async () => {
+    const a = acc.querySelector('#pw1').value, b = acc.querySelector('#pw2').value;
+    if(a !== b){ toast('I due codici non coincidono.', 'err'); return; }
+    try{ await changePassword(S.me.username, a); toast('Codice cambiato.', 'ok'); acc.querySelector('#pw1').value = acc.querySelector('#pw2').value = ''; }
+    catch(e){ toast(e.message, 'err'); }
+  };
+  wrap.appendChild(acc);
+
+  const info = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Dove finiscono i dati</h2></div>
+      <div class="panel-body">
+        <p class="note">Modalità archivio: <strong class="mono">${Store.mode()}</strong>${Store.mode() === 'supabase' ? ` · <span class="mono">${esc(Store.config().url)}</span>` : ''}.</p>
+        <p class="note-dim">I codici di accesso sono salvati in chiaro, perché l'organizzatore deve poterli leggere e ridarli a chi li dimentica. Servono a evitare che qualcuno mandi il pronostico al posto di un altro, niente di più: <strong>non usare qui una password che usi altrove</strong>.</p>
+        <div class="btn-row"><button class="btn btn-ghost" id="cfg-open">Cambia archivio</button></div>
+      </div>
+    </div>`);
+  info.querySelector('#cfg-open').onclick = openBackendSetup;
+  wrap.appendChild(info);
+
+  if(isAdmin()){
+    const admins = S.users.filter(u => u.role === 'admin');
+    const co = el(`
+      <div class="panel">
+        <div class="panel-head"><h2>Altri organizzatori</h2><span class="eyebrow">${admins.length} attivi</span></div>
+        <div class="panel-body">
+          <p class="note">${admins.map(u => esc(u.username)).join(', ')}. Un secondo organizzatore serve se vuoi che qualcun altro possa approvare al posto tuo.</p>
+          <div class="btn-row"><button class="btn btn-ghost" id="mk-admin">Promuovi un partecipante</button></div>
+        </div>
+      </div>`);
+    co.querySelector('#mk-admin').onclick = async () => {
+      const u = await modal({ title:'Promuovi a organizzatore', message:'Scrivi il nome utente di chi deve poter approvare i pronostici.', input:'text', placeholder:'nome utente', confirmText:'Promuovi' });
+      if(!u) return;
+      const rec = await findUser(u);
+      if(!rec){ toast('Account non trovato.', 'err'); return; }
+      rec.role = 'admin'; await Store.set(K.user(rec.username), rec); await loadUsers();
+      toast(rec.username + ' ora è organizzatore.', 'ok'); render();
+    };
+    wrap.appendChild(co);
+
+    const danger = el(`
+      <div class="panel" style="border-color:rgba(242,99,95,0.4);">
+        <div class="panel-head"><h2 style="color:var(--ko);">Azzera il minigioco</h2></div>
+        <div class="panel-body">
+          <p class="note">Cancella partecipanti, storico, pronostici e file collegato. Gli account restano: chi vuole rigiocare dovrà solo essere ricollegato al proprio nome.</p>
+          <button class="btn btn-ko" id="wipe">Azzera tutto</button>
+        </div>
+      </div>`);
+    danger.querySelector('#wipe').onclick = async () => {
+      const c = await modal({ title:'Azzera il minigioco', message:'Scrivi AZZERA per confermare: l\'operazione non si annulla.', input:'text', placeholder:'AZZERA', confirmText:'Azzera' });
+      if(c !== 'AZZERA') return;
+      for(const h of S.meta.history){
+        for(const e of h.entries) await Store.del(K.req(h.round, e.playerId));
+      }
+      for(const pid of Object.keys(S.requests)) await Store.del(K.req(S.meta.round, pid));
+      for(const tid of Object.keys(S.results)) await Store.del(K.res(S.meta.round, tid));
+      for(const p of S.meta.players) await Store.del(K.claim(p.id));
+      S.meta = emptyMeta(); await saveMeta();
+      S.me.playerId = null; await Store.set(K.user(S.me.username), S.me);
+      await refresh(false); toast('Minigioco azzerato.', 'ok');
+    };
+    wrap.appendChild(danger);
+  }
+  return wrap;
+}
+
+/* =========================================================================
+   19. RENDER PRINCIPALE
+   ========================================================================= */
+function renderWho(){
+  const box = document.getElementById('who');
+  box.innerHTML = '';
+  if(!S.me){ box.appendChild(el(`<span class="note-dim">accesso riservato ai partecipanti</span>`)); return; }
+  box.appendChild(el(`<span class="badge-user ${isAdmin() ? 'admin' : ''}">${esc(S.me.displayName || S.me.username)}${isAdmin() ? ' · organizzatore' : ''}</span>`));
+  if(S.offline) box.appendChild(el(`<span class="tag ko">archivio irraggiungibile</span>`));
+  const out = el(`<button class="btn-link">Esci</button>`);
+  out.onclick = logout;
+  box.appendChild(out);
+}
+
+function tabsFor(){
+  if(isAdmin()){
+    const pending = activePlayers().filter(p => S.requests[p.id]?.status === 'pending').length;
+    const t = [{ k:'requests', l:'Richieste', c:pending }, { k:'results', l:'Risultati' },
+               { k:'league', l:'Lega' }, { k:'players', l:'Partecipanti' },
+               { k:'excel', l:'File Excel' }, { k:'settings', l:'Impostazioni' }];
+    if(myPlayer()) t.unshift({ k:'mine', l:'La mia schedina' });
+    return t;
+  }
+  return [{ k:'mine', l:'La mia schedina' }, { k:'league', l:'Lega' }, { k:'settings', l:'Impostazioni' }];
+}
+
+function render(){
+  renderWho();
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  document.getElementById('foot').textContent =
+    'FantaList · minigioco a eliminazione' + (S.meta?.fileName ? ' · file ' + S.meta.fileName : '') + ' · archivio: ' + Store.mode();
+
+  if(!S.me){ app.appendChild(renderGate()); return; }
+
+  if(!S.meta || S.meta.players.length === 0){
+    const wrap = el(`<div class="stack"></div>`);
+    if(isAdmin()){
+      wrap.appendChild(el(`
+        <div class="panel"><div class="panel-body">
+          <span class="eyebrow">passo 2 di 2</span>
+          <h2 style="font-size:1.5rem; margin:4px 0 8px;">Apri il minigioco</h2>
+          <p class="note">Carica il file Excel della lega: da lì escono partecipanti, squadre e le giornate già giocate. In alternativa aggiungi i nomi a mano dalla sezione Partecipanti.</p>
+        </div></div>`));
+      wrap.appendChild(importPanel(false));
+      const manual = el(`<div class="panel"><div class="panel-body"><div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="mp" placeholder="Nome partecipante" style="flex:1; min-width:200px;">
+          <button class="btn btn-ghost" id="mp-go">Aggiungi a mano</button></div></div></div>`);
+      const addManual = async () => {
+        const name = manual.querySelector('#mp').value.trim();
+        if(!name) return;
+        if(!S.meta) S.meta = emptyMeta();
+        S.meta.players.push({ id:'p-' + slug(name), name, usedTeamIds:[], eliminated:false, eliminatedRound:null, rowIndex:null });
+        S.meta.phase = 'playing';
+        await saveMeta(); toast(name + ' aggiunto.', 'ok'); S.tab = 'players'; render();
+      };
+      manual.querySelector('#mp-go').onclick = addManual;
+      manual.querySelector('#mp').onkeydown = e => { if(e.key === 'Enter') addManual(); };
+      wrap.appendChild(manual);
+    } else {
+      wrap.appendChild(el(`<div class="empty">L'organizzatore non ha ancora aperto il minigioco. Torna più tardi.</div>`));
+    }
+    app.appendChild(wrap);
+    return;
+  }
+
+  const tabs = tabsFor();
+  if(!S.tab || !tabs.find(t => t.k === S.tab)) S.tab = tabs[0].k;
+  const bar = el(`<div class="tabs"></div>`);
+  tabs.forEach(t => {
+    const b = el(`<button class="tab ${S.tab === t.k ? 'on' : ''}">${t.l}${t.c ? `<span class="count">${t.c}</span>` : ''}</button>`);
+    b.onclick = () => { S.tab = t.k; render(); };
+    bar.appendChild(b);
+  });
+  app.appendChild(bar);
+  if(isAdmin() && S.meta.phase !== 'setup') app.appendChild(scoreboard());
+
+  const views = { mine: viewMine, requests: viewRequests, results: viewResults,
+                  players: viewPlayers, league: viewLeague, excel: viewExcel, settings: viewSettings };
+  app.appendChild((views[S.tab] || viewLeague)());
+}
+
+/* =========================================================================
+   20. AVVIO
+   ========================================================================= */
+let poller = null;
+async function boot(){
+  Store.init();
+  try{
+    await loadUsers();
+    await loadClaims();
+    await restoreSession();
+    await loadMeta();
+    await loadRound();
+  }catch(e){
+    S.offline = true;
+    document.getElementById('app').innerHTML =
+      `<div class="banner err">Non riesco a leggere l'archivio: ${esc(e.message)}. Controlla la configurazione Supabase (URL, chiave e tabella) e ricarica la pagina.</div>`;
+    return;
+  }
+  render();
+  poller = setInterval(async () => {
+    if(!S.me || document.hidden) return;
+    if(document.querySelector('.overlay')) return;      // non ricaricare mentre una finestra è aperta
+    const focus = document.activeElement;
+    if(focus && ['INPUT','SELECT','TEXTAREA'].includes(focus.tagName)) return;
+    await refresh(true);
+  }, 8000);
+}
+boot();
+</script>
+</body>
+</html>
