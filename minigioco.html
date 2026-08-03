@@ -238,6 +238,32 @@ input[type=file]::file-selector-button{
 .slip-pick{display:flex; align-items:center; gap:11px; font-family:'Anton',sans-serif; font-size:1.6rem; text-transform:uppercase;}
 .slip-pick .dot{width:15px; height:15px; border-radius:50%; flex:none; box-shadow:0 0 0 1px rgba(11,36,28,0.35);}
 .slip-meta{font-family:'Space Mono',monospace; font-size:0.72rem; color:rgba(11,36,28,0.62); margin-top:6px;}
+.slip-fixtures{
+  border-bottom:1px dashed rgba(11,36,28,0.25); padding-bottom:12px; margin-bottom:14px;
+  display:flex; flex-direction:column; gap:5px;
+}
+.slip-fixtures.empty-fx{
+  color:rgba(11,36,28,0.5); font-size:0.78rem; font-style:italic; border-bottom:none; padding-bottom:0;
+}
+.slip-fixtures .fx-row{display:flex; align-items:center; gap:8px; font-size:0.8rem; color:rgba(11,36,28,0.85);}
+.slip-fixtures .fx-team{display:flex; align-items:center; gap:6px; flex:1; min-width:0;}
+.slip-fixtures .fx-team.right{justify-content:flex-end; text-align:right;}
+.slip-fixtures .fx-team .dot{width:8px; height:8px; border-radius:50%; flex:none;}
+.slip-fixtures .fx-vs{font-family:'Space Mono',monospace; font-size:0.7rem; color:rgba(11,36,28,0.4); flex:none;}
+.slip-fixtures .fx-date{font-family:'Space Mono',monospace; font-size:0.66rem; color:rgba(11,36,28,0.45); flex:none; margin-left:6px;}
+
+/* ---------- CALENDARIO SERIE A (scheda dedicata, su sfondo scuro) ---------- */
+.fixtures-list{display:flex; flex-direction:column; gap:8px;}
+.fixture-row{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  background:rgba(8,31,24,0.5); border:1px solid var(--line); border-radius:var(--radius-sm);
+  padding:11px 14px; font-size:0.9rem;
+}
+.fixture-row .fx-team{display:flex; align-items:center; gap:7px; flex:1; min-width:120px;}
+.fixture-row .fx-team .dot{width:9px; height:9px; border-radius:50%; flex:none;}
+.fixture-row .fx-vs{font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--chalk-mute); text-transform:uppercase; flex:none;}
+.fixture-row .fx-date{font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--chalk-mute); flex:none;}
+.fixture-row .fx-rm{margin-left:auto;}
 .stamp{
   position:absolute; right:14px; bottom:14px; transform:rotate(-11deg);
   font-family:'Anton',sans-serif; font-size:0.9rem; letter-spacing:0.16em; text-transform:uppercase;
@@ -358,6 +384,36 @@ details.mini-hist>summary:hover{color:var(--amber);}
 details.mini-hist>summary::-webkit-details-marker{display:none;}
 details.mini-hist>summary::before{content:'\25B8 ';}
 details.mini-hist[open]>summary::before{content:'\25BE ';}
+
+/* ---------- REGOLAMENTO / GUIDA (accordion) ---------- */
+details.rules{
+  border:1px solid var(--line); border-radius:var(--radius-sm); background:rgba(245,242,234,0.02);
+  margin-bottom:10px; overflow:hidden; transition:border-color .15s var(--ease);
+}
+details.rules:hover{border-color:var(--line-strong);}
+details.rules>summary{
+  cursor:pointer; padding:14px 16px; list-style:none; display:flex; align-items:center; justify-content:space-between;
+  gap:12px; transition:background .15s var(--ease);
+}
+details.rules>summary:hover{background:rgba(245,242,234,0.04);}
+details.rules>summary::-webkit-details-marker{display:none;}
+details.rules .rules-title{font-weight:700; font-size:0.95rem; color:var(--chalk);}
+details.rules .rules-tag{font-family:'Space Mono',monospace; font-size:0.64rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--chalk-mute);}
+details.rules .rules-arrow{color:var(--chalk-mute); transition:transform .2s var(--ease); flex:none;}
+details.rules[open] .rules-arrow{transform:rotate(90deg); color:var(--amber);}
+details.rules .rules-body{padding:0 16px 16px; font-size:0.88rem; color:var(--chalk-soft); line-height:1.65;}
+details.rules .rules-body p{margin:0 0 10px;}
+details.rules .rules-body ul{padding-left:20px; margin:0 0 10px;}
+details.rules .rules-body li{margin-bottom:6px;}
+details.rules .rules-body li::marker{color:var(--amber);}
+details.rules .rules-body strong{color:var(--chalk);}
+details.rules .rules-body .step{
+  display:flex; gap:10px; align-items:flex-start; margin-bottom:10px;
+}
+details.rules .rules-body .step .n{
+  flex:none; width:22px; height:22px; border-radius:50%; background:rgba(255,182,39,0.14); color:var(--amber);
+  font-family:'Space Mono',monospace; font-size:0.72rem; font-weight:700; display:flex; align-items:center; justify-content:center;
+}
 
 /* ---------- CLASSIFICA INTERATTIVA ---------- */
 .board-table th.sortable{cursor:pointer; user-select:none; white-space:nowrap; transition:color .15s var(--ease);}
@@ -555,8 +611,20 @@ const TEAM_COLORS = {
   frosinone:'#F2C400', palermo:'#E39BC0', sampdoria:'#1B4F9C', spezia:'#1A1A1A'
 };
 const FALLBACK = ['#1B5EA6','#8E1B2E','#0B4DA2','#6B32A0','#C8102E','#1C8FDB','#E8722C','#7B2038','#1FA35A','#D91C3D'];
-const DEFAULT_TEAMS = ['Atalanta','Bologna','Cagliari','Como','Empoli','Fiorentina','Genoa','Inter','Juventus','Lazio',
-  'Lecce','Milan','Monza','Napoli','Parma','Roma','Torino','Udinese','Venezia','Verona'];
+const DEFAULT_TEAMS = ['Atalanta','Bologna','Cagliari','Como','Fiorentina','Frosinone','Genoa','Inter','Juventus','Lazio',
+  'Lecce','Milan','Monza','Napoli','Parma','Roma','Sassuolo','Torino','Udinese','Venezia'];
+
+/* Calendario di esempio: solo la 1a giornata, verificata al sorteggio del
+   5 giugno 2026. Le altre 37 vanno importate dall'Excel (foglio "Calendario")
+   o inserite a mano dalla scheda Calendario — non le ho precompilate tutte
+   per non rischiare di mostrare date sbagliate in caso di variazioni TV. */
+const DEFAULT_CALENDAR = [
+  { round:1, home:'Atalanta', away:'Sassuolo' }, { round:1, home:'Bologna', away:'Lazio' },
+  { round:1, home:'Frosinone', away:'Juventus' }, { round:1, home:'Genoa', away:'Napoli' },
+  { round:1, home:'Inter', away:'Monza' }, { round:1, home:'Parma', away:'Cagliari' },
+  { round:1, home:'Roma', away:'Fiorentina' }, { round:1, home:'Torino', away:'Milan' },
+  { round:1, home:'Udinese', away:'Como' }, { round:1, home:'Venezia', away:'Lecce' }
+];
 
 const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
   .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
@@ -682,7 +750,8 @@ function emptyCore(){
     autoApprove: false,
     fileName: null,
     originalB64: null,
-    sheetNames: {}        // gameKey -> nome del foglio da cui è stato letto
+    sheetNames: {},        // gameKey -> nome del foglio da cui è stato letto
+    calendar: DEFAULT_CALENDAR.slice()   // [{round, home, away}] — calendario Serie A
   };
 }
 function emptyGame(){
@@ -706,6 +775,15 @@ const player    = id => (S.core?.players || []).find(p => p.id === id) || null;
 const myPlayer  = () => S.me?.playerId ? player(S.me.playerId) : null;
 const team      = id => (S.core?.teams || []).find(t => t.id === id) || { id, name: id || '—', color:'#8A8A8A' };
 const deadlinePassed = () => !!(S.core?.deadline && new Date(S.core.deadline) < new Date());
+function matchesForRound(round){
+  return (S.core?.calendar || []).filter(m => m.round === round);
+}
+/* Prova a collegare il nome della squadra in calendario (testo libero,
+   può venire da un Excel esterno) alla squadra vera per colore/coerenza. */
+function teamByName(name){
+  const s = slug(name);
+  return (S.core?.teams || []).find(t => t.id === s) || { id:s, name, color:'#8A8A8A' };
+}
 const gmeta     = key => S.games[key];
 
 function gstate(key, pid){
@@ -879,14 +957,17 @@ async function decidePick(gameKey, playerId, status, note = ''){
 /* ---- ESITI DELLE SQUADRE: UNICI PER TUTTA LA LEGA ----
    Segnare "Milan ha vinto" vale nello stesso momento per chi l'ha scelto nel
    Last Man Standing e per chi l'ha scelto in WhoWin?. */
+async function writeTeamResult(teamId, result, round = S.core.round){
+  await Store.set(K.res(round, teamId), result);
+  if(round === S.core.round) S.results[teamId] = result;
+}
 async function setTeamResult(teamId, result){
   const r = S.core.round;
   if(S.results[teamId] === result){
     await Store.del(K.res(r, teamId));
     delete S.results[teamId];
   } else {
-    await Store.set(K.res(r, teamId), result);
-    S.results[teamId] = result;
+    await writeTeamResult(teamId, result);
   }
 }
 
@@ -1315,7 +1396,8 @@ async function importWorkbook(file, opts){
   }
 
   const round = Math.min(maxDone + 1, SEASON_ROUNDS);
-  S.core = { ...emptyCore(), teams, players, round,
+  const calendar = parseCalendarSheet(wb) || DEFAULT_CALENDAR.slice();
+  S.core = { ...emptyCore(), teams, players, round, calendar,
     fileName: file.name, originalB64: b64FromBuffer(buf), sheetNames };
   S.games = games;
   await saveCore();
@@ -1323,6 +1405,95 @@ async function importWorkbook(file, opts){
   await loadRound();
   return { players: players.length, teams: teams.length, round,
            sheets: GAMES.filter(g => sheetNames[g.key]).map(g => g.short) };
+}
+
+/* ---- CALENDARIO SERIE A ----
+   Foglio "Calendario": colonne Giornata, Casa, Trasferta (e opzionalmente
+   Data). Un foglio semplice, non nel formato a griglia degli altri —
+   basta trovare l'intestazione nelle prime righe. */
+function parseCalendarSheet(wb){
+  const sn = wb.SheetNames.find(n => /calendario/i.test(n));
+  if(!sn) return null;
+  const ws = wb.Sheets[sn];
+  if(!ws || !ws['!ref']) return null;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  let headerRow = null, roundCol = null, homeCol = null, awayCol = null, dateCol = null, resCol = null;
+  for(let r = range.s.r; r <= Math.min(range.s.r + 2, range.e.r); r++){
+    let rc=null, hc=null, ac=null, dc=null, sc=null;
+    for(let c = range.s.c; c <= range.e.c; c++){
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if(!cell || cell.v == null) continue;
+      const label = String(cell.v).trim().toLowerCase();
+      if(/^giornata$/.test(label)) rc = c;
+      else if(/^(casa|squadra casa)$/.test(label)) hc = c;
+      else if(/^(trasferta|squadra trasferta|ospite)$/.test(label)) ac = c;
+      else if(/^data$/.test(label)) dc = c;
+      else if(/^(risultato|esito|score)$/.test(label)) sc = c;
+    }
+    if(rc != null && hc != null && ac != null){ headerRow = r; roundCol = rc; homeCol = hc; awayCol = ac; dateCol = dc; resCol = sc; break; }
+  }
+  if(headerRow == null) return null;
+  const matches = [];
+  for(let r = headerRow + 1; r <= range.e.r; r++){
+    const rc = ws[XLSX.utils.encode_cell({ r, c: roundCol })];
+    const hc = ws[XLSX.utils.encode_cell({ r, c: homeCol })];
+    const ac = ws[XLSX.utils.encode_cell({ r, c: awayCol })];
+    if(!rc || rc.v == null || !hc || hc.v == null || !ac || ac.v == null) continue;
+    const round = parseInt(rc.v, 10);
+    if(!round) continue;
+    const dc = dateCol != null ? ws[XLSX.utils.encode_cell({ r, c: dateCol })] : null;
+    const sc = resCol != null ? ws[XLSX.utils.encode_cell({ r, c: resCol })] : null;
+    matches.push({
+      round, home: String(hc.v).trim(), away: String(ac.v).trim(),
+      date: dc && dc.v != null ? String(dc.v).trim() : '',
+      result: sc && sc.v != null ? String(sc.v).trim() : ''
+    });
+  }
+  return matches.length ? matches : null;
+}
+/* "2-1", "2 - 1", "2:1" → chi ha vinto. Pareggio: nessuna delle due squadre
+   ha vinto (coerente con "ha vinto"/"non ha vinto" usato negli esiti). */
+function parseScore(raw){
+  const m = String(raw || '').trim().match(/^(\d+)\s*[-:]\s*(\d+)$/);
+  if(!m) return null;
+  const h = parseInt(m[1],10), a = parseInt(m[2],10);
+  if(h === a) return { home:'lose', away:'lose', draw:true };
+  return h > a ? { home:'win', away:'lose', draw:false } : { home:'lose', away:'win', draw:false };
+}
+/* Importa SOLO il calendario da un file a parte (foglio "Calendario" con
+   Giornata, Casa, Trasferta, e opzionalmente Risultato). Se una partita ha
+   il risultato compilato ed è della giornata in corso, l'esito delle due
+   squadre viene scritto subito — così non serve più segnarlo a mano nella
+   scheda Esiti. Le giornate diverse da quella in corso aggiornano solo il
+   calendario mostrato: gli esiti si applicano solo quando tocca a loro. */
+async function importCalendarOnly(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array' });
+  const matches = parseCalendarSheet(wb);
+  if(!matches) throw new Error('Non trovo un foglio "Calendario" con le colonne Giornata, Casa, Trasferta.');
+  if(!S.core) S.core = emptyCore();
+  S.core.calendar = matches.map(m => ({ round:m.round, home:m.home, away:m.away, date:m.date }));
+  await saveCore();
+
+  let applied = 0;
+  for(const m of matches){
+    if(m.round !== S.core.round || !m.result) continue;
+    const outcome = parseScore(m.result);
+    if(!outcome) continue;
+    const th = teamByName(m.home), ta = teamByName(m.away);
+    await writeTeamResult(th.id, outcome.home, m.round);
+    await writeTeamResult(ta.id, outcome.away, m.round);
+    applied++;
+  }
+  return { matches: matches.length, applied };
+}
+function writeCalendarSheet(wb){
+  const sn = wb.SheetNames.find(n => /calendario/i.test(n)) || 'Calendario';
+  const aoa = [['Giornata','Casa','Trasferta','Data']];
+  (S.core.calendar || []).forEach(m => aoa.push([m.round, m.home, m.away, m.date || '']));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  if(!wb.SheetNames.includes(sn)) wb.SheetNames.push(sn);
+  wb.Sheets[sn] = ws;
 }
 
 /* ---- SCRITTURA ---- */
@@ -1411,6 +1582,7 @@ function buildWorkbook(){
   if(S.core.originalB64) wb = XLSX.read(S.core.originalB64, { type:'base64' });
   else { wb = XLSX.utils.book_new(); }
   GAMES.forEach(g => writeGameSheet(wb, g));
+  writeCalendarSheet(wb);
   return wb;
 }
 function downloadWorkbook(){
@@ -1684,9 +1856,17 @@ function myPanel(gameKey){
   const body = wrap.querySelector('.panel-body');
 
   const t = req ? team(req.teamId) : null;
+  const fixtures = matchesForRound(S.core.round);
   body.appendChild(el(`
     <div class="slip on-pitch">
       <div class="slip-head"><span class="who-slip">${esc(p.name)}</span><span class="code mono">G${String(S.core.round).padStart(2,'0')}</span></div>
+      ${fixtures.length ? `<div class="slip-fixtures">${fixtures.map(m => {
+          const h = teamByName(m.home), a = teamByName(m.away);
+          return `<div class="fx-row"><span class="fx-team"><span class="dot" style="background:${h.color}"></span>${esc(m.home)}</span>
+                  <span class="fx-vs">–</span>
+                  <span class="fx-team right"><span class="dot" style="background:${a.color}"></span>${esc(m.away)}</span>${m.date ? `<span class="fx-date">${esc(m.date)}</span>` : ''}</div>`;
+        }).join('')}</div>`
+        : `<div class="slip-fixtures empty-fx">Calendario di questa giornata non ancora caricato.</div>`}
       ${req
         ? `<div class="slip-pick"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}</div>
            <div class="slip-meta">Inviato ${fmtDate(req.sentAt)} da ${esc(req.sentBy)}</div>
@@ -2058,6 +2238,124 @@ function viewBoard(){
 /* =========================================================================
    16. SCHERMATA — partecipanti e accessi (organizzatore)
    ========================================================================= */
+/* =========================================================================
+   15bis. SCHERMATA — calendario Serie A
+   ========================================================================= */
+function fixturesListEl(round, editable){
+  const list = matchesForRound(round);
+  const box = el(`<div class="fixtures-list"></div>`);
+  if(!list.length){
+    box.appendChild(el(`<div class="empty">Nessuna partita caricata per questa giornata.</div>`));
+  } else {
+    list.forEach((m,i) => {
+      const h = teamByName(m.home), a = teamByName(m.away);
+      const rh = round === S.core.round ? S.results[h.id] : null;
+      const ra = round === S.core.round ? S.results[a.id] : null;
+      const esito = rh === 'win' ? `${esc(m.home)} ha vinto` : ra === 'win' ? `${esc(m.away)} ha vinto` : (rh || ra) ? 'nessuna delle due ha vinto' : null;
+      const row = el(`
+        <div class="fixture-row">
+          <span class="fx-team"><span class="dot" style="background:${h.color}"></span>${esc(m.home)}</span>
+          <span class="fx-vs">vs</span>
+          <span class="fx-team"><span class="dot" style="background:${a.color}"></span>${esc(m.away)}</span>
+          ${m.date ? `<span class="fx-date mono">${esc(m.date)}</span>` : ''}
+          ${esito ? `<span class="tag ok">${esc(esito)}</span>` : ''}
+          ${editable ? `<button class="btn btn-sm btn-ghost fx-rm">Rimuovi</button>` : ''}
+        </div>`);
+      if(editable){
+        row.querySelector('.fx-rm').onclick = async () => {
+          const idx = S.core.calendar.findIndex(x => x === m);
+          if(idx >= 0) S.core.calendar.splice(idx, 1);
+          await saveCore(); render();
+        };
+      }
+      box.appendChild(row);
+    });
+  }
+  return box;
+}
+function viewCalendar(){
+  const wrap = el(`<div class="stack"></div>`);
+  if(!S.core.round) S.core.round = 1;
+  let shown = S.boardRound || S.core.round;
+
+  if(isAdmin()){
+    const imp = el(`
+      <div class="panel">
+        <div class="panel-head"><h2>File del calendario</h2><span class="eyebrow">.xlsx separato</span></div>
+        <div class="panel-body">
+          <p class="note">Un file a parte da quello dei minigiochi: foglio "Calendario" con le colonne <span class="mono">Giornata, Casa, Trasferta</span> e, se vuoi, <span class="mono">Risultato</span> (es. <span class="mono">2-1</span>). Se compili il risultato di una partita della <strong>giornata in corso</strong>, l'esito delle due squadre viene segnato subito da solo — non serve più farlo a mano in Esiti.</p>
+          <input type="file" id="cal-file" accept=".xlsx,.xlsm">
+        </div>
+      </div>`);
+    imp.querySelector('#cal-file').onchange = async e => {
+      const f = e.target.files[0];
+      if(!f) return;
+      try{
+        const res = await importCalendarOnly(f);
+        toast(`Calendario aggiornato: ${res.matches} partite.` + (res.applied ? ` ${res.applied} esiti applicati alla giornata ${S.core.round}.` : ''), 'ok');
+        render();
+      }catch(err){ toast(err.message, 'err'); e.target.value = ''; }
+    };
+    wrap.appendChild(imp);
+  }
+
+  const nav = el(`
+    <div class="panel">
+      <div class="panel-body" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <button class="btn btn-sm btn-ghost" id="prev-r">← Precedente</button>
+        <div style="text-align:center;">
+          <div class="eyebrow">Giornata</div>
+          <div style="font-family:'Anton',sans-serif; font-size:1.6rem;">${String(shown).padStart(2,'0')} <span style="color:var(--chalk-mute); font-size:1rem;">/ ${SEASON_ROUNDS}</span></div>
+        </div>
+        <button class="btn btn-sm btn-ghost" id="next-r">Successiva →</button>
+      </div>
+    </div>`);
+  nav.querySelector('#prev-r').onclick = () => { S.boardRound = Math.max(1, shown - 1); render(); };
+  nav.querySelector('#next-r').onclick = () => { S.boardRound = Math.min(SEASON_ROUNDS, shown + 1); render(); };
+  wrap.appendChild(nav);
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Partite di Serie A</h2>${shown === S.core.round ? '<span class="tag ok">giornata in corso</span>' : ''}</div>
+      <div class="panel-body"></div>
+    </div>`);
+  panel.querySelector('.panel-body').appendChild(fixturesListEl(shown, isAdmin()));
+  wrap.appendChild(panel);
+
+  if(isAdmin()){
+    const add = el(`
+      <div class="panel">
+        <div class="panel-head"><h2>Aggiungi una partita alla giornata ${shown}</h2></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <label class="field"><span>Squadra in casa</span>
+              <select id="fx-home"><option value="">Scegli…</option>${S.core.teams.map(t => `<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('')}</select>
+            </label>
+            <label class="field"><span>Squadra in trasferta</span>
+              <select id="fx-away"><option value="">Scegli…</option>${S.core.teams.map(t => `<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('')}</select>
+            </label>
+          </div>
+          <label class="field"><span>Data/ora (opzionale)</span><input type="text" id="fx-date" placeholder="es. 23/08 15:00"></label>
+          <button class="btn btn-primary" id="fx-add">Aggiungi partita</button>
+          <p class="note-dim" style="margin-top:10px;">Più comodo per tutta la stagione: importa un foglio "Calendario" dal file Excel (colonne Giornata, Casa, Trasferta, Data) dalla scheda File Excel.</p>
+        </div>
+      </div>`);
+    add.querySelector('#fx-add').onclick = async () => {
+      const home = add.querySelector('#fx-home').value, away = add.querySelector('#fx-away').value;
+      const date = add.querySelector('#fx-date').value.trim();
+      if(!home || !away){ toast('Scegli entrambe le squadre.', 'err'); return; }
+      if(home === away){ toast('Una squadra non può giocare contro se stessa.', 'err'); return; }
+      if(!S.core.calendar) S.core.calendar = [];
+      S.core.calendar.push({ round: shown, home, away, date });
+      await saveCore();
+      toast('Partita aggiunta.', 'ok');
+      render();
+    };
+    wrap.appendChild(add);
+  }
+  return wrap;
+}
+
 function viewPlayers(){
   const wrap = el(`<div class="stack"></div>`);
 
@@ -2244,6 +2542,117 @@ function viewExcel(){
 }
 
 /* =========================================================================
+   17bis. SCHERMATA — regolamento e guida al sito
+   ========================================================================= */
+function ruleItem(tag, title, bodyHtml, open){
+  const d = el(`
+    <details class="rules" ${open ? 'open' : ''}>
+      <summary>
+        <span style="display:flex; align-items:center; gap:10px;">
+          ${tag ? `<span class="rules-tag">${esc(tag)}</span>` : ''}
+          <span class="rules-title">${esc(title)}</span>
+        </span>
+        <span class="rules-arrow">▸</span>
+      </summary>
+      <div class="rules-body">${bodyHtml}</div>
+    </details>`);
+  return d;
+}
+function viewHelp(){
+  const wrap = el(`<div class="stack"></div>`);
+
+  wrap.appendChild(el(`
+    <div class="panel"><div class="panel-body">
+      <span class="eyebrow">come funziona la lega</span>
+      <h2 style="font-size:1.6rem; margin:4px 0 10px;">Regolamento e guida al sito</h2>
+      <p class="note">Tre minigiochi paralleli, tutti sulle stesse 20 squadre di Serie A: due <strong>Last Man Standing</strong> a eliminazione (andata e ritorno) e un <strong>WhoWin?</strong> che copre l'intera stagione. Puoi partecipare a tutti e tre insieme: le squadre disponibili sono indipendenti da un minigioco all'altro.</p>
+    </div></div>`));
+
+  /* ---- REGOLAMENTO ---- */
+  const reg = el(`<div class="panel"><div class="panel-head"><h2>Regolamento</h2></div><div class="panel-body"></div></div>`);
+  const rb = reg.querySelector('.panel-body');
+
+  rb.appendChild(ruleItem('meccanica comune', 'Come funzionano gli esiti', `
+    <p>Ogni giornata, l'organizzatore segna l'esito di ogni squadra pronosticata <strong>una volta sola</strong>: "ha vinto" oppure "non ha vinto" (che vale anche in caso di pareggio). Quell'esito conta per <strong>tutti</strong> i minigiochi in cui quella squadra è stata scelta — se il Milan vince, la vittoria va sia a chi l'ha giocato in Last Man Standing sia a chi l'ha giocato in WhoWin?.</p>
+    <p>La giornata si chiude tutta insieme, per tutti i minigiochi ancora in corso: quando l'organizzatore ha gli esiti di tutte le squadre pronosticate, un solo pulsante fa avanzare la lega alla giornata successiva.</p>`, true));
+
+  rb.appendChild(ruleItem('giornate 1–19', 'Last Man Standing — Andata', `
+    <p>Ogni giornata scegli <strong>una squadra</strong> tra le 20 di Serie A.</p>
+    <ul>
+      <li>Ogni squadra si può usare <strong>una sola volta</strong> in tutto il girone di andata.</li>
+      <li>Se la squadra che hai scelto non vince, sei <strong>eliminato</strong>.</li>
+      <li>Se non mandi il pronostico entro il termine, l'organizzatore può eliminarti per assenza — ma resti ripescabile finché non chiude la giornata.</li>
+      <li>Si va avanti così fino a quando resta un solo partecipante, oppure fino alla giornata 19: chi resta in piedi vince. Se l'ultima eliminazione lascia più partecipanti fuori nella stessa giornata, vincono a pari merito.</li>
+    </ul>`));
+
+  rb.appendChild(ruleItem('giornate 20–38', 'Last Man Standing — Ritorno', `
+    <p>Stesse identiche regole dell'andata, ma è un torneo a sé stante: si riparte da zero, e le squadre già usate nel girone di andata tornano tutte disponibili.</p>
+    <p>Si apre da solo quando la lega arriva alla giornata 20, qualsiasi cosa sia successa nell'andata — puoi essere già stato eliminato lì e giocare comunque il ritorno.</p>`));
+
+  rb.appendChild(ruleItem('giornate 1–38', 'WhoWin?', `
+    <p>Ogni giornata scegli la squadra che secondo te vince — per l'intera stagione, dalla prima all'ultima giornata.</p>
+    <ul>
+      <li>Ogni squadra si può scegliere fino a <strong>3 volte</strong> in tutta la stagione, non una sola.</li>
+      <li>Non c'è eliminazione: continui a giocare comunque vada, fino alla giornata 38.</li>
+      <li>La classifica si basa sul <strong>numero totale di vittorie</strong> indovinate durante l'anno — la trovi nella scheda Classifiche.</li>
+    </ul>`));
+
+  rb.appendChild(ruleItem('per tutti', 'Termine di invio e approvazione', `
+    <p>L'organizzatore può fissare un <strong>termine unico</strong> per l'invio, valido per tutti i minigiochi in corso: dopo la scadenza non si può più mandare né cambiare un pronostico.</p>
+    <p>Ogni pronostico va confermato dall'organizzatore prima di contare (a meno che non abbia attivato l'approvazione automatica). Finché è "in attesa" puoi ancora cambiare scelta; se viene respinto, ne scegli un'altra.</p>`));
+
+  wrap.appendChild(reg);
+
+  /* ---- GUIDA PER I PARTECIPANTI ---- */
+  const guide = el(`<div class="panel"><div class="panel-head"><h2>Guida — per chi partecipa</h2></div><div class="panel-body"></div></div>`);
+  const gb = guide.querySelector('.panel-body');
+
+  gb.appendChild(ruleItem(null, 'Accedere al sito', `
+    <div class="step"><span class="n">1</span><p>Il tuo nome utente è il tuo nome come registrato dall'organizzatore (es. "Peppe Verbaro" → <span class="mono">peppe-verbaro</span>) — puoi scriverlo anche con maiuscole e spazi, il sito lo capisce comunque.</p></div>
+    <div class="step"><span class="n">2</span><p>Il codice di accesso te lo dà l'organizzatore. Se lo dimentichi, chiediglielo: lui lo vede sempre.</p></div>
+    <div class="step"><span class="n">3</span><p>Il pulsante in alto a destra è cliccabile: da sloggato porta al modulo di accesso, da loggato ti fa uscire.</p></div>`));
+
+  gb.appendChild(ruleItem(null, 'Inviare un pronostico', `
+    <p>Nella scheda <strong>"I miei pronostici"</strong> trovi una schedina per ciascun minigioco a cui partecipi, affiancate. Ognuna ha le sue squadre disponibili e il proprio stato — puoi scegliere la stessa squadra in minigiochi diversi.</p>
+    <div class="step"><span class="n">1</span><p>Guarda le partite di Serie A di quella giornata, mostrate in cima alla schedina.</p></div>
+    <div class="step"><span class="n">2</span><p>Tocca la squadra su cui punti: quelle sbarrate o disabilitate le hai già usate (o esaurite, in WhoWin? dopo 3 scelte).</p></div>
+    <div class="step"><span class="n">3</span><p>Premi "Invia il pronostico". Finché non è approvato puoi ancora cambiarlo.</p></div>`));
+
+  gb.appendChild(ruleItem(null, 'Calendario, classifiche e storico', `
+    <p>La scheda <strong>Calendario</strong> mostra le partite di Serie A di ogni giornata, con l'esito se già segnato.</p>
+    <p>La scheda <strong>Classifiche</strong> ha un selettore per passare da un minigioco all'altro: nei Last Man Standing vedi chi è ancora in gioco, in WhoWin? l'ordine per vittorie totali. Tocca l'intestazione di una colonna per riordinare, tocca una riga per vedere il tuo percorso giornata per giornata.</p>
+    <p>Da <strong>Impostazioni</strong> puoi cambiare il tuo codice di accesso in qualsiasi momento.</p>`));
+
+  wrap.appendChild(guide);
+
+  /* ---- GUIDA PER L'ORGANIZZATORE ---- */
+  if(isAdmin()){
+    const admin = el(`<div class="panel"><div class="panel-head"><h2>Guida — per l'organizzatore</h2></div><div class="panel-body"></div></div>`);
+    const ab = admin.querySelector('.panel-body');
+
+    ab.appendChild(ruleItem(null, 'Avviare i minigiochi', `
+      <p>Dalla scheda <strong>File Excel</strong> carichi il file della lega: da lì escono partecipanti, squadre e le giornate già giocate di tutti e tre i minigiochi in un colpo solo. I fogli riconosciuti sono quelli il cui nome contiene "LastManStanding", "Ritorno" o "Stagionale" — quelli mancanti vengono creati automaticamente al primo download.</p>
+      <p>Il <strong>Calendario</strong> delle partite di Serie A è un file a parte, con le colonne Giornata, Casa, Trasferta e, se vuoi, Risultato: se compili il risultato di una partita della giornata in corso, l'esito delle due squadre si segna da solo, senza doverlo rifare a mano.</p>`));
+
+    ab.appendChild(ruleItem(null, 'Gestire le richieste', `
+      <p>Nella scheda <strong>Richieste</strong> vedi un pannello per ciascun minigioco: chi ha inviato, chi manca, chi è in attesa di approvazione. Puoi approvare tutte insieme, respingere con una nota, o scegliere tu la squadra al posto di qualcuno che scrive in chat.</p>
+      <p>Puoi fissare un <strong>termine di invio</strong> valido per tutti i minigiochi in corso, e attivare l'approvazione automatica se non vuoi controllare ogni pronostico uno per uno. Dopo la scadenza, per i Last Man Standing compare un pulsante per eliminare chi non ha risposto — resta ripescabile finché non chiudi la giornata.</p>`));
+
+    ab.appendChild(ruleItem(null, 'Segnare gli esiti e chiudere la giornata', `
+      <p>Nella scheda <strong>Esiti</strong> trovi l'elenco delle squadre pronosticate quella giornata, con sotto chi le ha scelte e in quale minigioco. Segni "ha vinto" una volta sola per squadra — vale per tutti i minigiochi coinvolti.</p>
+      <p>Quando tutte le squadre hanno un esito, il pulsante "Chiudi la giornata" diventa attivo: chiudendola, la lega passa alla giornata successiva per tutti i minigiochi in corso insieme. Se sbagli, "Riapri l'ultima giornata" annulla la chiusura.</p>`));
+
+    ab.appendChild(ruleItem(null, 'Partecipanti, accessi e azzeramenti', `
+      <p>Dalla scheda <strong>Partecipanti</strong> aggiungi o rimuovi qualcuno (entra subito in tutti e tre i minigiochi), crei gli accessi in blocco o singolarmente, e vedi/copi i codici.</p>
+      <p>Da <strong>Impostazioni</strong> puoi azzerare un solo minigioco, solo i risultati (tenendo partecipanti e accessi), oppure tutto — sempre con una parola di conferma da scrivere, per evitare azzeramenti per sbaglio.</p>`));
+
+    wrap.appendChild(admin);
+  }
+
+  return wrap;
+}
+
+/* =========================================================================
    18. SCHERMATA — impostazioni
    ========================================================================= */
 function viewSettings(){
@@ -2347,12 +2756,13 @@ function renderWho(){
 function tabsFor(){
   if(isAdmin()){
     const t = [{ k:'requests', l:'Richieste', c: totalPending() }, { k:'results', l:'Esiti' },
-               { k:'board', l:'Classifiche' }, { k:'players', l:'Partecipanti' },
-               { k:'excel', l:'File Excel' }, { k:'settings', l:'Impostazioni' }];
+               { k:'board', l:'Classifiche' }, { k:'calendar', l:'Calendario' }, { k:'players', l:'Partecipanti' },
+               { k:'excel', l:'File Excel' }, { k:'help', l:'Regolamento' }, { k:'settings', l:'Impostazioni' }];
     if(myPlayer()) t.unshift({ k:'mine', l:'I miei pronostici' });
     return t;
   }
-  return [{ k:'mine', l:'I miei pronostici' }, { k:'board', l:'Classifiche' }, { k:'settings', l:'Impostazioni' }];
+  return [{ k:'mine', l:'I miei pronostici' }, { k:'board', l:'Classifiche' }, { k:'calendar', l:'Calendario' },
+           { k:'help', l:'Regolamento' }, { k:'settings', l:'Impostazioni' }];
 }
 function render(){
   renderWho();
@@ -2374,7 +2784,7 @@ function render(){
   app.appendChild(bar);
 
   const empty = !S.core || !S.core.players.length;
-  if(empty && S.tab !== 'settings'){
+  if(empty && S.tab !== 'settings' && S.tab !== 'calendar' && S.tab !== 'help'){
     const w = el(`<div class="stack"></div>`);
     if(isAdmin()){
       w.appendChild(el(`
@@ -2394,7 +2804,7 @@ function render(){
   if(isAdmin() && !empty && S.tab !== 'settings') app.appendChild(scoreboard());
 
   const views = { mine: viewMine, requests: viewRequests, results: viewResults,
-                  board: viewBoard, players: viewPlayers, excel: viewExcel, settings: viewSettings };
+                  board: viewBoard, calendar: viewCalendar, players: viewPlayers, excel: viewExcel, help: viewHelp, settings: viewSettings };
   app.appendChild((views[S.tab] || viewMine)());
 }
 
