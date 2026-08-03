@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FantaList — Minigioco</title>
+<title>FantaList — Minigiochi</title>
 <meta name="theme-color" content="#0A2A20">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -22,24 +22,35 @@
    Space Mono per numeri, orari e codici.
    ========================================================================= */
 :root{
-  --pitch:#0F3D2E;
-  --pitch-dark:#0A2A20;
-  --ink:#0B241C;
-  --chalk:#F5F2EA;
-  --chalk-soft:rgba(245,242,234,0.72);
-  --chalk-mute:rgba(245,242,234,0.45);
-  --gazzetta:#E8548C;
-  --gazzetta-dark:#C93E70;
-  --amber:#FFB627;
-  --line:rgba(245,242,234,0.14);
-  --ok:#57C98A;
-  --ko:#F2635F;
-  --radius:4px;
+  --pitch:oklch(21% 0.025 260);
+  --pitch-dark:oklch(14% 0.02 260);
+  --pitch-light:oklch(29% 0.03 260);
+  --ink:oklch(18% 0.02 258);
+  --chalk:oklch(97% 0.008 90);
+  --chalk-soft:rgba(245,243,240,0.72);
+  --chalk-mute:rgba(245,243,240,0.45);
+  --gazzetta:oklch(66% 0.19 35);
+  --gazzetta-dark:oklch(56% 0.19 35);
+  --amber:oklch(78% 0.13 195);
+  --amber-soft:oklch(85% 0.1 195);
+  --line:rgba(245,243,240,0.12);
+  --line-strong:rgba(245,242,234,0.22);
+  --ok:oklch(72% 0.15 150);
+  --ko:oklch(62% 0.19 25);
+  --radius:14px;
+  --radius-sm:8px;
+  --radius-pill:999px;
+  --shadow-card:0 1px 2px rgba(0,0,0,0.2), 0 12px 32px -12px rgba(0,0,0,0.55);
+  --shadow-pop:0 24px 64px -16px rgba(0,0,0,0.6);
+  --ease:cubic-bezier(.22,1,.36,1);
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{-webkit-text-size-adjust:100%;}
 body{
-  background:var(--pitch);
+  background:
+    radial-gradient(1200px 700px at 15% -10%, rgba(94,200,210,0.08), transparent 60%),
+    linear-gradient(180deg, var(--pitch-dark) 0%, var(--pitch) 45%, var(--pitch) 100%);
+  background-attachment:fixed;
   color:var(--chalk);
   font-family:'Work Sans',system-ui,sans-serif;
   line-height:1.5;
@@ -47,22 +58,21 @@ body{
 }
 body::before{
   content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
-  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,0.025) 0 2px,transparent 2px 64px);
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,0.02) 0 2px,transparent 2px 64px);
 }
+.panel,.slip{transition:box-shadow .3s var(--ease), border-color .2s var(--ease);}
 h1,h2,h3,.display{font-family:'Anton',sans-serif; text-transform:uppercase; letter-spacing:0.02em; font-weight:400;}
 .mono{font-family:'Space Mono',monospace;}
-a{color:var(--amber);}
-:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+a{color:var(--amber); text-decoration-thickness:1px;}
+a:hover{color:var(--amber-soft);}
+:focus-visible{outline:2px solid var(--amber); outline-offset:2px; border-radius:4px;}
 @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important;}}
 
-/* ---------- SMARTPHONE ----------
-   iOS Safari ingrandisce la pagina quando si tocca un campo con testo
-   sotto i 16px: qui li portiamo a 16px per evitarlo. In più diamo aria
-   sotto la barra di navigazione e bersagli grandi abbastanza per il dito. */
+/* ---------- SMARTPHONE ---------- */
 @media (max-width:820px){
   input[type=text],input[type=password],input[type=datetime-local],input[type=number],select,textarea{font-size:16px;}
-  .btn{padding:13px 18px;}
-  .btn-sm{padding:9px 13px; font-size:0.8rem;}
+  .btn{padding:13px 20px;}
+  .btn-sm{padding:9px 14px; font-size:0.8rem;}
   .team-btn{padding:12px 11px;}
   .btn-link{padding:6px 2px;}
   body{padding-bottom:env(safe-area-inset-bottom);}
@@ -75,54 +85,78 @@ a{color:var(--amber);}
 /* ---------- TOPBAR ---------- */
 .topbar{
   position:sticky; top:0; z-index:60;
-  background:var(--pitch-dark); border-bottom:2px solid var(--gazzetta);
+  background:rgba(8,31,24,0.82); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  box-shadow:0 1px 0 rgba(255,182,39,0.25), 0 12px 30px -18px rgba(0,0,0,0.8);
 }
 .topbar-inner{
   max-width:1080px; margin:0 auto; padding:14px 20px;
   display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
 }
 .brand{display:flex; align-items:center; gap:10px; font-family:'Anton',sans-serif; font-size:1.25rem; letter-spacing:0.03em;}
-.brand .dot{width:10px; height:10px; border-radius:50%; background:var(--gazzetta); box-shadow:0 0 0 3px rgba(232,84,140,0.25);}
+.brand .dot{width:10px; height:10px; border-radius:50%; background:var(--gazzetta); box-shadow:0 0 0 4px rgba(232,84,140,0.18), 0 0 14px rgba(232,84,140,0.55);}
 .brand small{display:block; font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:0.16em; color:var(--chalk-mute); text-transform:uppercase; margin-top:2px;}
 .who{display:flex; align-items:center; gap:10px; font-size:0.85rem;}
+.who-btn{
+  display:flex; align-items:center; gap:9px; background:transparent; border:none; padding:4px 4px 4px 8px;
+  border-radius:var(--radius-pill); cursor:pointer; transition:background .15s var(--ease);
+}
+.who-btn:hover{background:rgba(245,242,234,0.06);}
+.who-btn .who-name{color:var(--chalk); font-weight:600; font-size:0.88rem;}
 .who .badge-user{
   font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;
   background:rgba(255,182,39,0.12); color:var(--amber); border:1px solid rgba(255,182,39,0.35);
-  padding:4px 9px; border-radius:2px;
+  padding:5px 10px; border-radius:var(--radius-pill);
 }
 .who .badge-user.admin{background:rgba(232,84,140,0.14); color:var(--gazzetta); border-color:rgba(232,84,140,0.4);}
+.who-btn .logout-hint{
+  font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--chalk-mute); opacity:0; transition:opacity .15s var(--ease);
+}
+.who-btn:hover .logout-hint{opacity:1;}
+.who-login-btn{
+  font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;
+  background:var(--gazzetta); color:var(--chalk); border:none; padding:8px 16px; border-radius:var(--radius-pill);
+  font-weight:700; box-shadow:0 6px 16px -6px rgba(232,84,140,0.6); transition:filter .15s var(--ease), transform .15s var(--ease);
+}
+.who-login-btn:hover{filter:brightness(1.08); transform:translateY(-1px);}
 
 /* ---------- LAYOUT ---------- */
-.shell{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:26px 20px 90px;}
+.shell{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:28px 20px 96px;}
 .stack{display:flex; flex-direction:column; gap:18px;}
 .grid-2{display:grid; grid-template-columns:1.15fr 0.85fr; gap:18px; align-items:start;}
 @media (max-width:860px){.grid-2{grid-template-columns:1fr;}}
 
-.panel{background:var(--ink); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+.panel{
+  background:linear-gradient(180deg, rgba(245,242,234,0.035), rgba(245,242,234,0.015)), var(--ink);
+  border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  box-shadow:var(--shadow-card);
+  transition:border-color .2s var(--ease);
+}
 .panel-head{
   display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-  padding:13px 18px; border-bottom:1px solid var(--line); background:rgba(245,242,234,0.03);
+  padding:15px 20px; border-bottom:1px solid var(--line); background:rgba(245,242,234,0.03);
 }
 .panel-head h2{font-size:1.02rem;}
 .panel-head .eyebrow{font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:0.14em; color:var(--amber); text-transform:uppercase;}
-.panel-body{padding:18px;}
+.panel-body{padding:20px;}
 .panel-body > * + *{margin-top:14px;}
 .note{font-size:0.87rem; color:var(--chalk-soft);}
 .note-dim{font-size:0.8rem; color:var(--chalk-mute);}
 .empty{
-  border:1px dashed var(--line); border-radius:var(--radius); padding:22px 18px; text-align:center;
+  border:1px dashed var(--line-strong); border-radius:var(--radius); padding:26px 18px; text-align:center;
   color:var(--chalk-mute); font-size:0.88rem;
 }
 
 /* ---------- TABS ---------- */
-.tabs{display:flex; gap:4px; flex-wrap:wrap; margin-bottom:18px; border-bottom:1px solid var(--line); padding-bottom:10px;}
+.tabs{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:18px; border-bottom:1px solid var(--line); padding-bottom:10px;}
 .tab{
   font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase;
-  padding:9px 14px; border-radius:2px; border:1px solid transparent; background:transparent;
-  color:var(--chalk-mute); cursor:pointer;
+  padding:10px 16px; border-radius:var(--radius-pill); border:1px solid transparent; background:transparent;
+  color:var(--chalk-mute); cursor:pointer; transition:all .18s var(--ease);
 }
-.tab:hover{color:var(--chalk); background:rgba(245,242,234,0.06);}
-.tab.on{color:var(--ink); background:var(--amber); font-weight:700;}
+.tab:hover{color:var(--chalk); background:rgba(245,242,234,0.07);}
+.tab.on{color:var(--ink); background:linear-gradient(180deg, var(--amber-soft), var(--amber)); font-weight:700; box-shadow:0 6px 18px -6px rgba(255,182,39,0.55);}
 .tab .count{
   display:inline-block; margin-left:7px; background:var(--gazzetta); color:var(--chalk);
   border-radius:10px; padding:0 6px; font-size:0.66rem;
@@ -130,61 +164,64 @@ a{color:var(--amber);}
 .tab.on .count{background:var(--ink); color:var(--amber);}
 
 /* ---------- BUTTONS ---------- */
-button{font-family:'Work Sans',sans-serif; cursor:pointer; border:none; border-radius:2px; transition:filter .15s, background .15s, color .15s;}
-button:disabled{opacity:0.42; cursor:not-allowed;}
-.btn{padding:11px 18px; font-size:0.92rem; font-weight:600;}
-.btn-primary{background:var(--amber); color:var(--ink);}
-.btn-primary:hover:not(:disabled){filter:brightness(1.08);}
-.btn-pink{background:var(--gazzetta); color:var(--chalk);}
-.btn-pink:hover:not(:disabled){background:var(--gazzetta-dark);}
-.btn-ghost{background:transparent; border:1px solid var(--line); color:var(--chalk-soft); padding:10px 16px; font-size:0.88rem;}
-.btn-ghost:hover:not(:disabled){border-color:var(--amber); color:var(--amber);}
-.btn-sm{padding:7px 12px; font-size:0.78rem; font-weight:600;}
-.btn-ok{background:rgba(87,201,138,0.14); border:1px solid rgba(87,201,138,0.45); color:var(--ok);}
-.btn-ok:hover:not(:disabled){background:var(--ok); color:var(--ink);}
-.btn-ko{background:rgba(242,99,95,0.12); border:1px solid rgba(242,99,95,0.42); color:var(--ko);}
-.btn-ko:hover:not(:disabled){background:var(--ko); color:var(--ink);}
+button{font-family:'Work Sans',sans-serif; cursor:pointer; border:none; border-radius:var(--radius-sm); transition:filter .15s var(--ease), background .15s var(--ease), color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease);}
+button:disabled{opacity:0.4; cursor:not-allowed; transform:none !important;}
+.btn{padding:12px 20px; font-size:0.92rem; font-weight:600;}
+.btn-primary{background:linear-gradient(180deg, var(--amber-soft), var(--amber)); color:var(--ink); box-shadow:0 8px 20px -8px rgba(255,182,39,0.55);}
+.btn-primary:hover:not(:disabled){filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 10px 24px -8px rgba(255,182,39,0.65);}
+.btn-primary:active:not(:disabled){transform:translateY(0);}
+.btn-pink{background:linear-gradient(180deg, var(--gazzetta), var(--gazzetta-dark)); color:var(--chalk); box-shadow:0 8px 20px -8px rgba(232,84,140,0.5);}
+.btn-pink:hover:not(:disabled){filter:brightness(1.06); transform:translateY(-1px);}
+.btn-ghost{background:rgba(245,242,234,0.03); border:1px solid var(--line-strong); color:var(--chalk-soft); padding:11px 18px; font-size:0.88rem;}
+.btn-ghost:hover:not(:disabled){border-color:var(--amber); color:var(--amber); background:rgba(255,182,39,0.06);}
+.btn-sm{padding:8px 13px; font-size:0.78rem; font-weight:600; border-radius:var(--radius-sm);}
+.btn-ok{background:rgba(87,201,138,0.12); border:1px solid rgba(87,201,138,0.4); color:var(--ok);}
+.btn-ok:hover:not(:disabled){background:var(--ok); color:var(--ink); transform:translateY(-1px);}
+.btn-ko{background:rgba(242,99,95,0.1); border:1px solid rgba(242,99,95,0.38); color:var(--ko);}
+.btn-ko:hover:not(:disabled){background:var(--ko); color:var(--ink); transform:translateY(-1px);}
 .btn-ok.on{background:var(--ok); color:var(--ink);}
 .btn-ko.on{background:var(--ko); color:var(--ink);}
-.btn-row{display:flex; gap:8px; flex-wrap:wrap;}
+.btn-row{display:flex; gap:9px; flex-wrap:wrap;}
 .btn-link{background:none; border:none; color:var(--amber); font-size:0.8rem; text-decoration:underline; padding:2px;}
 
 /* ---------- FORMS ---------- */
 label.field{display:block;}
 label.field span{
   display:block; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:0.12em;
-  text-transform:uppercase; color:var(--chalk-mute); margin-bottom:6px;
+  text-transform:uppercase; color:var(--chalk-mute); margin-bottom:7px;
 }
 input[type=text],input[type=password],input[type=datetime-local],input[type=number],select,textarea{
-  width:100%; background:var(--pitch-dark); border:1px solid var(--line); color:var(--chalk);
-  padding:11px 13px; border-radius:2px; font-size:0.95rem; font-family:'Work Sans',sans-serif;
+  width:100%; background:rgba(8,31,24,0.6); border:1px solid var(--line-strong); color:var(--chalk);
+  padding:12px 14px; border-radius:var(--radius-sm); font-size:0.95rem; font-family:'Work Sans',sans-serif;
+  transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
 }
-input::placeholder,textarea::placeholder{color:rgba(245,242,234,0.3);}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--amber); outline-offset:1px;}
+input::placeholder,textarea::placeholder{color:rgba(245,242,234,0.28);}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--amber); box-shadow:0 0 0 3px rgba(255,182,39,0.2);}
 input[type=file]{color:var(--chalk-soft); font-size:0.85rem; max-width:100%;}
 input[type=file]::file-selector-button{
-  background:var(--amber); color:var(--ink); border:none; padding:9px 14px; border-radius:2px;
+  background:var(--amber); color:var(--ink); border:none; padding:9px 14px; border-radius:var(--radius-sm);
   font-weight:700; font-family:'Work Sans',sans-serif; cursor:pointer; margin-right:10px;
 }
 .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 @media (max-width:620px){.form-grid{grid-template-columns:1fr;}}
 .checkline{display:flex; align-items:flex-start; gap:9px; font-size:0.88rem; color:var(--chalk-soft);}
-.checkline input{margin-top:3px; accent-color:var(--amber);}
+.checkline input{margin-top:3px; accent-color:var(--amber); width:auto;}
 
 /* ---------- GATE (login / registrazione / setup) ---------- */
-.gate{max-width:460px; margin:40px auto 0;}
-.gate .lead{text-align:center; margin-bottom:22px;}
+.gate{max-width:460px; margin:48px auto 0;}
+.gate .lead{text-align:center; margin-bottom:26px;}
 .gate .lead h1{font-size:clamp(2rem,7vw,2.9rem); line-height:0.98;}
 .gate .lead h1 em{font-style:normal; color:var(--gazzetta);}
 .gate .lead p{color:var(--chalk-soft); margin-top:10px; font-size:0.94rem;}
-.switcher{display:flex; gap:0; border:1px solid var(--line); border-radius:2px; overflow:hidden; margin-bottom:18px;}
-.switcher button{flex:1; padding:11px; background:transparent; color:var(--chalk-mute); font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase;}
-.switcher button.on{background:var(--gazzetta); color:var(--chalk); font-weight:700;}
+.switcher{display:flex; gap:3px; border:1px solid var(--line); border-radius:var(--radius-pill); overflow:hidden; margin-bottom:18px; padding:3px; background:rgba(0,0,0,0.15);}
+.switcher button{flex:1; padding:11px; background:transparent; color:var(--chalk-mute); font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; border-radius:var(--radius-pill);}
+.switcher button.on{background:var(--gazzetta); color:var(--chalk); font-weight:700; box-shadow:0 6px 16px -6px rgba(232,84,140,0.6);}
 
 /* ---------- SCHEDINA (elemento firma) ---------- */
 .slip{
   position:relative; background:var(--chalk); color:var(--ink);
-  border-radius:2px; padding:22px 20px 20px; margin-top:8px; overflow:hidden;
+  border-radius:var(--radius-sm); padding:24px 22px 22px; margin-top:8px; overflow:hidden;
+  box-shadow:0 20px 44px -18px rgba(0,0,0,0.65);
 }
 .slip::before{
   content:""; position:absolute; top:-1px; left:0; right:0; height:9px;
@@ -204,7 +241,7 @@ input[type=file]::file-selector-button{
 .stamp{
   position:absolute; right:14px; bottom:14px; transform:rotate(-11deg);
   font-family:'Anton',sans-serif; font-size:0.9rem; letter-spacing:0.16em; text-transform:uppercase;
-  border:3px double currentColor; border-radius:3px; padding:5px 12px; opacity:0.85;
+  border:3px double currentColor; border-radius:5px; padding:5px 12px; opacity:0.85;
 }
 .stamp.ok{color:#1E7F4E;}
 .stamp.pending{color:#B07600;}
@@ -213,28 +250,29 @@ input[type=file]::file-selector-button{
 .stamp.lose{color:#B3312D;}
 
 /* ---------- SELETTORE SQUADRE ---------- */
-.team-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:8px;}
+.team-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:9px;}
 .team-btn{
-  display:flex; align-items:center; gap:8px; text-align:left;
-  background:var(--pitch-dark); border:1px solid var(--line); color:var(--chalk);
-  padding:10px 11px; font-size:0.86rem; font-weight:500; border-radius:2px;
+  display:flex; align-items:center; gap:9px; text-align:left;
+  background:rgba(8,31,24,0.55); border:1px solid var(--line); color:var(--chalk);
+  padding:11px 12px; font-size:0.86rem; font-weight:500; border-radius:var(--radius-sm);
+  transition:all .15s var(--ease);
 }
-.team-btn .dot{width:11px; height:11px; border-radius:50%; flex:none;}
-.team-btn:hover:not(:disabled){border-color:var(--amber);}
-.team-btn.on{background:var(--amber); color:var(--ink); border-color:var(--amber); font-weight:700;}
-.team-btn.used{opacity:0.32; text-decoration:line-through; cursor:not-allowed;}
+.team-btn .dot{width:11px; height:11px; border-radius:50%; flex:none; box-shadow:0 0 0 3px rgba(255,255,255,0.05);}
+.team-btn:hover:not(:disabled){border-color:var(--amber); transform:translateY(-1px); background:rgba(255,182,39,0.06);}
+.team-btn.on{background:linear-gradient(180deg, var(--amber-soft), var(--amber)); color:var(--ink); border-color:var(--amber); font-weight:700; box-shadow:0 8px 20px -8px rgba(255,182,39,0.55);}
+.team-btn.used{opacity:0.3; text-decoration:line-through; cursor:not-allowed;}
 
 /* ---------- RIGHE RICHIESTA (tabellone) ---------- */
-.board{display:flex; flex-direction:column; gap:8px;}
+.board{display:flex; flex-direction:column; gap:9px;}
 .req{
   display:grid; grid-template-columns:1.1fr 1fr auto; gap:12px; align-items:center;
-  background:var(--pitch-dark); border:1px solid var(--line); border-left:3px solid var(--line);
-  border-radius:2px; padding:12px 14px;
+  background:rgba(8,31,24,0.5); border:1px solid var(--line); border-left:3px solid var(--line);
+  border-radius:var(--radius-sm); padding:13px 15px; transition:border-color .15s var(--ease);
 }
 .req.pending{border-left-color:var(--amber);}
 .req.approved{border-left-color:var(--ok);}
 .req.rejected{border-left-color:var(--ko);}
-.req.missing{border-left-color:rgba(245,242,234,0.2); opacity:0.75;}
+.req.missing{border-left-color:rgba(245,242,234,0.18); opacity:0.7;}
 .req .p-name{font-weight:600; font-size:0.95rem;}
 .req .p-sub{font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--chalk-mute); letter-spacing:0.06em;}
 .req .p-team{display:flex; align-items:center; gap:9px; font-size:0.95rem;}
@@ -246,7 +284,7 @@ input[type=file]::file-selector-button{
 }
 .tag{
   font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase;
-  padding:3px 7px; border-radius:2px; border:1px solid currentColor; white-space:nowrap;
+  padding:3px 8px; border-radius:var(--radius-pill); border:1px solid currentColor; white-space:nowrap;
 }
 .tag.ok{color:var(--ok);} .tag.pending{color:var(--amber);} .tag.ko{color:var(--ko);} .tag.mute{color:var(--chalk-mute);}
 .warn-inline{color:var(--ko); font-size:0.76rem; font-family:'Space Mono',monospace;}
@@ -258,37 +296,41 @@ table{width:100%; border-collapse:collapse; font-size:0.88rem;}
 .code-cell.hidden-code{letter-spacing:0.16em; color:var(--chalk-mute); cursor:pointer; user-select:none;}
 th{
   text-align:left; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:0.1em;
-  text-transform:uppercase; color:var(--chalk-mute); padding:9px 10px; border-bottom:1px solid var(--line);
+  text-transform:uppercase; color:var(--chalk-mute); padding:10px 12px; border-bottom:1px solid var(--line);
 }
-td{padding:10px; border-bottom:1px solid var(--line);}
+td{padding:11px 12px; border-bottom:1px solid var(--line);}
+tr{transition:background .12s var(--ease);}
+tr:hover td{background:rgba(245,242,234,0.02);}
 tr:last-child td{border-bottom:none;}
 td.num{font-family:'Space Mono',monospace; color:var(--chalk-mute);}
 .out-row{opacity:0.5;}
 .chip-mini{
   display:inline-flex; align-items:center; gap:5px; font-family:'Space Mono',monospace; font-size:0.66rem;
-  background:rgba(245,242,234,0.06); padding:3px 7px; border-radius:2px; margin:2px 3px 2px 0;
+  background:rgba(245,242,234,0.06); padding:4px 8px; border-radius:var(--radius-pill); margin:2px 3px 2px 0;
 }
 .chip-mini .dot{width:8px; height:8px; border-radius:50%;}
 .res-win{color:var(--ok); font-weight:700;}
 .res-lose{color:var(--ko); font-weight:700;}
 
 /* ---------- SCOREBOARD ---------- */
-.scoreboard{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; background:var(--line);}
-.sb-cell{background:var(--ink); padding:15px 14px;}
+.scoreboard{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; background:var(--line); border-radius:var(--radius); overflow:hidden;}
+.sb-cell{background:var(--ink); padding:17px 16px; transition:background .15s var(--ease);}
 .sb-cell .k{font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--chalk-mute);}
-.sb-cell .v{font-family:'Anton',sans-serif; font-size:1.9rem; line-height:1.1; color:var(--amber); margin-top:3px;}
+.sb-cell .v{font-family:'Anton',sans-serif; font-size:1.9rem; line-height:1.1; color:var(--amber); margin-top:4px;}
 .sb-cell .v.small{font-size:1.1rem; color:var(--chalk);}
+.sb-cell.alert{background:rgba(232,84,140,0.08);}
 .sb-cell.alert .v{color:var(--gazzetta);}
 
 /* ---------- BANNER / TOAST / MODALE ---------- */
-.banner{border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:2px; padding:12px 15px; font-size:0.87rem; color:var(--chalk-soft); background:rgba(255,182,39,0.06);}
+.banner{border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:var(--radius-sm); padding:13px 16px; font-size:0.87rem; color:var(--chalk-soft); background:rgba(255,182,39,0.06);}
 .banner.err{border-left-color:var(--ko); background:rgba(242,99,95,0.08); color:#FFD3D1;}
 .banner.ok{border-left-color:var(--ok); background:rgba(87,201,138,0.08); color:#CFF3E0;}
 .toast-wrap{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:200; display:flex; flex-direction:column; gap:8px; width:min(420px,calc(100% - 32px));}
-.toast{background:var(--ink); border:1px solid var(--line); border-left:3px solid var(--amber); padding:12px 15px; font-size:0.87rem; box-shadow:0 12px 34px rgba(0,0,0,0.45); border-radius:2px;}
+.toast{background:rgba(11,36,28,0.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid var(--line); border-left:3px solid var(--amber); padding:13px 16px; font-size:0.87rem; box-shadow:var(--shadow-pop); border-radius:var(--radius-sm); animation:toast-in .25s var(--ease);}
+@keyframes toast-in{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
 .toast.err{border-left-color:var(--ko);} .toast.ok{border-left-color:var(--ok);}
-.overlay{position:fixed; inset:0; background:rgba(5,20,14,0.76); display:flex; align-items:center; justify-content:center; padding:20px; z-index:300;}
-.modal{background:var(--ink); border:1px solid var(--line); border-top:3px solid var(--gazzetta); border-radius:2px; padding:22px; width:min(420px,100%); box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.overlay{position:fixed; inset:0; background:rgba(5,20,14,0.7); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px; z-index:300;}
+.modal{background:var(--ink); border:1px solid var(--line); border-top:3px solid var(--gazzetta); border-radius:var(--radius); padding:24px; width:min(420px,100%); box-shadow:var(--shadow-pop);}
 .modal h3{font-size:1.1rem; margin-bottom:8px;}
 .modal p{font-size:0.88rem; color:var(--chalk-soft); margin-bottom:14px;}
 .modal .btn-row{justify-content:flex-end; margin-top:16px;}
@@ -296,6 +338,52 @@ td.num{font-family:'Space Mono',monospace; color:var(--chalk-mute);}
 .spinner{display:inline-block; width:14px; height:14px; border:2px solid rgba(245,242,234,0.25); border-top-color:var(--amber); border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 footer.site{max-width:1080px; margin:0 auto; padding:0 20px 40px; color:var(--chalk-mute); font-size:0.75rem; font-family:'Space Mono',monospace; letter-spacing:0.06em;}
+
+
+/* ---------- TRE MINIGIOCHI ---------- */
+.games-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; align-items:start;}
+.panel.out{border-color:rgba(242,99,95,0.35);}
+.uses{
+  font-family:'Space Mono',monospace; font-size:0.66rem; padding:2px 7px; border-radius:var(--radius-pill);
+  background:rgba(245,242,234,0.1); margin-left:6px; letter-spacing:0.04em;
+}
+.uses.full{background:rgba(242,99,95,0.22); color:var(--ko);}
+.sub-head{
+  font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--chalk-mute);
+  padding:16px 2px 6px; border-top:1px solid var(--line); margin-top:8px;
+}
+details.mini-hist{margin-top:16px; border-top:1px solid var(--line); padding-top:12px;}
+details.mini-hist>summary{cursor:pointer; font-size:0.8rem; color:var(--chalk-mute); list-style:none; transition:color .15s var(--ease);}
+details.mini-hist>summary:hover{color:var(--amber);}
+details.mini-hist>summary::-webkit-details-marker{display:none;}
+details.mini-hist>summary::before{content:'\25B8 ';}
+details.mini-hist[open]>summary::before{content:'\25BE ';}
+
+/* ---------- CLASSIFICA INTERATTIVA ---------- */
+.board-table th.sortable{cursor:pointer; user-select:none; white-space:nowrap; transition:color .15s var(--ease);}
+.board-table th.sortable:hover{color:var(--amber);}
+.board-table th.sortable.on{color:var(--amber);}
+.board-table th.sortable.on::after{content:' \25BC'; font-size:0.6rem;}
+.board-table th.sortable.on.asc::after{content:' \25B2'; font-size:0.6rem;}
+.rank-row{cursor:pointer; transition:background .15s var(--ease);}
+.rank-row:hover td{background:rgba(245,242,234,0.04);}
+.rank-row.me td{background:rgba(255,182,39,0.09);}
+.rank-row.out td{opacity:0.55;}
+.rank-row.open td{background:rgba(245,242,234,0.06);}
+.rank-row td.wins{color:var(--amber); font-weight:700; font-size:1.05rem;}
+.rank-detail>td{padding:0 16px 16px; background:rgba(0,0,0,0.18);}
+.bar{height:5px; border-radius:var(--radius-pill); background:rgba(245,242,234,0.09); margin-top:7px; overflow:hidden; max-width:200px;}
+.bar>span{display:block; height:100%; background:linear-gradient(90deg,var(--amber),var(--gazzetta)); border-radius:var(--radius-pill);}
+
+/* ---------- AZZERAMENTI ---------- */
+.reset-list{margin-top:8px;}
+.reset-row{
+  display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:14px 0; border-top:1px solid var(--line);
+}
+.reset-row:first-child{border-top:none;}
+.reset-row.danger{border-top:2px solid rgba(242,99,95,0.4); margin-top:8px; padding-top:16px;}
+@media (max-width:820px){ .games-grid{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -331,6 +419,7 @@ const CONFIG = {
   supabaseAnonKey: "sb_publishable_89xr7FlglRmI6xWdsbmEwQ_Yrkc1lDF",           // la chiave "anon public" del progetto
   tableName:       "fantalist_kv"
 };
+
 
 /* =========================================================================
    2. ARCHIVIO — un semplice magazzino chiave/valore con tre modalità
@@ -439,16 +528,6 @@ const Store = (() => {
 })();
 
 /* Chiavi usate nell'archivio (niente spazi, slash o virgolette) */
-const K = {
-  meta:  'meta',
-  user:  u => 'user-' + u,
-  claim: pid => 'claim-' + pid,
-  req:   (r, pid) => 'req-r' + r + '-' + pid,
-  reqPrefix: r => 'req-r' + r + '-',
-  res:   (r, tid) => 'res-r' + r + '-' + tid,
-  resPrefix: r => 'res-r' + r + '-'
-};
-
 /* =========================================================================
    3. PASSWORD — PBKDF2 (SHA-256, 150.000 giri) con sale casuale per utente
    ========================================================================= */
@@ -553,85 +632,186 @@ function modal({ title, message, input = null, placeholder = '', prefill = '', c
 const confirmBox = message => modal({ title:'Confermi?', message, confirmText:'Sì, procedi' });
 const alertBox   = message => modal({ title:'Attenzione', message, confirmText:'Ho capito', cancelText:'Chiudi' });
 
+
 /* =========================================================================
-   5. STATO
+   5. I TRE MINIGIOCHI
+   -------------------------------------------------------------------------
+   Due "Last Man Standing" (andata: giornate 1-19, ritorno: giornate 20-38) e
+   un "WhoWin?" che copre tutte le 38 giornate. Le giornate sono numerate in
+   modo assoluto (1..38) in tutti e tre: è questo che permette di assegnare
+   una sola volta l'esito di ogni squadra e farlo valere per tutti i minigiochi
+   in corso in quella giornata.
    ========================================================================= */
-const S = {
-  meta: null,          // partita condivisa
-  me: null,            // utente collegato su questo dispositivo
-  requests: {},        // playerId -> richiesta della giornata in corso
-  results: {},         // teamId   -> 'win' | 'lose'
-  users: [],           // elenco account (solo per l'organizzatore)
-  claims: {},          // playerId -> username
-  tab: null,
-  gateTab: 'login',
-  busy: false,
-  offline: false
+const SEASON_ROUNDS = 38;
+
+const GAMES = [
+  { key:'lms_a',  name:'Last Man Standing — Andata',  short:'LMS Andata',  kind:'lms',
+    first:1,  last:19, maxUses:1, sheet:'Minigioco_LastManStanding', table:'MG_A',
+    match:/lastmanstanding|last man standing|\blms\b|minigioco.*andata/i, exclude:/ritorno|stagional|whowin/i },
+  /* Il nome del foglio deve stare in 31 caratteri: è il limite di Excel. */
+  { key:'lms_r',  name:'Last Man Standing — Ritorno', short:'LMS Ritorno', kind:'lms',
+    first:20, last:38, maxUses:1, sheet:'Minigioco_LMS_Ritorno', table:'MG_R',
+    match:/ritorno/i, exclude:/stagional|whowin/i },
+  { key:'whowin', name:'WhoWin?',                     short:'WhoWin?',     kind:'season',
+    first:1,  last:38, maxUses:3, sheet:'Minigioco_Stagionale',              table:'MG_S',
+    match:/stagional|whowin|mg[_ ]?s\b/i, exclude:null }
+];
+const G = key => GAMES.find(g => g.key === key);
+
+const K = {
+  core:  'core',
+  user:  u => 'user-' + u,
+  claim: pid => 'claim-' + pid,
+  gmeta: g => 'gmeta-' + g,
+  req:       (g, r, pid) => `req-${g}-r${r}-${pid}`,
+  reqPrefix: (g, r)      => `req-${g}-r${r}-`,
+  res:       (r, tid)    => `res-g${r}-${tid}`,
+  resPrefix: r           => `res-g${r}-`
 };
 
-function emptyMeta(){
+/* =========================================================================
+   6. STATO
+   ========================================================================= */
+function emptyCore(){
   return {
     createdAt: new Date().toISOString(),
     teams: DEFAULT_TEAMS.map((n,i) => ({ id: slug(n), name: n, color: teamColor(n,i) })),
-    players: [],        // {id, name, usedTeamIds[], eliminated, eliminatedRound, rowIndex}
-    round: 1,
-    phase: 'setup',     // setup | playing | finished
-    deadline: null,
+    players: [],          // [{id, name}] — gli stessi per tutti e tre i minigiochi
+    round: 1,             // giornata corrente della lega (1..38)
+    deadline: null,       // termine unico d'invio per la giornata corrente
     autoApprove: false,
-    history: [],        // [{round, entries:[{playerId,teamId,result}], eliminatedIds:[]}]
-    winners: [],
     fileName: null,
-    sheetName: null,
-    originalB64: null
+    originalB64: null,
+    sheetNames: {}        // gameKey -> nome del foglio da cui è stato letto
   };
 }
-
-const team = id => (S.meta?.teams || []).find(t => t.id === id) || { id, name: id || '—', color:'#8A8A8A' };
-const player = id => (S.meta?.players || []).find(p => p.id === id) || null;
-const activePlayers = () => (S.meta?.players || []).filter(p => !p.eliminated);
-const isAdmin = () => S.me?.role === 'admin';
-const myPlayer = () => S.me?.playerId ? player(S.me.playerId) : null;
-const deadlinePassed = () => !!(S.meta?.deadline && new Date(S.meta.deadline) < new Date());
-
-function availableTeams(p){
-  const used = new Set(p.usedTeamIds || []);
-  return (S.meta.teams || []).map(t => ({ ...t, used: used.has(t.id) }));
+function emptyGame(){
+  return { phase:'playing', history:[], st:{} };
 }
-function approvedPicks(){
+
+const S = {
+  core: null,
+  games: {},      // gameKey -> { phase, history, st }
+  reqs: {},       // gameKey -> { playerId: richiesta della giornata corrente }
+  results: {},    // teamId -> 'win' | 'lose'   (CONDIVISI: valgono per tutti i minigiochi)
+  users: [], claims: {}, me: null,
+  tab: null, gameTab: 'lms_a', boardGame: 'whowin',
+  boardSort: 'wins', boardDir: 'desc', boardOpen: {},
+  gateTab: 'login', offline: false
+};
+
+/* ---- helper derivati ---- */
+const isAdmin   = () => S.me?.role === 'admin';
+const player    = id => (S.core?.players || []).find(p => p.id === id) || null;
+const myPlayer  = () => S.me?.playerId ? player(S.me.playerId) : null;
+const team      = id => (S.core?.teams || []).find(t => t.id === id) || { id, name: id || '—', color:'#8A8A8A' };
+const deadlinePassed = () => !!(S.core?.deadline && new Date(S.core.deadline) < new Date());
+const gmeta     = key => S.games[key];
+
+function gstate(key, pid){
+  const m = gmeta(key);
+  if(!m) return { used:[], eliminated:false, eliminatedRound:null, eliminatedReason:null };
+  if(!m.st[pid]) m.st[pid] = { used:[], eliminated:false, eliminatedRound:null, eliminatedReason:null };
+  return m.st[pid];
+}
+/* Un minigioco è "in corso" se la giornata della lega rientra nel suo
+   intervallo e non si è già concluso (nel Last Man Standing può finire prima,
+   quando resta un solo partecipante in piedi). */
+function gameOpen(key){
+  const g = G(key), m = gmeta(key);
+  if(!m || m.phase === 'finished') return false;
+  return S.core.round >= g.first && S.core.round <= g.last;
+}
+function gameStarted(key){
+  const g = G(key);
+  return !!gmeta(key) && S.core.round >= g.first;
+}
+const openGames = () => GAMES.filter(g => gameOpen(g.key));
+function aliveIn(key){
+  return (S.core?.players || []).filter(p => !gstate(key, p.id).eliminated);
+}
+function usesOf(key, pid, tid){
+  return gstate(key, pid).used.filter(t => t === tid).length;
+}
+function availableIn(key, p){
+  const max = G(key).maxUses;
+  return (S.core.teams || []).map(t => {
+    const count = usesOf(key, p.id, t.id);
+    return { ...t, count, max, full: count >= max };
+  });
+}
+function winsIn(key, pid){
+  return (gmeta(key)?.history || []).reduce((s,h) => {
+    const e = h.entries.find(x => x.playerId === pid);
+    return s + (e && e.result === 'win' ? 1 : 0);
+  }, 0);
+}
+function playedIn(key, pid){
+  return (gmeta(key)?.history || []).filter(h => h.entries.some(e => e.playerId === pid && e.teamId)).length;
+}
+function approvedIn(key){
   const out = {};
-  for(const [pid, r] of Object.entries(S.requests)) if(r.status === 'approved') out[pid] = r.teamId;
+  for(const [pid, r] of Object.entries(S.reqs[key] || {})) if(r.status === 'approved') out[pid] = r.teamId;
   return out;
 }
-function allApproved(){
-  const a = activePlayers();
-  const ap = approvedPicks();
-  return a.length > 0 && a.every(p => ap[p.id]);
+/* Tutte le squadre pronosticate (e approvate) in questa giornata, in qualunque
+   minigioco: è su queste che l'organizzatore segna l'esito, una volta sola. */
+function pickedTeamsThisRound(){
+  const map = new Map();   // teamId -> [{gameKey, playerId}]
+  openGames().forEach(g => {
+    const ap = approvedIn(g.key);
+    Object.entries(ap).forEach(([pid, tid]) => {
+      if(!map.has(tid)) map.set(tid, []);
+      map.get(tid).push({ gameKey: g.key, playerId: pid });
+    });
+  });
+  return map;
 }
-function allResulted(){
-  const ap = approvedPicks();
-  const ids = [...new Set(Object.values(ap))];
+function allResultsIn(){
+  const ids = [...pickedTeamsThisRound().keys()];
   return ids.length > 0 && ids.every(t => S.results[t]);
 }
+function missingIn(key){
+  return aliveIn(key).filter(p => !S.reqs[key]?.[p.id] || S.reqs[key][p.id].status === 'rejected');
+}
+function pendingIn(key){
+  return aliveIn(key).filter(p => S.reqs[key]?.[p.id]?.status === 'pending');
+}
+const totalPending = () => openGames().reduce((n,g) => n + pendingIn(g.key).length, 0);
 
 /* =========================================================================
-   6. CARICAMENTO E SALVATAGGIO
+   7. CARICAMENTO E SALVATAGGIO
    ========================================================================= */
-async function saveMeta(){
-  S.meta.updatedAt = new Date().toISOString();
-  await Store.set(K.meta, S.meta);
+async function saveCore(){
+  S.core.updatedAt = new Date().toISOString();
+  await Store.set(K.core, S.core);
 }
-async function loadMeta(){
-  const m = await Store.get(K.meta);
-  S.meta = m ? { ...emptyMeta(), ...m } : null;
+async function saveGame(key){
+  await Store.set(K.gmeta(key), S.games[key]);
+}
+async function loadCore(){
+  const c = await Store.get(K.core);
+  S.core = c ? { ...emptyCore(), ...c } : null;
+}
+async function loadGames(){
+  S.games = {};
+  for(const g of GAMES){
+    const m = await Store.get(K.gmeta(g.key));
+    if(m) S.games[g.key] = { ...emptyGame(), ...m };
+  }
 }
 async function loadRound(){
-  S.requests = {}; S.results = {};
-  if(!S.meta || S.meta.phase !== 'playing') return;
-  const r = S.meta.round;
-  const reqs = await Store.list(K.reqPrefix(r));
-  reqs.forEach(({ key, value }) => { S.requests[key.slice(K.reqPrefix(r).length)] = value; });
-  const res = await Store.list(K.resPrefix(r));
-  res.forEach(({ key, value }) => { S.results[key.slice(K.resPrefix(r).length)] = value; });
+  S.reqs = {}; S.results = {};
+  if(!S.core) return;
+  const r = S.core.round;
+  for(const g of GAMES){
+    S.reqs[g.key] = {};
+    if(!S.games[g.key]) continue;
+    const pfx = K.reqPrefix(g.key, r);
+    (await Store.list(pfx)).forEach(({ key, value }) => { S.reqs[g.key][key.slice(pfx.length)] = value; });
+  }
+  const rpfx = K.resPrefix(r);
+  (await Store.list(rpfx)).forEach(({ key, value }) => { S.results[key.slice(rpfx.length)] = value; });
 }
 async function loadClaims(){
   S.claims = {};
@@ -640,10 +820,10 @@ async function loadClaims(){
 async function loadUsers(){
   S.users = (await Store.list('user-')).map(x => x.value);
 }
-
 async function refresh(silent = true){
   try{
-    await loadMeta();
+    await loadCore();
+    await loadGames();
     await loadRound();
     S.offline = false;
     if(isAdmin()) await loadUsers();
@@ -652,6 +832,243 @@ async function refresh(silent = true){
     if(!silent) toast('Archivio non raggiungibile: ' + e.message, 'err');
   }
   render();
+}
+
+/* =========================================================================
+   8. RICHIESTE DI PRONOSTICO
+   ========================================================================= */
+async function submitPick(gameKey, playerId, teamId, byAdmin = false){
+  const g = G(gameKey);
+  const p = player(playerId);
+  if(!p) throw new Error('Partecipante non trovato.');
+  if(!gameOpen(gameKey)) throw new Error(g.name + ' non è in corso in questa giornata.');
+  if(gstate(gameKey, playerId).eliminated) throw new Error(p.name + ' è già fuori da ' + g.name + '.');
+  const used = usesOf(gameKey, playerId, teamId);
+  if(used >= g.maxUses){
+    throw new Error(g.maxUses === 1
+      ? 'Questa squadra è già stata usata da ' + p.name + ' in ' + g.short + '.'
+      : 'Questa squadra è già stata scelta ' + g.maxUses + ' volte da ' + p.name + ' in ' + g.short + '.');
+  }
+  if(!byAdmin && deadlinePassed()) throw new Error('Il termine per questa giornata è scaduto: scrivi all\'organizzatore.');
+
+  const prev = S.reqs[gameKey]?.[playerId];
+  const auto = byAdmin || S.core.autoApprove;
+  const rec = {
+    teamId,
+    status: auto ? 'approved' : 'pending',
+    note: '',
+    sentAt: new Date().toISOString(),
+    sentBy: S.me ? S.me.username : 'sistema',
+    decidedAt: auto ? new Date().toISOString() : null,
+    decidedBy: auto ? (S.me ? S.me.username : 'sistema') : null
+  };
+  await Store.set(K.req(gameKey, S.core.round, playerId), rec);
+  if(!S.reqs[gameKey]) S.reqs[gameKey] = {};
+  S.reqs[gameKey][playerId] = rec;
+}
+async function decidePick(gameKey, playerId, status, note = ''){
+  const rec = S.reqs[gameKey]?.[playerId];
+  if(!rec) return;
+  rec.status = status; rec.note = note;
+  rec.decidedAt = new Date().toISOString();
+  rec.decidedBy = S.me ? S.me.username : 'organizzatore';
+  await Store.set(K.req(gameKey, S.core.round, playerId), rec);
+  S.reqs[gameKey][playerId] = rec;
+}
+
+/* ---- ESITI DELLE SQUADRE: UNICI PER TUTTA LA LEGA ----
+   Segnare "Milan ha vinto" vale nello stesso momento per chi l'ha scelto nel
+   Last Man Standing e per chi l'ha scelto in WhoWin?. */
+async function setTeamResult(teamId, result){
+  const r = S.core.round;
+  if(S.results[teamId] === result){
+    await Store.del(K.res(r, teamId));
+    delete S.results[teamId];
+  } else {
+    await Store.set(K.res(r, teamId), result);
+    S.results[teamId] = result;
+  }
+}
+
+/* ---- ELIMINAZIONE PER ASSENZA (solo Last Man Standing) ---- */
+async function eliminateAbsent(gameKey){
+  const missing = missingIn(gameKey);
+  if(!missing.length) return;
+  const ok = await confirmBox(
+    `Elimino da ${G(gameKey).name} ${missing.length === 1 ? 'il partecipante' : 'i ' + missing.length + ' partecipanti'} ` +
+    `che non ${missing.length === 1 ? 'ha' : 'hanno'} inviato il pronostico: ${missing.map(p => p.name).join(', ')}. ` +
+    `Restano ripescabili finché non chiudi la giornata.`);
+  if(!ok) return;
+  missing.forEach(p => {
+    const st = gstate(gameKey, p.id);
+    st.eliminated = true; st.eliminatedRound = S.core.round; st.eliminatedReason = 'assente';
+  });
+  await saveGame(gameKey);
+  toast('Eliminati per assenza: ' + missing.length + '.', 'ok');
+  render();
+}
+async function readmit(gameKey, pid){
+  const st = gstate(gameKey, pid);
+  st.eliminated = false; st.eliminatedRound = null; st.eliminatedReason = null;
+  await saveGame(gameKey);
+  toast(player(pid).name + ' ripescato.', 'ok');
+  render();
+}
+
+/* ---- CHIUSURA DELLA GIORNATA (una sola, per tutti i minigiochi) ---- */
+function closeSummary(){
+  const rows = [];
+  openGames().forEach(g => {
+    const ap = approvedIn(g.key);
+    const alive = aliveIn(g.key);
+    const withPick = alive.filter(p => ap[p.id]).length;
+    const noPick = alive.filter(p => !ap[p.id]);
+    rows.push({ g, withPick, noPick, alive: alive.length });
+  });
+  return rows;
+}
+async function closeGiornata(){
+  if(!openGames().length || !allResultsIn()) return;
+  const summary = closeSummary();
+  const absLines = summary.filter(r => r.noPick.length).map(r =>
+    `${r.g.short}: ${r.noPick.map(p => p.name).join(', ')} senza pronostico` +
+    (r.g.kind === 'lms' ? ' → eliminati' : ' → giornata persa'));
+  const ok = await confirmBox(
+    `Chiudo la giornata ${S.core.round} per ${summary.length === 1 ? 'il minigioco in corso' : 'tutti i minigiochi in corso'}. ` +
+    `Gli esiti diventano definitivi.` + (absLines.length ? '\n\n' + absLines.join('\n') : ''));
+  if(!ok) return;
+
+  for(const g of openGames()){
+    const m = gmeta(g.key);
+    const ap = approvedIn(g.key);
+    const entries = [];
+    aliveIn(g.key).forEach(p => {
+      const st = gstate(g.key, p.id);
+      const teamId = ap[p.id];
+      if(teamId){
+        const result = S.results[teamId];
+        entries.push({ playerId: p.id, teamId, result });
+        st.used = [ ...(st.used || []), teamId ];
+        if(result === 'lose' && g.kind === 'lms'){
+          st.eliminated = true; st.eliminatedRound = S.core.round; st.eliminatedReason = null;
+        }
+      } else {
+        /* nessun pronostico: nel Last Man Standing è un'eliminazione, in
+           WhoWin? semplicemente una giornata senza vittoria. */
+        entries.push({ playerId: p.id, teamId: null, result: 'absent' });
+        if(g.kind === 'lms'){
+          st.eliminated = true; st.eliminatedRound = S.core.round;
+          st.eliminatedReason = st.eliminatedReason || 'assente';
+        }
+      }
+    });
+    m.history.push({ round: S.core.round, entries, closedAt: new Date().toISOString() });
+
+    if(g.kind === 'lms'){
+      const still = aliveIn(g.key);
+      if(still.length <= 1 || S.core.round >= g.last){
+        m.phase = 'finished';
+        m.winners = still.map(p => p.id);
+        if(!m.winners.length){
+          /* tutti eliminati nella stessa giornata: vincono a pari merito */
+          m.winners = entries.filter(e => e.result === 'lose' || e.result === 'absent').map(e => e.playerId);
+        }
+      }
+    } else if(S.core.round >= g.last){
+      m.phase = 'finished';
+    }
+    await saveGame(g.key);
+  }
+
+  if(S.core.round < SEASON_ROUNDS) S.core.round += 1;
+  S.core.deadline = null;
+  await saveCore();
+  await loadRound();
+  toast('Giornata chiusa. Si passa alla ' + S.core.round + '.', 'ok');
+  render();
+}
+async function reopenGiornata(){
+  const last = Math.max(...GAMES.map(g => {
+    const h = gmeta(g.key)?.history || [];
+    return h.length ? h[h.length-1].round : 0;
+  }), 0);
+  if(!last) return;
+  if(!await confirmBox('Riapro la giornata ' + last + ': esiti ed eliminazioni tornano modificabili in tutti i minigiochi.')) return;
+
+  for(const g of GAMES){
+    const m = gmeta(g.key);
+    if(!m || !m.history.length) continue;
+    const h = m.history[m.history.length - 1];
+    if(h.round !== last) continue;
+    h.entries.forEach(e => {
+      const st = gstate(g.key, e.playerId);
+      if(e.teamId){
+        const i = (st.used || []).lastIndexOf(e.teamId);
+        if(i >= 0) st.used.splice(i, 1);
+      }
+      if(st.eliminatedRound === last){ st.eliminated = false; st.eliminatedRound = null; st.eliminatedReason = null; }
+    });
+    m.history.pop();
+    if(m.phase === 'finished'){ m.phase = 'playing'; m.winners = []; }
+    await saveGame(g.key);
+  }
+  S.core.round = last;
+  await saveCore();
+  await loadRound();
+  toast('Giornata ' + last + ' riaperta.', 'ok');
+  render();
+}
+
+/* ---- AZZERAMENTI ---- */
+async function wipeGame(key){
+  const g = G(key);
+  const c = await modal({ title:'Azzera ' + g.name, message:'Scrivi AZZERA per confermare: si cancellano storico, pronostici ed eliminazioni di questo minigioco. Gli altri restano intatti.', input:'text', placeholder:'AZZERA', confirmText:'Azzera' });
+  if(c !== 'AZZERA') return;
+  for(let r = g.first; r <= g.last; r++){
+    for(const { key: k } of await Store.list(K.reqPrefix(key, r))) await Store.del(k);
+  }
+  S.games[key] = emptyGame();
+  await saveGame(key);
+  await refresh(false);
+  toast(g.name + ' azzerato.', 'ok');
+}
+async function wipeAll(){
+  const c = await modal({ title:'Azzera tutti i minigiochi', message:'Scrivi AZZERA TUTTO per confermare: si cancellano partecipanti, storico, pronostici, esiti e file collegato di tutti e tre i minigiochi. Gli account restano.', input:'text', placeholder:'AZZERA TUTTO', confirmText:'Azzera tutto' });
+  if(c !== 'AZZERA TUTTO') return;
+  for(const g of GAMES){
+    for(let r = g.first; r <= g.last; r++){
+      for(const { key: k } of await Store.list(K.reqPrefix(g.key, r))) await Store.del(k);
+    }
+    S.games[g.key] = emptyGame();
+    await saveGame(g.key);
+  }
+  for(let r = 1; r <= SEASON_ROUNDS; r++){
+    for(const { key: k } of await Store.list(K.resPrefix(r))) await Store.del(k);
+  }
+  for(const p of (S.core?.players || [])) await Store.del(K.claim(p.id));
+  S.core = emptyCore();
+  await saveCore();
+  if(S.me){ S.me.playerId = null; await Store.set(K.user(S.me.username), S.me); }
+  await refresh(false);
+  toast('Tutti i minigiochi azzerati.', 'ok');
+}
+async function wipeResultsOnly(){
+  const c = await modal({ title:'Azzera solo i risultati', message:'Scrivi AZZERA per confermare: si cancellano storico, esiti e pronostici di tutti e tre i minigiochi, ma restano i partecipanti, gli account e il file collegato. Si riparte dalla giornata 1.', input:'text', placeholder:'AZZERA', confirmText:'Azzera i risultati' });
+  if(c !== 'AZZERA') return;
+  for(const g of GAMES){
+    for(let r = g.first; r <= g.last; r++){
+      for(const { key: k } of await Store.list(K.reqPrefix(g.key, r))) await Store.del(k);
+    }
+    S.games[g.key] = emptyGame();
+    await saveGame(g.key);
+  }
+  for(let r = 1; r <= SEASON_ROUNDS; r++){
+    for(const { key: k } of await Store.list(K.resPrefix(r))) await Store.del(k);
+  }
+  S.core.round = 1; S.core.deadline = null;
+  await saveCore();
+  await refresh(false);
+  toast('Risultati azzerati: si riparte dalla giornata 1.', 'ok');
 }
 
 /* =========================================================================
@@ -721,287 +1138,222 @@ async function changePassword(username, newPassword){
   return rec;
 }
 
-/* =========================================================================
-   8. RICHIESTE DI PRONOSTICO
-   ========================================================================= */
-async function submitRequest(playerId, teamId, byAdmin = false){
-  const p = player(playerId);
-  if(!p) throw new Error('Partecipante non trovato.');
-  if((p.usedTeamIds || []).includes(teamId)) throw new Error('Questa squadra è già stata usata da ' + p.name + '.');
-  if(!byAdmin && deadlinePassed()) throw new Error('Il termine per questa giornata è scaduto: scrivi all\'organizzatore.');
-  const prev = S.requests[playerId];
-  const rec = {
-    teamId,
-    status: (byAdmin || S.meta.autoApprove) ? 'approved' : 'pending',
-    note: '',
-    sentAt: new Date().toISOString(),
-    sentBy: S.me ? S.me.username : 'sistema',
-    decidedAt: (byAdmin || S.meta.autoApprove) ? new Date().toISOString() : null,
-    decidedBy: (byAdmin || S.meta.autoApprove) ? (S.me ? S.me.username : 'sistema') : null,
-    history: [ ...((prev && prev.history) || []), ...(prev ? [{ teamId: prev.teamId, status: prev.status, at: prev.sentAt }] : []) ]
-  };
-  await Store.set(K.req(S.meta.round, playerId), rec);
-  S.requests[playerId] = rec;
-}
-async function decideRequest(playerId, status, note = ''){
-  const rec = S.requests[playerId];
-  if(!rec) return;
-  rec.status = status; rec.note = note;
-  rec.decidedAt = new Date().toISOString();
-  rec.decidedBy = S.me ? S.me.username : 'organizzatore';
-  await Store.set(K.req(S.meta.round, playerId), rec);
-  S.requests[playerId] = rec;
-}
-async function setResult(teamId, result){
-  if(S.results[teamId] === result){
-    await Store.del(K.res(S.meta.round, teamId));
-    delete S.results[teamId];
-  } else {
-    await Store.set(K.res(S.meta.round, teamId), result);
-    S.results[teamId] = result;
-  }
-}
-
-async function closeRound(){
-  if(!allApproved() || !allResulted()) return;
-  const ap = approvedPicks();
-  const entries = [], eliminatedIds = [];
-  activePlayers().forEach(p => {
-    const teamId = ap[p.id];
-    const result = S.results[teamId];
-    entries.push({ playerId: p.id, teamId, result });
-    p.usedTeamIds = [ ...(p.usedTeamIds || []), teamId ];
-    if(result === 'lose'){ p.eliminated = true; p.eliminatedRound = S.meta.round; eliminatedIds.push(p.id); }
-  });
-  S.meta.history.push({ round: S.meta.round, entries, eliminatedIds, closedAt: new Date().toISOString() });
-
-  const still = activePlayers();
-  if(still.length <= 1){
-    S.meta.phase = 'finished';
-    S.meta.winners = still.length === 1 ? [still[0].id] : eliminatedIds;
-  } else {
-    S.meta.round += 1;
-  }
-  S.meta.deadline = null;
-  await saveMeta();
-  await loadRound();
-  toast(S.meta.phase === 'finished' ? 'Minigioco concluso.' : 'Giornata chiusa. Si riparte dalla ' + S.meta.round + '.', 'ok');
-  render();
-}
-
-async function reopenRound(){
-  const last = S.meta.history[S.meta.history.length - 1];
-  if(!last) return;
-  if(S.meta.phase === 'finished'){ S.meta.phase = 'playing'; S.meta.winners = []; }
-  else { S.meta.round = last.round; }
-  last.entries.forEach(e => {
-    const p = player(e.playerId);
-    if(!p) return;
-    const i = (p.usedTeamIds || []).lastIndexOf(e.teamId);
-    if(i >= 0) p.usedTeamIds.splice(i, 1);
-    if(p.eliminatedRound === last.round){ p.eliminated = false; p.eliminatedRound = null; }
-  });
-  S.meta.history.pop();
-  await saveMeta();
-  await loadRound();
-  toast('Giornata ' + last.round + ' riaperta.', 'ok');
-  render();
-}
 
 /* =========================================================================
-   9. FOGLIO EXCEL — lettura e scrittura (formato FantaList_2627.xlsx)
-   Il foglio "Minigioco" ha: colonna Partecipanti, una colonna per squadra
-   (X = squadra già usata) e una colonna per giornata ("V (Squadra)" se la
-   squadra ha vinto, "NV (Squadra)" se non ha vinto).
+   9. FOGLIO EXCEL — un solo file comanda tutti e tre i minigiochi
+   -------------------------------------------------------------------------
+   Fogli attesi (i nomi possono variare, vengono riconosciuti dal contenuto):
+     · "Partecipanti e Premi"            — elenco iscritti e quota minigiochi
+     · "Minigioco_LastManStanding" (MG_A) — LMS andata,  Giornata 1..19
+     · "Minigioco_..._Ritorno"     (MG_R) — LMS ritorno, Giornata 20..38
+     · "Minigioco_Stagionale"      (MG_S) — WhoWin?,     Giornata 1..38 + Totale Vittorie
+   Nelle colonne delle squadre: "X" (Last Man Standing) o un numero da 1 a 3
+   (WhoWin?, quante volte quella squadra è stata usata). Nelle colonne
+   Giornata: "V (Inter)", "NV (Inter)" oppure "ASSENTE".
    ========================================================================= */
 function b64FromBuffer(buffer){
   let bin = ''; const bytes = new Uint8Array(buffer), chunk = 0x8000;
   for(let i=0;i<bytes.length;i+=chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
   return btoa(bin);
 }
+
+/* Trova la riga di intestazione (nelle prime 3 righe) e mappa le colonne. */
 function parseGrid(ws){
   if(!ws || !ws['!ref']) return null;
   const range = XLSX.utils.decode_range(ws['!ref']);
-  const scan = row => {
-    let partCol = null; const teams = [], giornate = [];
+  for(let hr = range.s.r; hr <= Math.min(range.s.r + 2, range.e.r); hr++){
+    let partCol = null; const teams = [], giornate = []; let winsCol = null;
     for(let c = range.s.c; c <= range.e.c; c++){
-      const cell = ws[XLSX.utils.encode_cell({ r: row, c })];
+      const cell = ws[XLSX.utils.encode_cell({ r: hr, c })];
       if(!cell || cell.v == null || cell.v === '') continue;
       const label = String(cell.v).trim();
-      if(/^partecipant/i.test(label)) partCol = c;
+      /* "Partecipanti" può comparire più volte sulla stessa riga (nel foglio
+         dei premi c'è anche nei riepiloghi a destra): vale la prima. */
+      if(/^partecipant/i.test(label)){ if(partCol == null) partCol = c; }
       else if(/^giornata\s*\d+/i.test(label)) giornate.push({ col:c, num: parseInt(label.match(/\d+/)[0], 10) });
+      else if(/^totale/i.test(label)) winsCol = c;
       else teams.push({ col:c, name: label });
     }
-    return { partCol, teams, giornate };
-  };
-  for(let r = range.s.r; r <= Math.min(range.s.r + 3, range.e.r); r++){
-    const res = scan(r);
-    if(res.partCol != null && res.teams.length > 0){
-      res.giornate.sort((a,b) => a.num - b.num);
-      return { range, headerRow: r, firstDataRow: r + 1, ...res };
+    if(partCol != null && teams.length){
+      giornate.sort((a,b) => a.num - b.num);
+      return { range, headerRow: hr, firstDataRow: hr + 1, partCol, teams, giornate, winsCol };
     }
   }
   return null;
 }
-function readEligibleNames(wb){
-  /* Foglio "Partecipanti e Premi": tiene solo chi ha la x sulla quota minigiochi */
-  const name = wb.SheetNames.find(n => /partecipant/i.test(n) && !/minigioco/i.test(n));
+function findSheet(wb, game){
+  const byName = wb.SheetNames.find(n =>
+    game.match.test(n) && !(game.exclude && game.exclude.test(n)));
+  return byName || null;
+}
+/* Chi ha la x su "Quota MiniGiochi" nel foglio dei partecipanti. */
+function readEligible(wb){
+  const name = wb.SheetNames.find(n => /partecipanti/i.test(n));
   if(!name) return null;
   const ws = wb.Sheets[name];
-  if(!ws || !ws['!ref']) return null;
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for(let r = range.s.r; r <= Math.min(range.s.r + 4, range.e.r); r++){
-    let nameCol = null, quotaCol = null;
-    for(let c = range.s.c; c <= range.e.c; c++){
-      const cell = ws[XLSX.utils.encode_cell({ r, c })];
-      if(!cell || cell.v == null) continue;
-      const lbl = String(cell.v).trim();
-      if(/^partecipant/i.test(lbl) && nameCol === null) nameCol = c;
-      else if(/minigioch/i.test(lbl)) quotaCol = c;
-    }
-    if(nameCol !== null && quotaCol !== null){
-      const set = new Set();
-      for(let rr = r + 1; rr <= range.e.r; rr++){
-        const n = ws[XLSX.utils.encode_cell({ r: rr, c: nameCol })];
-        const q = ws[XLSX.utils.encode_cell({ r: rr, c: quotaCol })];
-        if(n && n.v && q && String(q.v).trim().toLowerCase() === 'x') set.add(String(n.v).trim().toLowerCase());
-      }
-      return set.size ? set : null;
-    }
+  const grid = parseGrid(ws);
+  if(!grid) return null;
+  const quotaCol = grid.teams.find(t => /quota\s*minigioch/i.test(t.name));
+  if(!quotaCol) return null;
+  const out = new Set();
+  for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+    const n = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
+    const q = ws[XLSX.utils.encode_cell({ r, c: quotaCol.col })];
+    if(!n || n.v == null) continue;
+    if(q && String(q.v).trim().toLowerCase() === 'x') out.add(String(n.v).trim().toLowerCase());
   }
-  return null;
+  return out;
 }
 
 async function importWorkbook(file, opts){
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type:'array' });
-  const sheetName = wb.SheetNames.find(n => /minigioco/i.test(n)) || wb.SheetNames[0];
-  const ws = wb.Sheets[sheetName];
-  const grid = parseGrid(ws);
-  if(!grid) throw new Error('Nel foglio "' + sheetName + '" non trovo la riga di intestazione con "Partecipanti" e i nomi delle squadre.');
+  const eligible = opts.onlyPaying ? readEligible(wb) : null;
 
-  const teams = grid.teams.map((t,i) => ({ id: slug(t.name), name: t.name, color: teamColor(t.name, i) }));
-  const eligible = opts.onlyPaying ? readEligibleNames(wb) : null;
+  /* --- 1. elenco partecipanti: dal foglio "Partecipanti e Premi" se c'è,
+         altrimenti dal primo foglio di minigioco disponibile --- */
+  let names = [];
+  const partSheet = wb.SheetNames.find(n => /partecipanti/i.test(n));
+  const sourceSheets = partSheet ? [partSheet] : [];
+  GAMES.forEach(g => { const s = findSheet(wb, g); if(s) sourceSheets.push(s); });
+  for(const sn of sourceSheets){
+    const grid = parseGrid(wb.Sheets[sn]);
+    if(!grid) continue;
+    for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+      const c = wb.Sheets[sn][XLSX.utils.encode_cell({ r, c: grid.partCol })];
+      if(!c || c.t === 'e' || c.v == null) continue;
+      const nm = String(c.v).trim();
+      if(!nm) continue;
+      if(opts.skipPlaceholders && isPlaceholder(nm)) continue;
+      if(eligible && !eligible.has(nm.toLowerCase())) continue;
+      if(!names.includes(nm)) names.push(nm);
+    }
+    if(names.length) break;
+  }
+  if(!names.length) throw new Error('Non trovo nessun partecipante nel file. Controlla il foglio "Partecipanti e Premi" e le due spunte qui sopra.');
 
-  const players = []; const seen = new Set(); let maxRound = 0;
-  const historyByRound = {};
-
-  for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
-    const cell = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
-    if(!cell || cell.t === 'e' || cell.v == null) continue;
-    const name = String(cell.v).trim();
-    if(!name) continue;
-    if(opts.skipPlaceholders && isPlaceholder(name)) continue;
-    if(eligible && !eligible.has(name.toLowerCase())) continue;
-
-    let id = 'p-' + slug(name), n = 2;
-    while(seen.has(id)) id = 'p-' + slug(name) + '-' + (n++);
+  const seen = new Set();
+  const players = names.map(nm => {
+    let id = 'p-' + slug(nm), n = 2;
+    while(seen.has(id)) id = 'p-' + slug(nm) + '-' + (n++);
     seen.add(id);
+    return { id, name: nm };
+  });
+  const byName = {}; players.forEach(p => { byName[p.name.toLowerCase()] = p.id; });
 
-    const p = { id, name, usedTeamIds: [], eliminated: false, eliminatedRound: null, rowIndex: r };
-
-    const marked = [];
-    grid.teams.forEach((t,i) => {
-      const c = ws[XLSX.utils.encode_cell({ r, c: t.col })];
-      if(c && c.v != null && String(c.v).trim().toUpperCase() === 'X') marked.push(teams[i].id);
-    });
-
-    const entries = [];
-    grid.giornate.forEach(g => {
-      const c = ws[XLSX.utils.encode_cell({ r, c: g.col })];
-      if(!c || c.v == null) return;
-      const m = String(c.v).trim().match(/^(V|NV)\s*\(([^)]+)\)$/i);
-      if(!m) return;
-      const label = m[2].trim();
-      const t = teams.find(x => x.name.toLowerCase() === label.toLowerCase()) || teams.find(x => x.id === slug(label));
-      if(!t) return;
-      entries.push({ round: g.num, teamId: t.id, result: m[1].toUpperCase() === 'V' ? 'win' : 'lose' });
-      if(g.num > maxRound) maxRound = g.num;
-    });
-    entries.sort((a,b) => a.round - b.round);
-
-    p.usedTeamIds = entries.map(e => e.teamId);
-    const lost = entries.find(e => e.result === 'lose');
-    if(lost){ p.eliminated = true; p.eliminatedRound = lost.round; }
-
-    entries.forEach(e => {
-      (historyByRound[e.round] = historyByRound[e.round] || []).push({ playerId: p.id, teamId: e.teamId, result: e.result });
-    });
-
-    /* una X su una squadra senza esito = pronostico già dato per la giornata in corso */
-    const usedSet = new Set(p.usedTeamIds);
-    p._pending = !p.eliminated ? (marked.find(t => !usedSet.has(t)) || null) : null;
-    players.push(p);
-  }
-  if(!players.length) throw new Error('Nessun partecipante trovato nel foglio "' + sheetName + '".');
-
-  const history = Object.keys(historyByRound).map(k => {
-    const entries = historyByRound[k];
-    return { round: parseInt(k,10), entries, eliminatedIds: entries.filter(e => e.result === 'lose').map(e => e.playerId) };
-  }).sort((a,b) => a.round - b.round);
-
-  const meta = { ...emptyMeta(), ...(S.meta || {}) };
-  meta.teams = teams;
-  meta.players = players.map(p => { const c = { ...p }; delete c._pending; return c; });
-  meta.history = history;
-  meta.round = maxRound + 1;
-  meta.deadline = null;
-  meta.fileName = file.name;
-  meta.sheetName = sheetName;
-  meta.originalB64 = b64FromBuffer(buf);
-
-  const alive = players.filter(p => !p.eliminated);
-  if(players.length >= 2 && alive.length <= 1){
-    meta.phase = 'finished';
-    meta.winners = alive.length === 1 ? [alive[0].id] : [];
-  } else {
-    meta.phase = 'playing';
-    meta.winners = [];
-  }
-
-  S.meta = meta;
-  await saveMeta();
-
-  /* le X senza esito diventano richieste già approvate della giornata in corso */
-  if(meta.phase === 'playing'){
-    for(const p of players){
-      if(!p._pending) continue;
-      await Store.set(K.req(meta.round, p.id), {
-        teamId: p._pending, status:'approved', note:'Importata dal file Excel',
-        sentAt: new Date().toISOString(), sentBy:'excel',
-        decidedAt: new Date().toISOString(), decidedBy:'excel', history: []
-      });
+  /* --- 2. squadre: dal primo foglio di minigioco che le contiene --- */
+  let teams = null, sheetNames = {};
+  for(const g of GAMES){
+    const sn = findSheet(wb, g);
+    if(!sn) continue;
+    sheetNames[g.key] = sn;
+    if(!teams){
+      const grid = parseGrid(wb.Sheets[sn]);
+      if(grid) teams = grid.teams.map((t,i) => ({ id: slug(t.name), name: t.name, color: teamColor(t.name, i) }));
     }
   }
+  if(!teams) teams = DEFAULT_TEAMS.map((n,i) => ({ id: slug(n), name: n, color: teamColor(n,i) }));
+
+  /* --- 3. stato di ciascun minigioco --- */
+  const games = {}; let maxDone = 0;
+  for(const g of GAMES){
+    const m = emptyGame();
+    players.forEach(p => { m.st[p.id] = { used:[], eliminated:false, eliminatedRound:null, eliminatedReason:null }; });
+    const sn = sheetNames[g.key];
+    if(sn){
+      const ws = wb.Sheets[sn], grid = parseGrid(ws);
+      if(grid){
+        const histByRound = {};
+        for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+          const nc = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
+          if(!nc || nc.t === 'e' || nc.v == null) continue;
+          const pid = byName[String(nc.v).trim().toLowerCase()];
+          if(!pid) continue;
+          const st = m.st[pid];
+          const entries = [];
+          grid.giornate.forEach(gi => {
+            if(gi.num < g.first || gi.num > g.last) return;
+            const cell = ws[XLSX.utils.encode_cell({ r, c: gi.col })];
+            if(!cell || cell.v == null) return;
+            const raw = String(cell.v).trim();
+            if(/^assente$/i.test(raw)){ entries.push({ round: gi.num, teamId: null, result: 'absent' }); return; }
+            const mt = raw.match(/^(V|NV)\s*\(([^)]+)\)$/i);
+            if(!mt) return;
+            const label = mt[2].trim();
+            const t = teams.find(x => x.name.toLowerCase() === label.toLowerCase()) || teams.find(x => x.id === slug(label));
+            if(!t) return;
+            entries.push({ round: gi.num, teamId: t.id, result: mt[1].toUpperCase() === 'V' ? 'win' : 'lose' });
+          });
+          entries.sort((a,b) => a.round - b.round);
+          st.used = entries.filter(e => e.teamId).map(e => e.teamId);
+          if(g.kind === 'lms'){
+            const out = entries.find(e => e.result === 'lose' || e.result === 'absent');
+            if(out){
+              st.eliminated = true; st.eliminatedRound = out.round;
+              if(out.result === 'absent') st.eliminatedReason = 'assente';
+            }
+          }
+          entries.forEach(e => {
+            (histByRound[e.round] = histByRound[e.round] || []).push({ playerId: pid, teamId: e.teamId, result: e.result });
+            if(e.round > maxDone) maxDone = e.round;
+          });
+        }
+        m.history = Object.keys(histByRound).map(k => ({ round: parseInt(k,10), entries: histByRound[k] }))
+          .sort((a,b) => a.round - b.round);
+      }
+    }
+    if(g.kind === 'lms'){
+      const alive = players.filter(p => !m.st[p.id].eliminated);
+      const lastPlayed = m.history.length ? m.history[m.history.length-1].round : 0;
+      if(m.history.length && (alive.length <= 1 || lastPlayed >= g.last)){
+        m.phase = 'finished'; m.winners = alive.map(p => p.id);
+      }
+    } else if(m.history.length && m.history[m.history.length-1].round >= g.last){
+      m.phase = 'finished';
+    }
+    games[g.key] = m;
+  }
+
+  const round = Math.min(maxDone + 1, SEASON_ROUNDS);
+  S.core = { ...emptyCore(), teams, players, round,
+    fileName: file.name, originalB64: b64FromBuffer(buf), sheetNames };
+  S.games = games;
+  await saveCore();
+  for(const g of GAMES) await saveGame(g.key);
   await loadRound();
-  await loadClaims();
-  return { players: players.length, teams: teams.length, round: meta.round, sheetName };
+  return { players: players.length, teams: teams.length, round,
+           sheets: GAMES.filter(g => sheetNames[g.key]).map(g => g.short) };
 }
 
-function buildWorkbook(){
-  let wb, ws, grid;
-  if(S.meta.originalB64){
-    wb = XLSX.read(S.meta.originalB64, { type:'base64' });
-    ws = wb.Sheets[S.meta.sheetName] || wb.Sheets[wb.SheetNames.find(n => /minigioco/i.test(n)) || wb.SheetNames[0]];
-    grid = parseGrid(ws);
-  }
-  if(!grid){
-    const header = ['Partecipanti', ...S.meta.teams.map(t => t.name)];
-    const last = Math.max(S.meta.round, ...S.meta.history.map(h => h.round), 1);
-    for(let n=1;n<=last;n++) header.push('Giornata ' + n);
-    const aoa = [['Tabella Minigioco - disponibilità'], header, ...S.meta.players.map(p => [p.name])];
-    ws = XLSX.utils.aoa_to_sheet(aoa);
-    wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Minigioco Attivo');
-    grid = parseGrid(ws);
-    S.meta.players.forEach((p,i) => { if(p.rowIndex == null) p.rowIndex = grid.firstDataRow + i; });
-  }
+/* ---- SCRITTURA ---- */
+function ensureSheet(wb, game){
+  let sn = S.core.sheetNames?.[game.key] && wb.Sheets[S.core.sheetNames[game.key]]
+    ? S.core.sheetNames[game.key] : findSheet(wb, game);
+  if(sn && parseGrid(wb.Sheets[sn])) return sn;
 
-  /* assicura una colonna per ogni giornata giocata o in corso */
-  const needed = Math.max(S.meta.round, ...S.meta.history.map(h => h.round), 1);
-  let lastCol = Math.max(grid.partCol, ...grid.teams.map(t => t.col), ...grid.giornate.map(g => g.col).concat([-1]));
+  /* foglio assente (tipico del ritorno la prima volta): lo creo da zero */
+  const header = ['Partecipanti', ...S.core.teams.map(t => t.name)];
+  for(let n = game.first; n <= game.last; n++) header.push('Giornata ' + n);
+  if(game.kind === 'season') header.push('Totale Vittorie');
+  const aoa = [ ['Tabella ' + game.name + ' - disponibilità'], header, ...S.core.players.map(p => [p.name]) ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  sn = game.sheet;
+  if(!wb.SheetNames.includes(sn)) wb.SheetNames.push(sn);
+  wb.Sheets[sn] = ws;
+  return sn;
+}
+function writeGameSheet(wb, game){
+  const sn = ensureSheet(wb, game);
+  const ws = wb.Sheets[sn];
+  const grid = parseGrid(ws);
+  if(!grid) return;
+  const m = gmeta(game.key) || emptyGame();
+
+  let lastCol = Math.max(grid.partCol, ...grid.teams.map(t => t.col),
+    ...(grid.giornate.length ? grid.giornate.map(g => g.col) : [-1]),
+    grid.winsCol == null ? -1 : grid.winsCol);
   const have = new Set(grid.giornate.map(g => g.num));
-  for(let n=1;n<=needed;n++){
+  for(let n = game.first; n <= game.last; n++){
     if(!have.has(n)){
       lastCol += 1;
       ws[XLSX.utils.encode_cell({ r: grid.headerRow, c: lastCol })] = { t:'s', v:'Giornata ' + n };
@@ -1009,46 +1361,64 @@ function buildWorkbook(){
     }
   }
   grid.giornate.sort((a,b) => a.num - b.num);
+  let winsCol = grid.winsCol;
+  if(game.kind === 'season' && winsCol == null){
+    lastCol += 1; winsCol = lastCol;
+    ws[XLSX.utils.encode_cell({ r: grid.headerRow, c: winsCol })] = { t:'s', v:'Totale Vittorie' };
+  }
 
-  const byName = {};
+  const rowOf = {};
   for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
     const c = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
-    if(c && c.v != null) byName[String(c.v).trim().toLowerCase()] = r;
+    if(c && c.v != null) rowOf[String(c.v).trim().toLowerCase()] = r;
   }
   let appendRow = Math.max(grid.range.e.r, grid.firstDataRow - 1);
-  const ap = approvedPicks();
 
-  S.meta.players.forEach(p => {
-    let row = byName[p.name.toLowerCase()];
+  S.core.players.forEach(p => {
+    let row = rowOf[p.name.toLowerCase()];
     if(row == null){ row = ++appendRow; ws[XLSX.utils.encode_cell({ r: row, c: grid.partCol })] = { t:'s', v: p.name }; }
+    const st = m.st[p.id] || { used:[] };
 
-    const used = new Set(p.usedTeamIds || []);
-    if(!p.eliminated && ap[p.id]) used.add(ap[p.id]);
+    const counts = {};
+    (st.used || []).forEach(tid => { counts[tid] = (counts[tid] || 0) + 1; });
     grid.teams.forEach(t => {
       const addr = XLSX.utils.encode_cell({ r: row, c: t.col });
-      if(used.has(slug(t.name))) ws[addr] = { t:'s', v:'X' }; else delete ws[addr];
+      const n = counts[slug(t.name)] || 0;
+      if(!n) delete ws[addr];
+      else if(game.kind === 'lms') ws[addr] = { t:'s', v:'X' };
+      else ws[addr] = { t:'n', v: n };
     });
 
-    grid.giornate.forEach(g => {
-      const addr = XLSX.utils.encode_cell({ r: row, c: g.col });
-      const h = S.meta.history.find(h => h.round === g.num);
+    grid.giornate.forEach(gi => {
+      const addr = XLSX.utils.encode_cell({ r: row, c: gi.col });
+      const h = m.history.find(x => x.round === gi.num);
       const e = h && h.entries.find(x => x.playerId === p.id);
-      if(e) ws[addr] = { t:'s', v: (e.result === 'win' ? 'V' : 'NV') + ' (' + team(e.teamId).name + ')' };
-      else delete ws[addr];
+      if(!e) delete ws[addr];
+      else if(e.result === 'absent') ws[addr] = { t:'s', v:'ASSENTE' };
+      else ws[addr] = { t:'s', v: (e.result === 'win' ? 'V' : 'NV') + ' (' + team(e.teamId).name + ')' };
     });
+
+    if(winsCol != null) ws[XLSX.utils.encode_cell({ r: row, c: winsCol })] = { t:'n', v: winsIn(game.key, p.id) };
   });
 
   const maxRow = Math.max(grid.range.e.r, appendRow);
-  const maxCol = Math.max(grid.range.e.c, lastCol);
+  const maxCol = Math.max(grid.range.e.c, lastCol, winsCol == null ? -1 : winsCol);
   ws['!ref'] = XLSX.utils.encode_range({ s:{ r: grid.range.s.r, c: grid.range.s.c }, e:{ r: maxRow, c: maxCol } });
+}
+function buildWorkbook(){
+  if(!S.core || !S.core.players.length) throw new Error('Nessun partecipante caricato: non c\'è nulla da esportare.');
+  let wb;
+  if(S.core.originalB64) wb = XLSX.read(S.core.originalB64, { type:'base64' });
+  else { wb = XLSX.utils.book_new(); }
+  GAMES.forEach(g => writeGameSheet(wb, g));
   return wb;
 }
 function downloadWorkbook(){
   try{
     const wb = buildWorkbook();
-    const base = (S.meta.fileName || 'FantaList.xlsx').replace(/\.xlsx?$/i, '');
-    XLSX.writeFile(wb, base + '_G' + S.meta.round + '.xlsx');
-    toast('File Excel scaricato.', 'ok');
+    const base = (S.core.fileName || 'FantaList.xlsx').replace(/\.xlsx?$/i, '');
+    XLSX.writeFile(wb, base + '_G' + S.core.round + '.xlsx');
+    toast('File Excel scaricato: contiene tutti e tre i minigiochi aggiornati.', 'ok');
   }catch(e){ toast('Non riesco a generare il file: ' + e.message, 'err'); }
 }
 
@@ -1123,7 +1493,7 @@ function renderGate(){
         await createUser({ username:u, password:p, role:'admin', displayName:u });
         await login(u, p);
         await loadUsers();
-        if(!S.meta){ S.meta = emptyMeta(); await saveMeta(); }
+        if(!S.core){ S.core = emptyCore(); await saveCore(); }
         toast('Account creato. Ora carica il file del minigioco.', 'ok');
         render();
       }catch(e){ toast(e.message, 'err'); ev.target.disabled = false; ev.target.textContent = 'Crea l\'account e continua'; }
@@ -1161,10 +1531,10 @@ function renderGate(){
     box.querySelectorAll('input').forEach(i => i.onkeydown = e => { if(e.key === 'Enter') go(); });
     wrap.appendChild(box);
   } else {
-    const free = (S.meta?.players || []).filter(p => !S.claims[p.id]);
+    const free = (S.core?.players || []).filter(p => !S.claims[p.id]);
     const box = el(`
       <div class="panel"><div class="panel-body">
-        ${!S.meta || !S.meta.players.length
+        ${!S.core || !S.core.players.length
           ? `<div class="empty">L'organizzatore non ha ancora caricato l'elenco dei partecipanti. Riprova più tardi.</div>`
           : free.length === 0
             ? `<div class="empty">Tutti i partecipanti hanno già un account. Se non riesci ad accedere, chiedi all'organizzatore di azzerarti la password.</div>`
@@ -1200,106 +1570,141 @@ function renderGate(){
   return wrap;
 }
 
+
 /* =========================================================================
-   11. SCHERMATE — pezzi riutilizzabili
+   11. PEZZI RIUTILIZZABILI
    ========================================================================= */
 function scoreboard(){
-  const alive = activePlayers().length, total = S.meta.players.length;
-  const sent = Object.keys(S.requests).length;
-  const pending = Object.values(S.requests).filter(r => r.status === 'pending').length;
-  const missing = activePlayers().filter(p => !S.requests[p.id]).length;
+  const open = openGames();
+  const pending = totalPending();
+  const missing = open.reduce((n,g) => n + missingIn(g.key).length, 0);
   return el(`
     <div class="panel"><div class="scoreboard">
-      <div class="sb-cell"><div class="k">Giornata</div><div class="v">${S.meta.phase === 'finished' ? 'FINE' : String(S.meta.round).padStart(2,'0')}</div></div>
-      <div class="sb-cell"><div class="k">In gioco</div><div class="v">${alive}<span style="font-size:1rem; color:var(--chalk-mute);">/${total}</span></div></div>
+      <div class="sb-cell"><div class="k">Giornata</div><div class="v">${String(S.core.round).padStart(2,'0')}<span style="font-size:1rem; color:var(--chalk-mute);">/${SEASON_ROUNDS}</span></div></div>
+      <div class="sb-cell"><div class="k">In corso</div><div class="v small">${open.length ? open.map(g => g.short).join('<br>') : 'nessuno'}</div></div>
       <div class="sb-cell ${pending ? 'alert' : ''}"><div class="k">Da approvare</div><div class="v">${pending}</div></div>
       <div class="sb-cell ${missing ? 'alert' : ''}"><div class="k">Non pervenuti</div><div class="v">${missing}</div></div>
-      <div class="sb-cell"><div class="k">Termine</div><div class="v small mono">${S.meta.deadline ? fmtDate(S.meta.deadline) : 'libero'}</div></div>
+      <div class="sb-cell"><div class="k">Termine</div><div class="v small mono">${S.core.deadline ? fmtDate(S.core.deadline) : 'libero'}</div></div>
     </div></div>`);
 }
 
-function slipFor(p, req, opts = {}){
-  const t = req ? team(req.teamId) : null;
-  const stamp = !req ? ''
-    : req.status === 'approved' ? '<div class="stamp ok">Registrato</div>'
-    : req.status === 'pending'  ? '<div class="stamp pending">In attesa</div>'
-    : '<div class="stamp ko">Respinto</div>';
-  return el(`
-    <div class="slip ${opts.onPitch ? 'on-pitch' : ''}">
-      <div class="slip-head">
-        <span class="who-slip">${esc(p.name)}</span>
-        <span class="code">G${String(S.meta.round).padStart(2,'0')} · ${req ? fmtDate(req.sentAt) : 'nessun invio'}</span>
-      </div>
-      ${req ? `
-        <div class="slip-pick"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}</div>
-        <div class="slip-meta">Inviato da ${esc(req.sentBy)}${req.decidedBy ? ' · deciso da ' + esc(req.decidedBy) : ''}</div>
-        ${req.note ? `<div class="slip-meta" style="color:#B3312D;">Nota: ${esc(req.note)}</div>` : ''}`
-      : `<div class="slip-pick" style="opacity:0.35;">— — —</div>
-         <div class="slip-meta">Nessun pronostico inviato per questa giornata.</div>`}
-      ${stamp}
-    </div>`);
-}
-
-function teamPicker(p, selected, onPick){
+function teamPickerFor(gameKey, p, selected, onPick){
   const wrap = el(`<div class="team-grid"></div>`);
-  availableTeams(p).forEach(t => {
-    const b = el(`<button class="team-btn ${t.used ? 'used' : ''} ${t.id === selected ? 'on' : ''}" data-team="${t.id}" ${t.used ? 'disabled' : ''}>
-        <span class="dot" style="background:${t.color}"></span>${esc(t.name)}</button>`);
-    if(!t.used) b.onclick = () => onPick(t.id);
+  availableIn(gameKey, p).forEach(t => {
+    const badge = t.max > 1 ? ` <span class="uses ${t.full ? 'full' : ''}">${t.count}/${t.max}</span>` : '';
+    const b = el(`<button class="team-btn ${t.full ? 'used' : ''} ${t.id === selected ? 'on' : ''}" data-team="${t.id}" ${t.full ? 'disabled' : ''}>
+        <span class="dot" style="background:${t.color}"></span>${esc(t.name)}${badge}</button>`);
+    if(!t.full) b.onclick = () => onPick(t.id);
     wrap.appendChild(b);
   });
   return wrap;
 }
 
+function historyTable(gameKey, pid){
+  const m = gmeta(gameKey);
+  const rows = (m?.history || []).map(h => {
+    const e = h.entries.find(x => x.playerId === pid);
+    return e ? { round: h.round, ...e } : null;
+  }).filter(Boolean);
+  if(!rows.length) return el(`<div class="empty">Nessuna giornata giocata finora.</div>`);
+  return el(`
+    <table><thead><tr><th>G</th><th>Squadra</th><th style="text-align:right;">Esito</th></tr></thead>
+      <tbody>${rows.map(r => `
+        <tr><td class="num">G${String(r.round).padStart(2,'0')}</td>
+            <td>${r.teamId
+              ? `<span class="chip-mini"><span class="dot" style="background:${team(r.teamId).color}"></span>${esc(team(r.teamId).name)}</span>`
+              : '<span class="tag mute">nessun pronostico</span>'}</td>
+            <td style="text-align:right;" class="${r.result === 'win' ? 'res-win' : 'res-lose'}">${
+              r.result === 'win' ? 'Vittoria' : r.result === 'absent' ? 'Assente' : 'Non vince'}</td></tr>`).join('')}
+      </tbody></table>`);
+}
+
 /* =========================================================================
-   12. SCHERMATA — la mia schedina (partecipante)
+   12. SCHERMATA — i miei pronostici (uno per minigioco)
    ========================================================================= */
-function viewMine(){
-  const wrap = el(`<div class="stack"></div>`);
+function myPanel(gameKey){
+  const g = G(gameKey);
   const p = myPlayer();
-  if(!p){
-    wrap.appendChild(el(`<div class="empty">Il tuo account non è collegato a nessun partecipante. Chiedi all'organizzatore di collegarlo dalla sezione Partecipanti.</div>`));
-    return wrap;
-  }
-  if(S.meta.phase === 'finished'){ wrap.appendChild(viewWinner()); return wrap; }
-  if(p.eliminated){
-    wrap.appendChild(el(`
-      <div class="panel"><div class="panel-body" style="text-align:center; padding:34px 20px;">
-        <h2 style="font-size:1.6rem; color:var(--ko);">Eliminato alla giornata ${p.eliminatedRound}</h2>
-        <p class="note">Il tuo minigioco finisce qui. Puoi continuare a seguire chi resta in piedi dalla sezione Lega.</p>
-      </div></div>`));
-    wrap.appendChild(myHistoryPanel(p));
+  const m = gmeta(gameKey);
+  const st = p ? gstate(gameKey, p.id) : null;
+
+  const head = (tag, tagClass) => `
+    <div class="panel-head">
+      <div><span class="eyebrow">${esc(g.short)} · giornate ${g.first}–${g.last}</span><h2>${esc(g.name)}</h2></div>
+      <span class="tag ${tagClass}">${tag}</span>
+    </div>`;
+
+  if(!m) return el(`<div class="panel">${head('non avviato','mute')}<div class="panel-body"><div class="empty">L'organizzatore non ha ancora avviato questo minigioco.</div></div></div>`);
+  if(!p)  return el(`<div class="panel">${head('non iscritto','mute')}<div class="panel-body"><div class="empty">Il tuo account non è collegato a nessun partecipante. Chiedi all'organizzatore di collegarlo.</div></div></div>`);
+
+  if(S.core.round < g.first)
+    return el(`<div class="panel">${head('non ancora iniziato','mute')}<div class="panel-body">
+      <div class="empty">Comincia alla giornata ${g.first}. Mancano ${g.first - S.core.round} giornate.</div></div></div>`);
+
+  if(m.phase === 'finished' || S.core.round > g.last){
+    const won = (m.winners || []).includes(p.id);
+    const wrap = el(`<div class="panel">${head('concluso', won ? 'ok' : 'mute')}<div class="panel-body"></div></div>`);
+    const body = wrap.querySelector('.panel-body');
+    body.appendChild(el(g.kind === 'lms'
+      ? `<div style="text-align:center; padding:16px 0;">
+           <h2 style="font-size:1.3rem; color:${won ? 'var(--amber)' : 'var(--chalk-mute)'};">${won ? '🏆 Sei arrivato in fondo' : 'Minigioco concluso'}</h2>
+           <p class="note">${(m.winners || []).length ? 'Vincitori: ' + m.winners.map(id => esc(player(id)?.name || '?')).join(', ') : 'Nessun vincitore.'}</p>
+         </div>`
+      : `<div style="text-align:center; padding:16px 0;">
+           <h2 style="font-size:1.3rem;">Stagione conclusa</h2>
+           <p class="note">Hai totalizzato <strong class="mono" style="color:var(--amber);">${winsIn(gameKey, p.id)}</strong> vittorie su ${g.last} giornate.</p>
+         </div>`));
+    body.appendChild(historyTable(gameKey, p.id));
     return wrap;
   }
 
-  const req = S.requests[p.id];
+  if(st.eliminated){
+    const others = GAMES.filter(x => x.key !== gameKey && gameOpen(x.key)).map(x => x.short);
+    const wrap = el(`<div class="panel out">${head('eliminato G' + st.eliminatedRound,'ko')}<div class="panel-body"></div></div>`);
+    const body = wrap.querySelector('.panel-body');
+    body.appendChild(el(`
+      <div style="text-align:center; padding:14px 0 18px;">
+        <h2 style="font-size:1.25rem; color:var(--ko);">Eliminato alla giornata ${st.eliminatedRound}${st.eliminatedReason === 'assente' ? ' (assente)' : ''}</h2>
+        <p class="note">${others.length
+          ? 'Qui finisce, ma continui a giocare a <strong>' + others.map(esc).join('</strong> e <strong>') + '</strong>.'
+          : 'Qui il tuo percorso finisce.'}</p>
+      </div>`));
+    body.appendChild(historyTable(gameKey, p.id));
+    return wrap;
+  }
+
+  /* --- minigioco in corso: schedina --- */
+  const req = S.reqs[gameKey]?.[p.id];
   let selected = req ? req.teamId : null;
   const closed = deadlinePassed();
+  const status = req ? (req.status === 'approved' ? 'registrato' : req.status === 'pending' ? 'in attesa' : 'respinto') : 'da inviare';
+  const statusClass = req ? (req.status === 'approved' ? 'ok' : req.status === 'pending' ? 'pending' : 'ko') : 'mute';
 
-  const panel = el(`
-    <div class="panel">
-      <div class="panel-head">
-        <div><span class="eyebrow">Giornata ${S.meta.round}</span><h2>La tua schedina</h2></div>
-        <span class="tag ${req ? (req.status === 'approved' ? 'ok' : req.status === 'pending' ? 'pending' : 'ko') : 'mute'}">
-          ${req ? (req.status === 'approved' ? 'registrata' : req.status === 'pending' ? 'in attesa' : 'respinta') : 'da inviare'}</span>
-      </div>
-      <div class="panel-body"></div>
-    </div>`);
-  const body = panel.querySelector('.panel-body');
-  body.appendChild(slipFor(p, req));
+  const wrap = el(`<div class="panel">${head(status, statusClass)}<div class="panel-body"></div></div>`);
+  const body = wrap.querySelector('.panel-body');
+
+  const t = req ? team(req.teamId) : null;
+  body.appendChild(el(`
+    <div class="slip on-pitch">
+      <div class="slip-head"><span class="who-slip">${esc(p.name)}</span><span class="code mono">G${String(S.core.round).padStart(2,'0')}</span></div>
+      ${req
+        ? `<div class="slip-pick"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}</div>
+           <div class="slip-meta">Inviato ${fmtDate(req.sentAt)} da ${esc(req.sentBy)}</div>
+           <div class="stamp ${statusClass}">${status}</div>`
+        : `<div class="slip-pick" style="opacity:0.35;">— — —</div>
+           <div class="slip-meta">Nessun pronostico inviato per questa giornata.</div>`}
+    </div>`));
 
   if(req && req.status === 'rejected' && req.note)
-    body.appendChild(el(`<div class="banner err">L'organizzatore ha respinto il pronostico: ${esc(req.note)}. Scegline un altro qui sotto.</div>`));
+    body.appendChild(el(`<div class="banner err">Respinto dall'organizzatore: ${esc(req.note)}. Scegline un altro qui sotto.</div>`));
   if(closed)
-    body.appendChild(el(`<div class="banner err">Il termine di invio è scaduto (${fmtDate(S.meta.deadline)}). Per cambiare, scrivi all'organizzatore.</div>`));
-  else if(S.meta.deadline)
-    body.appendChild(el(`<div class="banner">Hai tempo fino al <strong class="mono">${fmtDate(S.meta.deadline)}</strong>.</div>`));
+    body.appendChild(el(`<div class="banner err">Termine scaduto (${fmtDate(S.core.deadline)}). Per cambiare, scrivi all'organizzatore.</div>`));
 
   if(!closed){
-    body.appendChild(el(`<p class="note">${req && req.status === 'approved'
-      ? 'Puoi ancora cambiare idea: il nuovo pronostico tornerà in attesa di approvazione.'
-      : 'Scegli la squadra su cui punti. Quelle sbarrate le hai già usate nelle giornate precedenti.'}</p>`));
-    const picker = teamPicker(p, selected, id => {
+    body.appendChild(el(`<p class="note">${g.maxUses === 1
+      ? 'Scegli la squadra: quelle sbarrate le hai già usate in questo minigioco.'
+      : `Ogni squadra vale fino a ${g.maxUses} volte in stagione: il contatore dice quante ne hai già usate.`}</p>`));
+    const picker = teamPickerFor(gameKey, p, selected, id => {
       selected = id;
       picker.querySelectorAll('.team-btn').forEach(b => b.classList.toggle('on', b.dataset.team === id));
       send.disabled = false;
@@ -1310,203 +1715,209 @@ function viewMine(){
       if(!selected) return;
       send.disabled = true; send.innerHTML = '<span class="spinner"></span> Invio…';
       try{
-        await submitRequest(p.id, selected);
-        toast(S.meta.autoApprove ? 'Pronostico registrato.' : 'Pronostico inviato: aspetta l\'approvazione.', 'ok');
+        await submitPick(gameKey, p.id, selected);
+        toast(S.core.autoApprove ? 'Pronostico registrato.' : 'Pronostico inviato: aspetta l\'approvazione.', 'ok');
         render();
       }catch(e){ toast(e.message, 'err'); send.disabled = false; send.textContent = 'Invia il pronostico'; }
     };
     body.appendChild(send);
   }
-  wrap.appendChild(panel);
-  wrap.appendChild(myHistoryPanel(p));
+  const det = el(`<details class="mini-hist"><summary>Il tuo percorso in ${esc(g.short)}</summary></details>`);
+  det.appendChild(historyTable(gameKey, p.id));
+  body.appendChild(det);
   return wrap;
 }
 
-function myHistoryPanel(p){
-  const rows = S.meta.history.map(h => {
-    const e = h.entries.find(x => x.playerId === p.id);
-    return e ? { round: h.round, ...e } : null;
-  }).filter(Boolean);
-  const used = (p.usedTeamIds || []).length;
-  const panel = el(`
-    <div class="panel">
-      <div class="panel-head"><h2>Il tuo percorso</h2><span class="eyebrow">${used} usate · ${Math.max(S.meta.teams.length - used, 0)} ancora disponibili</span></div>
-      <div class="panel-body"></div>
-    </div>`);
-  const body = panel.querySelector('.panel-body');
-  if(!rows.length){ body.appendChild(el(`<div class="empty">Nessuna giornata giocata finora.</div>`)); return panel; }
-  body.appendChild(el(`
-    <table><thead><tr><th>G</th><th>Squadra</th><th style="text-align:right;">Esito</th></tr></thead>
-      <tbody>${rows.map(r => `
-        <tr><td class="num">G${String(r.round).padStart(2,'0')}</td>
-            <td><span class="chip-mini"><span class="dot" style="background:${team(r.teamId).color}"></span>${esc(team(r.teamId).name)}</span></td>
-            <td style="text-align:right;" class="${r.result === 'win' ? 'res-win' : 'res-lose'}">${r.result === 'win' ? 'Vittoria' : 'Non vince'}</td></tr>`).join('')}
-      </tbody></table>`));
-  return panel;
+function viewMine(){
+  const wrap = el(`<div class="stack"></div>`);
+  if(!S.core || !S.core.players.length){
+    wrap.appendChild(el(`<div class="empty">L'organizzatore non ha ancora caricato i partecipanti. Torna più tardi.</div>`));
+    return wrap;
+  }
+  wrap.appendChild(el(`<div class="banner">Giornata <strong class="mono">${S.core.round}</strong> di ${SEASON_ROUNDS}. Ogni minigioco ha le sue squadre disponibili: puoi scegliere la stessa squadra in più minigiochi.${S.core.deadline ? ` Termine: <strong class="mono">${fmtDate(S.core.deadline)}</strong>.` : ''}</div>`));
+  const grid = el(`<div class="games-grid"></div>`);
+  GAMES.forEach(g => grid.appendChild(myPanel(g.key)));
+  wrap.appendChild(grid);
+  return wrap;
 }
 
 /* =========================================================================
-   13. SCHERMATA — richieste di pronostico (organizzatore)
+   13. SCHERMATA — richieste (organizzatore), un pannello per minigioco
    ========================================================================= */
-async function pickTeamFor(p){
+async function pickForModal(gameKey, p){
   return new Promise(resolve => {
     const ov = el(`<div class="overlay"></div>`);
     const box = el(`
-      <div class="modal" style="width:min(560px,100%);">
-        <h3>Pronostico per ${esc(p.name)}</h3>
+      <div class="modal" style="width:min(620px,100%);">
+        <h3>${esc(G(gameKey).short)} — pronostico per ${esc(p.name)}</h3>
         <p>Scegli tu la squadra: viene registrata subito come approvata.</p>
         <div class="btn-row" style="justify-content:flex-end;"><button class="btn btn-ghost" data-x>Annulla</button></div>
       </div>`);
-    const picker = teamPicker(p, S.requests[p.id]?.teamId, id => { ov.remove(); resolve(id); });
-    box.insertBefore(picker, box.querySelector('.btn-row'));
+    const picker = teamPickerFor(gameKey, p, S.reqs[gameKey]?.[p.id]?.teamId, id => { ov.remove(); resolve(id); });
     picker.style.marginBottom = '14px';
+    box.insertBefore(picker, box.querySelector('.btn-row'));
     ov.appendChild(box); document.body.appendChild(ov);
     box.querySelector('[data-x]').onclick = () => { ov.remove(); resolve(null); };
     ov.onclick = e => { if(e.target === ov){ ov.remove(); resolve(null); } };
   });
 }
 
-function viewRequests(){
-  const wrap = el(`<div class="stack"></div>`);
-  const active = activePlayers();
-  const pending = active.filter(p => S.requests[p.id]?.status === 'pending');
-  const missing = active.filter(p => !S.requests[p.id] || S.requests[p.id].status === 'rejected');
+function requestsPanel(gameKey){
+  const g = G(gameKey);
+  const alive = aliveIn(gameKey);
+  const pending = pendingIn(gameKey);
+  const missing = missingIn(gameKey);
+  const out = (S.core.players || []).filter(p => gstate(gameKey, p.id).eliminated);
+  const absentNow = out.filter(p => gstate(gameKey, p.id).eliminatedRound === S.core.round && gstate(gameKey, p.id).eliminatedReason === 'assente');
 
-  /* controlli di giornata */
-  const ctl = el(`
-    <div class="panel">
-      <div class="panel-head"><div><span class="eyebrow">Giornata ${S.meta.round}</span><h2>Regole d'invio</h2></div></div>
-      <div class="panel-body">
-        <div class="form-grid">
-          <label class="field"><span>Termine per l'invio</span><input type="datetime-local" id="dl" value="${toInputDT(S.meta.deadline)}"></label>
-          <div style="display:flex; align-items:flex-end; gap:8px;">
-            <button class="btn btn-ghost" id="dl-save">Salva termine</button>
-            <button class="btn btn-ghost" id="dl-clear">Togli</button>
-          </div>
-        </div>
-        <label class="checkline"><input type="checkbox" id="auto" ${S.meta.autoApprove ? 'checked' : ''}>
-          <span>Approva da solo i pronostici validi. Lascialo spento se vuoi controllarli uno per uno.</span></label>
-      </div>
-    </div>`);
-  ctl.querySelector('#dl-save').onclick = async () => {
-    const v = ctl.querySelector('#dl').value;
-    S.meta.deadline = v ? new Date(v).toISOString() : null;
-    await saveMeta(); toast('Termine aggiornato.', 'ok'); render();
-  };
-  ctl.querySelector('#dl-clear').onclick = async () => { S.meta.deadline = null; await saveMeta(); toast('Termine rimosso.', 'ok'); render(); };
-  ctl.querySelector('#auto').onchange = async (e) => { S.meta.autoApprove = e.target.checked; await saveMeta(); toast(e.target.checked ? 'Approvazione automatica attiva.' : 'Approvazione manuale attiva.', 'ok'); };
-  wrap.appendChild(ctl);
-
-  /* tabellone richieste */
   const panel = el(`
     <div class="panel">
       <div class="panel-head">
-        <h2>Richieste ricevute</h2>
+        <div><span class="eyebrow">giornate ${g.first}–${g.last}</span><h2>${esc(g.name)}</h2></div>
         <div class="btn-row">
-          ${pending.length ? `<button class="btn btn-sm btn-ok" id="all-ok">Approva tutte (${pending.length})</button>` : ''}
-          ${missing.length ? `<button class="btn btn-sm btn-ghost" id="copy">Copia promemoria</button>` : ''}
+          ${pending.length ? `<button class="btn btn-sm btn-ok" data-all>Approva tutte (${pending.length})</button>` : ''}
+          ${missing.length && g.kind === 'lms' ? `<button class="btn btn-sm btn-ko" data-abs>Elimina i ${missing.length} assenti</button>` : ''}
+          ${missing.length ? `<button class="btn btn-sm btn-ghost" data-copy>Promemoria</button>` : ''}
         </div>
       </div>
       <div class="panel-body"><div class="board"></div></div>
     </div>`);
   const board = panel.querySelector('.board');
 
-  active.forEach(p => {
-    const req = S.requests[p.id];
+  if(!gameOpen(gameKey)){
+    board.appendChild(el(`<div class="empty">${
+      S.core.round < g.first ? 'Comincia alla giornata ' + g.first + '.' :
+      gmeta(gameKey)?.phase === 'finished' ? 'Minigioco concluso.' : 'Non in corso.'}</div>`));
+    return panel;
+  }
+
+  alive.forEach(p => {
+    const req = S.reqs[gameKey]?.[p.id];
     const state = req ? req.status : 'missing';
     const t = req ? team(req.teamId) : null;
-    const dup = req ? Object.entries(S.requests).filter(([id, r]) => r.teamId === req.teamId && r.status !== 'rejected').length : 0;
-    const invalid = req && (p.usedTeamIds || []).includes(req.teamId);
     const row = el(`
       <div class="req ${state}">
         <div>
           <div class="p-name">${esc(p.name)}</div>
-          <div class="p-sub">${req ? 'inviato ' + fmtDate(req.sentAt) + ' · da ' + esc(req.sentBy) : 'nessuna richiesta'}</div>
+          <div class="p-sub">${req ? 'inviato ' + fmtDate(req.sentAt) : 'nessuna richiesta'}</div>
         </div>
-        <div>
-          ${req ? `<div class="p-team"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}
-                   ${dup > 1 ? `<span class="tag mute">in ${dup}</span>` : ''}</div>
-                   ${invalid ? `<div class="warn-inline">Squadra già usata in una giornata precedente.</div>` : ''}
-                   ${req.note ? `<div class="p-sub">nota: ${esc(req.note)}</div>` : ''}`
-                 : `<span class="tag mute">in attesa di risposta</span>`}
-        </div>
+        <div>${req
+          ? `<div class="p-team"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}</div>
+             ${req.note ? `<div class="p-sub">nota: ${esc(req.note)}</div>` : ''}`
+          : `<span class="tag mute">in attesa di risposta</span>`}</div>
         <div class="p-actions"></div>
       </div>`);
     const acts = row.querySelector('.p-actions');
-
     if(state === 'pending'){
       const ok = el(`<button class="btn btn-sm btn-ok">Approva</button>`);
-      ok.onclick = async () => { await decideRequest(p.id, 'approved'); toast('Approvato: ' + p.name + ' → ' + t.name, 'ok'); render(); };
+      ok.onclick = async () => { await decidePick(gameKey, p.id, 'approved'); toast('Approvato: ' + p.name + ' → ' + t.name, 'ok'); render(); };
       const ko = el(`<button class="btn btn-sm btn-ko">Respingi</button>`);
       ko.onclick = async () => {
-        const note = await modal({ title:'Respingi il pronostico', message:'Scrivi il motivo: ' + p.name + ' lo vedrà e potrà rifare la scelta.', input:'text', placeholder:'es. squadra già usata', confirmText:'Respingi' });
+        const note = await modal({ title:'Respingi il pronostico', message:'Scrivi il motivo: ' + p.name + ' lo vedrà e potrà rifare la scelta.', input:'text', placeholder:'es. squadra non più disponibile', confirmText:'Respingi' });
         if(note === null) return;
-        await decideRequest(p.id, 'rejected', note); toast('Richiesta respinta.', ''); render();
+        await decidePick(gameKey, p.id, 'rejected', note); toast('Richiesta respinta.', ''); render();
       };
       acts.append(ok, ko);
     } else if(state === 'approved'){
       acts.appendChild(el(`<span class="tag ok">registrato</span>`));
       const undo = el(`<button class="btn btn-sm btn-ghost">Annulla</button>`);
-      undo.onclick = async () => { await decideRequest(p.id, 'pending'); render(); };
+      undo.onclick = async () => { await decidePick(gameKey, p.id, 'pending'); render(); };
       acts.appendChild(undo);
     } else {
       acts.appendChild(el(`<span class="tag ${state === 'rejected' ? 'ko' : 'mute'}">${state === 'rejected' ? 'respinto' : 'manca'}</span>`));
     }
-    const setBtn = el(`<button class="btn btn-sm btn-ghost">Scegli tu</button>`);
-    setBtn.onclick = async () => {
-      const tid = await pickTeamFor(p);
+    const set = el(`<button class="btn btn-sm btn-ghost">Scegli tu</button>`);
+    set.onclick = async () => {
+      const tid = await pickForModal(gameKey, p);
       if(!tid) return;
-      try{ await submitRequest(p.id, tid, true); toast(p.name + ' → ' + team(tid).name, 'ok'); render(); }
+      try{ await submitPick(gameKey, p.id, tid, true); toast(p.name + ' → ' + team(tid).name, 'ok'); render(); }
       catch(e){ toast(e.message, 'err'); }
     };
-    acts.appendChild(setBtn);
+    acts.appendChild(set);
     board.appendChild(row);
   });
 
-  const allOk = panel.querySelector('#all-ok');
-  if(allOk) allOk.onclick = async () => {
-    allOk.disabled = true;
-    for(const p of pending) await decideRequest(p.id, 'approved');
-    toast(pending.length + ' pronostici approvati.', 'ok'); render();
+  if(absentNow.length){
+    board.appendChild(el(`<div class="sub-head">Eliminati per assenza in questa giornata — ancora ripescabili</div>`));
+    absentNow.forEach(p => {
+      const row = el(`<div class="req missing"><div class="p-name">${esc(p.name)}</div>
+        <div><span class="tag ko">eliminato per assenza</span></div>
+        <div class="p-actions"><button class="btn btn-sm btn-ghost">Ripesca</button></div></div>`);
+      row.querySelector('button').onclick = () => readmit(gameKey, p.id);
+      board.appendChild(row);
+    });
+  }
+  if(!alive.length) board.appendChild(el(`<div class="empty">Nessun partecipante ancora in gioco.</div>`));
+
+  const all = panel.querySelector('[data-all]');
+  if(all) all.onclick = async () => { all.disabled = true; for(const p of pending) await decidePick(gameKey, p.id, 'approved'); toast(pending.length + ' approvati.', 'ok'); render(); };
+  const abs = panel.querySelector('[data-abs]');
+  if(abs) abs.onclick = () => eliminateAbsent(gameKey);
+  const cp = panel.querySelector('[data-copy]');
+  if(cp) cp.onclick = () => copyText(`${g.name} — giornata ${S.core.round}\nManca il pronostico di: ${missing.map(p => p.name).join(', ')}.` +
+    (S.core.deadline ? `\nTermine: ${fmtDate(S.core.deadline)}.` : ''));
+  return panel;
+}
+
+function viewRequests(){
+  const wrap = el(`<div class="stack"></div>`);
+  const ctl = el(`
+    <div class="panel">
+      <div class="panel-head"><div><span class="eyebrow">giornata ${S.core.round} / ${SEASON_ROUNDS}</span><h2>Regole d'invio</h2></div></div>
+      <div class="panel-body">
+        <p class="note">Il termine e l'approvazione automatica valgono per tutti i minigiochi in corso.</p>
+        <div class="form-grid">
+          <label class="field"><span>Termine per l'invio</span><input type="datetime-local" id="dl" value="${toInputDT(S.core.deadline)}"></label>
+          <div style="display:flex; align-items:flex-end; gap:8px;">
+            <button class="btn btn-ghost" id="dl-save">Salva</button>
+            <button class="btn btn-ghost" id="dl-clear">Togli</button>
+          </div>
+        </div>
+        <label class="checkline"><input type="checkbox" id="auto" ${S.core.autoApprove ? 'checked' : ''}>
+          <span>Approva da solo i pronostici validi, in tutti i minigiochi.</span></label>
+      </div>
+    </div>`);
+  ctl.querySelector('#dl-save').onclick = async () => {
+    const v = ctl.querySelector('#dl').value;
+    S.core.deadline = v ? new Date(v).toISOString() : null;
+    await saveCore(); toast('Termine aggiornato.', 'ok'); render();
   };
-  const copy = panel.querySelector('#copy');
-  if(copy) copy.onclick = () => {
-    const txt = `Minigioco — giornata ${S.meta.round}\nManca ancora il pronostico di: ${missing.map(p => p.name).join(', ')}.` +
-      (S.meta.deadline ? `\nTermine: ${fmtDate(S.meta.deadline)}.` : '');
-    navigator.clipboard?.writeText(txt).then(() => toast('Promemoria copiato.', 'ok'), () => toast('Copia non riuscita.', 'err'));
-  };
-  wrap.appendChild(panel);
+  ctl.querySelector('#dl-clear').onclick = async () => { S.core.deadline = null; await saveCore(); toast('Termine rimosso.', 'ok'); render(); };
+  ctl.querySelector('#auto').onchange = async e => { S.core.autoApprove = e.target.checked; await saveCore(); render(); };
+  wrap.appendChild(ctl);
+  GAMES.forEach(g => wrap.appendChild(requestsPanel(g.key)));
   return wrap;
 }
 
 /* =========================================================================
-   14. SCHERMATA — risultati e chiusura giornata (organizzatore)
+   14. SCHERMATA — esiti condivisi e chiusura della giornata
    ========================================================================= */
 function viewResults(){
   const wrap = el(`<div class="stack"></div>`);
-  const ap = approvedPicks();
-  const byTeam = new Map();
-  Object.entries(ap).forEach(([pid, tid]) => { (byTeam.get(tid) || byTeam.set(tid, []).get(tid)).push(pid); });
+  const picked = pickedTeamsThisRound();
 
-  if(!allApproved())
-    wrap.appendChild(el(`<div class="banner">Mancano ancora dei pronostici approvati: puoi già segnare i risultati delle squadre note, ma la giornata si chiude solo quando ci sono tutti.</div>`));
+  wrap.appendChild(el(`<div class="banner">L'esito di ogni squadra si segna <strong>una volta sola</strong> e vale per tutti i minigiochi: se il Milan vince, la vittoria va sia a chi l'ha scelto in Last Man Standing sia a chi l'ha scelto in WhoWin?.</div>`));
 
   const panel = el(`
     <div class="panel">
-      <div class="panel-head"><div><span class="eyebrow">Giornata ${S.meta.round}</span><h2>Esito delle squadre</h2></div></div>
-      <div class="panel-body"><p class="note">Segna se la squadra ha vinto: l'esito vale per tutti quelli che l'hanno scelta. Ricliccando togli il segno.</p><div class="board"></div></div>
+      <div class="panel-head"><div><span class="eyebrow">giornata ${S.core.round} / ${SEASON_ROUNDS}</span><h2>Esito delle squadre</h2></div>
+        <span class="eyebrow">${picked.size} squadre pronosticate</span></div>
+      <div class="panel-body"><div class="board"></div></div>
     </div>`);
   const board = panel.querySelector('.board');
 
-  if(byTeam.size === 0){
+  if(!picked.size){
     board.appendChild(el(`<div class="empty">Nessun pronostico approvato per questa giornata.</div>`));
   } else {
-    [...byTeam.entries()].sort((a,b) => team(a[0]).name.localeCompare(team(b[0]).name)).forEach(([tid, pids]) => {
+    [...picked.entries()].sort((a,b) => team(a[0]).name.localeCompare(team(b[0]).name)).forEach(([tid, uses]) => {
       const t = team(tid), cur = S.results[tid];
+      const byGame = {};
+      uses.forEach(u => { (byGame[u.gameKey] = byGame[u.gameKey] || []).push(player(u.playerId)?.name || '?'); });
       const row = el(`
         <div class="req ${cur === 'win' ? 'approved' : cur === 'lose' ? 'rejected' : 'pending'}">
           <div class="p-team"><span class="dot" style="background:${t.color}"></span><strong>${esc(t.name)}</strong></div>
-          <div class="p-sub">${pids.map(id => esc(player(id)?.name || '?')).join(' · ')}</div>
+          <div class="p-sub">${Object.entries(byGame).map(([k,names]) =>
+            `<span class="tag mute">${esc(G(k).short)}</span> ${esc(names.join(', '))}`).join('<br>')}</div>
           <div class="p-actions">
             <button class="btn btn-sm btn-ok ${cur === 'win' ? 'on' : ''}" data-r="win">Ha vinto</button>
             <button class="btn btn-sm btn-ko ${cur === 'lose' ? 'on' : ''}" data-r="lose">Non ha vinto</button>
@@ -1514,300 +1925,314 @@ function viewResults(){
         </div>`);
       row.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => {
         b.disabled = true;
-        try{ await setResult(tid, b.dataset.r); render(); }catch(e){ toast('Salvataggio non riuscito.', 'err'); b.disabled = false; }
+        try{ await setTeamResult(tid, b.dataset.r); render(); }
+        catch(e){ toast('Salvataggio non riuscito.', 'err'); b.disabled = false; }
       });
       board.appendChild(row);
     });
   }
   wrap.appendChild(panel);
 
-  const ready = allApproved() && allResulted();
-  const outCount = Object.entries(ap).filter(([pid, tid]) => S.results[tid] === 'lose').length;
+  const ready = openGames().length && allResultsIn();
+  const summary = closeSummary();
   const close = el(`
     <div class="panel"><div class="panel-body" style="display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;">
       <div>
-        <h2 style="font-size:1rem;">Chiudi la giornata ${S.meta.round}</h2>
+        <h2 style="font-size:1rem;">Chiudi la giornata ${S.core.round}</h2>
         <p class="note">${ready
-          ? `Alla chiusura ${outCount === 0 ? 'nessuno viene eliminato' : outCount === 1 ? '1 partecipante viene eliminato' : outCount + ' partecipanti vengono eliminati'} e si passa alla giornata successiva.`
-          : 'Servono tutti i pronostici approvati e tutti gli esiti segnati.'}</p>
+          ? summary.map(r => `${esc(r.g.short)}: ${r.withPick}/${r.alive} pronostici` + (r.noPick.length ? ` — ${r.noPick.length} senza` : '')).join(' · ')
+          : 'Servono gli esiti di tutte le squadre pronosticate.'}</p>
       </div>
-      <button class="btn btn-primary" id="close-round" ${ready ? '' : 'disabled'}>Chiudi la giornata</button>
+      <button class="btn btn-primary" id="close-r" ${ready ? '' : 'disabled'}>Chiudi la giornata</button>
     </div></div>`);
-  close.querySelector('#close-round').onclick = async () => {
-    if(!await confirmBox('Chiudo la giornata ' + S.meta.round + '. Gli esiti diventano definitivi e le squadre usate non saranno più scegliibili.')) return;
-    await closeRound();
-  };
+  close.querySelector('#close-r').onclick = closeGiornata;
   wrap.appendChild(close);
+
+  const lastRound = Math.max(...GAMES.map(g => { const h = gmeta(g.key)?.history || []; return h.length ? h[h.length-1].round : 0; }), 0);
+  if(lastRound){
+    const back = el(`
+      <div class="panel"><div class="panel-body" style="display:flex; justify-content:space-between; gap:14px; align-items:center; flex-wrap:wrap;">
+        <div><h2 style="font-size:1rem;">Riapri l'ultima giornata</h2>
+          <p class="note">Annulla la chiusura della giornata ${lastRound} in tutti i minigiochi.</p></div>
+        <button class="btn btn-ghost" id="reopen">Riapri G${lastRound}</button>
+      </div></div>`);
+    back.querySelector('#reopen').onclick = reopenGiornata;
+    wrap.appendChild(back);
+  }
   return wrap;
 }
 
 /* =========================================================================
-   15. SCHERMATA — partecipanti e account (organizzatore)
+   15. SCHERMATA — classifiche interattive
+   ========================================================================= */
+function viewBoard(){
+  const wrap = el(`<div class="stack"></div>`);
+  if(!GAMES.some(g => gmeta(g.key))){
+    wrap.appendChild(el(`<div class="empty">Nessun minigioco avviato.</div>`));
+    return wrap;
+  }
+  const sw = el(`<div class="switcher"></div>`);
+  GAMES.forEach(g => {
+    const b = el(`<button class="${S.boardGame === g.key ? 'on' : ''}">${esc(g.short)}</button>`);
+    b.onclick = () => { S.boardGame = g.key; render(); };
+    sw.appendChild(b);
+  });
+  wrap.appendChild(sw);
+
+  const key = S.boardGame, g = G(key), m = gmeta(key);
+  if(!m){ wrap.appendChild(el(`<div class="empty">Minigioco non ancora avviato.</div>`)); return wrap; }
+
+  const rows = (S.core.players || []).map(p => {
+    const st = gstate(key, p.id);
+    return { p, wins: winsIn(key, p.id), played: playedIn(key, p.id),
+             used: (st.used || []).length, eliminated: st.eliminated, elimRound: st.eliminatedRound };
+  });
+  const dir = S.boardDir === 'asc' ? 1 : -1;
+  const sorters = {
+    wins:   (a,b) => (a.wins - b.wins) * dir || a.p.name.localeCompare(b.p.name),
+    played: (a,b) => (a.played - b.played) * dir || a.p.name.localeCompare(b.p.name),
+    name:   (a,b) => a.p.name.localeCompare(b.p.name) * dir,
+    status: (a,b) => ((a.eliminated ? 1 : 0) - (b.eliminated ? 1 : 0)) * dir || b.wins - a.wins
+  };
+  rows.sort(sorters[S.boardSort] || sorters.wins);
+  const best = Math.max(1, ...rows.map(r => r.wins));
+  const me = myPlayer();
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head">
+        <div><span class="eyebrow">${g.kind === 'season' ? 'vittorie in stagione' : 'giornate superate'}</span><h2>Classifica — ${esc(g.short)}</h2></div>
+        <span class="eyebrow">giornata ${S.core.round} / ${SEASON_ROUNDS}${m.phase === 'finished' ? ' · conclusa' : ''}</span>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div class="table-scroll"><table class="board-table">
+          <thead><tr>
+            <th style="width:38px;">#</th>
+            <th data-s="name" class="sortable">Partecipante</th>
+            <th data-s="wins" class="sortable num">Vittorie</th>
+            <th data-s="played" class="sortable num">Giornate</th>
+            ${g.kind === 'lms' ? `<th data-s="status" class="sortable" style="text-align:right;">Stato</th>` : ''}
+          </tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <p class="note" style="padding:10px 16px 14px; margin:0;">Tocca l'intestazione di una colonna per riordinare, tocca una riga per vedere giornata per giornata.</p>
+      </div>
+    </div>`);
+  panel.querySelectorAll('.sortable').forEach(th => {
+    if(th.dataset.s === S.boardSort) th.classList.add('on', S.boardDir);
+    th.onclick = () => {
+      if(S.boardSort === th.dataset.s) S.boardDir = S.boardDir === 'desc' ? 'asc' : 'desc';
+      else { S.boardSort = th.dataset.s; S.boardDir = th.dataset.s === 'name' ? 'asc' : 'desc'; }
+      render();
+    };
+  });
+
+  const tb = panel.querySelector('tbody');
+  if(!rows.length) tb.appendChild(el(`<tr><td colspan="5" class="note" style="padding:14px;">Nessun partecipante.</td></tr>`));
+  rows.forEach((r,i) => {
+    const isMe = me && r.p.id === me.id;
+    const open = !!S.boardOpen[key + ':' + r.p.id];
+    const tr = el(`
+      <tr class="rank-row ${isMe ? 'me' : ''} ${r.eliminated ? 'out' : ''} ${open ? 'open' : ''}">
+        <td class="mono">${i+1}</td>
+        <td><strong>${esc(r.p.name)}</strong>${isMe ? ' <span class="tag mute">tu</span>' : ''}
+            <div class="bar"><span style="width:${Math.round(r.wins / best * 100)}%"></span></div></td>
+        <td class="num wins">${r.wins}</td>
+        <td class="num">${r.played}</td>
+        ${g.kind === 'lms' ? `<td style="text-align:right;">${r.eliminated
+          ? `<span class="tag ko">fuori G${r.elimRound}</span>`
+          : `<span class="tag ok">in gioco</span>`}</td>` : ''}
+      </tr>`);
+    tr.onclick = () => { S.boardOpen[key + ':' + r.p.id] = !open; render(); };
+    tb.appendChild(tr);
+    if(open){
+      const det = el(`<tr class="rank-detail"><td colspan="${g.kind === 'lms' ? 5 : 4}"></td></tr>`);
+      det.querySelector('td').appendChild(historyTable(key, r.p.id));
+      tb.appendChild(det);
+    }
+  });
+  wrap.appendChild(panel);
+  return wrap;
+}
+
+/* =========================================================================
+   16. SCHERMATA — partecipanti e accessi (organizzatore)
    ========================================================================= */
 function viewPlayers(){
   const wrap = el(`<div class="stack"></div>`);
-  const placeholders = S.meta.players.filter(p => isPlaceholder(p.name));
-  wrap.appendChild(el(`<div class="banner">I codici di accesso sono in chiaro: puoi leggerli, copiarli e cambiarli tu. Ricordalo ai partecipanti — qui dentro non deve finire una password che usano altrove.</div>`));
 
   const add = el(`
     <div class="panel">
-      <div class="panel-head"><h2>Aggiungi un partecipante</h2>
-        ${placeholders.length ? `<button class="btn btn-sm btn-ghost" id="rm-ph">Rimuovi ${placeholders.length} segnaposto</button>` : ''}</div>
-      <div class="panel-body"><div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="np" placeholder="Nome e cognome" style="flex:1; min-width:200px;">
-        <button class="btn btn-primary" id="np-go">Aggiungi</button>
-      </div></div>
+      <div class="panel-head"><h2>Aggiungi un partecipante</h2></div>
+      <div class="panel-body">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="np" placeholder="Nome e cognome" style="flex:1; min-width:200px;">
+          <button class="btn btn-primary" id="np-go">Aggiungi</button>
+        </div>
+        <p class="note-dim" style="margin-top:10px;">Entra subito in tutti e tre i minigiochi, da questa giornata in poi.</p>
+      </div>
     </div>`);
   const doAdd = async () => {
     const name = add.querySelector('#np').value.trim();
     if(!name) return;
+    if(!S.core) S.core = emptyCore();
     let id = 'p-' + slug(name), n = 2;
     while(player(id)) id = 'p-' + slug(name) + '-' + (n++);
-    S.meta.players.push({ id, name, usedTeamIds:[], eliminated:false, eliminatedRound:null, rowIndex:null });
-    if(S.meta.phase === 'setup') S.meta.phase = 'playing';
-    await saveMeta(); add.querySelector('#np').value = ''; toast(name + ' aggiunto.', 'ok'); render();
+    S.core.players.push({ id, name });
+    await saveCore();
+    for(const g of GAMES){
+      if(!S.games[g.key]) S.games[g.key] = emptyGame();
+      gstate(g.key, id);
+      await saveGame(g.key);
+    }
+    add.querySelector('#np').value = '';
+    toast(name + ' aggiunto.', 'ok'); render();
   };
   add.querySelector('#np-go').onclick = doAdd;
   add.querySelector('#np').onkeydown = e => { if(e.key === 'Enter') doAdd(); };
-  const rmPh = add.querySelector('#rm-ph');
-  if(rmPh) rmPh.onclick = async () => {
-    if(!await confirmBox('Rimuovo i ' + placeholders.length + ' nomi segnaposto ("partecipante N")?')) return;
-    S.meta.players = S.meta.players.filter(p => !isPlaceholder(p.name));
-    await saveMeta(); toast('Segnaposto rimossi.', 'ok'); render();
-  };
   wrap.appendChild(add);
 
-  const panel = el(`
+  const withUser = (S.core?.players || []).filter(p => S.claims[p.id]);
+  const without  = (S.core?.players || []).filter(p => !S.claims[p.id]);
+
+  const bulk = el(`
     <div class="panel">
-      <div class="panel-head"><h2>Partecipanti e accessi</h2>
+      <div class="panel-head"><h2>Accessi</h2>
         <div class="btn-row">
-          <button class="btn btn-sm btn-ghost" id="mk-all">Crea gli accessi mancanti</button>
-          <button class="btn btn-sm btn-ghost" id="cp-all">Copia tutti</button>
-          <button class="btn btn-sm btn-ghost" id="tg-all">Mostra i codici</button>
-        </div></div>
+          ${without.length ? `<button class="btn btn-sm btn-primary" id="mk">Crea i ${without.length} accessi mancanti</button>` : ''}
+          ${withUser.length ? `<button class="btn btn-sm btn-ghost" id="show">${S.showCodes ? 'Nascondi' : 'Mostra'} i codici</button>
+                               <button class="btn btn-sm btn-ghost" id="cpall">Copia elenco</button>` : ''}
+        </div>
+      </div>
       <div class="panel-body" style="padding:0;"><div class="table-scroll"><table>
-        <thead><tr><th>Partecipante</th><th>Nome utente</th><th>Codice</th><th>Squadre usate</th><th style="text-align:right;">Azioni</th></tr></thead>
+        <thead><tr><th>Partecipante</th><th>Nome utente</th><th>Codice</th><th style="text-align:right;">Azioni</th></tr></thead>
         <tbody></tbody></table></div></div>
     </div>`);
-  const tb = panel.querySelector('tbody');
-  S.meta.players.forEach(p => {
-    const u = S.users.find(u => u.playerId === p.id);
+  const tb = bulk.querySelector('tbody');
+  (S.core?.players || []).forEach(p => {
+    const uname = S.claims[p.id];
+    const u = uname ? S.users.find(x => x.username === uname) : null;
     const tr = el(`
-      <tr class="${p.eliminated ? 'out-row' : ''}">
-        <td><strong>${esc(p.name)}</strong>${p.eliminated ? `<div class="p-sub">eliminato G${p.eliminatedRound}</div>` : ''}</td>
-        <td><span class="mono" style="font-size:0.78rem;">${esc(u ? u.username : usernameFor(p))}</span>${u && u.role === 'admin' ? ' <span class="tag ok">organizzatore</span>' : ''}</td>
-        <td>${u ? (u.password
-              ? `<span class="code-cell mono" data-code="${esc(u.password)}">••••••</span>`
-              : `<span class="note-dim">creato prima: illeggibile</span>`)
-            : `<span class="tag mute">nessun accesso</span>`}</td>
-        <td>${(p.usedTeamIds || []).length ? (p.usedTeamIds || []).map(t => `<span class="chip-mini"><span class="dot" style="background:${team(t).color}"></span>${esc(team(t).name)}</span>`).join('') : '<span class="note-dim">—</span>'}</td>
-        <td style="text-align:right;"><div class="p-actions" style="justify-content:flex-end;"></div></td>
+      <tr>
+        <td><strong>${esc(p.name)}</strong></td>
+        <td class="mono">${uname ? esc(uname) : '<span class="tag mute">nessun accesso</span>'}</td>
+        <td class="mono">${u ? (S.showCodes ? esc(u.password || '—') : '••••••') : '—'}</td>
+        <td style="text-align:right;"><div class="btn-row" style="justify-content:flex-end;"></div></td>
       </tr>`);
-    const acts = tr.querySelector('.p-actions');
+    const acts = tr.querySelector('.btn-row');
     if(u){
       const cp = el(`<button class="btn btn-sm btn-ghost">Copia</button>`);
-      cp.onclick = () => copyText(`${p.name} — nome utente: ${u.username} · codice: ${u.password || '(illeggibile, rigeneralo)'}`);
-      acts.appendChild(cp);
-      const rp = el(`<button class="btn btn-sm btn-ghost">Cambia codice</button>`);
-      rp.onclick = async () => {
-        const np = await modal({ title:'Codice di ' + p.name, message:'Scrivi il nuovo codice, oppure lascia com\'è quello proposto.', input:'text', placeholder:'almeno 6 caratteri', confirmText:'Imposta', prefill: generateCode() });
-        if(np === null) return;
-        try{ await changePassword(u.username, np); await loadUsers(); toast('Codice aggiornato: ' + np, 'ok'); render(); }
+      cp.onclick = () => copyText(`${p.name}\nSito: ${location.href}\nNome utente: ${u.username}\nCodice: ${u.password}`);
+      const ch = el(`<button class="btn btn-sm btn-ghost">Cambia codice</button>`);
+      ch.onclick = async () => {
+        const np = await modal({ title:'Nuovo codice per ' + p.name, input:'text', prefill: generateCode(), confirmText:'Salva' });
+        if(!np) return;
+        try{ await changePassword(u.username, np); await loadUsers(); toast('Codice aggiornato.', 'ok'); render(); }
         catch(e){ toast(e.message, 'err'); }
       };
-      acts.appendChild(rp);
-      const un = el(`<button class="btn btn-sm btn-ghost">Scollega</button>`);
-      un.onclick = async () => {
-        if(!await confirmBox('Scollego l\'account "' + u.username + '" da ' + p.name + '? L\'account viene eliminato e il nome torna libero.')) return;
-        await Store.del(K.user(u.username)); await Store.del(K.claim(p.id));
-        await loadUsers(); await loadClaims(); toast('Account eliminato.', 'ok'); render();
-      };
-      acts.appendChild(un);
+      acts.append(cp, ch);
     } else {
-      const mk = el(`<button class="btn btn-sm btn-ok">Crea accesso</button>`);
+      const mk = el(`<button class="btn btn-sm btn-primary">Crea accesso</button>`);
       mk.onclick = async () => {
-        const code = await modal({ title:'Accesso per ' + p.name, message:'Nome utente: ' + usernameFor(p) + '. Questo è il codice che gli comunicherai.', input:'text', confirmText:'Crea', prefill: generateCode() });
-        if(code === null) return;
+        const code = generateCode();
         try{
-          await createUser({ username: usernameFor(p), password: code, role:'player', playerId: p.id, displayName: p.name });
+          await createUser({ username: p.id.replace(/^p-/,''), password: code, role:'player', playerId: p.id, displayName: p.name });
           await loadUsers(); await loadClaims();
-          copyText(`${p.name} — nome utente: ${usernameFor(p)} · codice: ${code}`);
-          toast('Accesso creato e copiato.', 'ok'); render();
+          toast('Accesso creato per ' + p.name + '.', 'ok'); render();
         }catch(e){ toast(e.message, 'err'); }
       };
       acts.appendChild(mk);
     }
-    if(!u && !S.me.playerId){
-      const link = el(`<button class="btn btn-sm btn-ghost">Sono io</button>`);
-      link.onclick = async () => {
-        S.me.playerId = p.id;
-        await Store.set(K.user(S.me.username), S.me);
-        await Store.set(K.claim(p.id), S.me.username);
-        await loadUsers(); await loadClaims(); toast('Collegato a ' + p.name + '.', 'ok'); render();
-      };
-      acts.appendChild(link);
-    }
-    const del = el(`<button class="btn btn-sm btn-ko">Elimina</button>`);
-    del.onclick = async () => {
-      if(!await confirmBox('Elimino ' + p.name + ' dal minigioco? Sparisce anche dallo storico delle giornate future.')) return;
-      S.meta.players = S.meta.players.filter(x => x.id !== p.id);
-      await saveMeta();
-      if(u){ await Store.del(K.user(u.username)); await Store.del(K.claim(p.id)); await loadUsers(); }
-      toast('Partecipante eliminato.', 'ok'); render();
+    const rm = el(`<button class="btn btn-sm btn-ko">Rimuovi</button>`);
+    rm.onclick = async () => {
+      if(!await confirmBox('Rimuovo ' + p.name + ' da tutti e tre i minigiochi? Lo storico di questo partecipante andrà perso.')) return;
+      S.core.players = S.core.players.filter(x => x.id !== p.id);
+      await saveCore();
+      for(const g of GAMES){
+        const m = gmeta(g.key); if(!m) continue;
+        delete m.st[p.id];
+        m.history.forEach(h => { h.entries = h.entries.filter(e => e.playerId !== p.id); });
+        await saveGame(g.key);
+      }
+      await Store.del(K.claim(p.id));
+      toast(p.name + ' rimosso.', ''); render();
     };
-    acts.appendChild(del);
+    acts.appendChild(rm);
     tb.appendChild(tr);
   });
 
-  /* i codici restano coperti finché non li chiedi: capita di condividere lo schermo */
-  let shown = false;
-  const applyMask = () => {
-    panel.querySelectorAll('.code-cell').forEach(c => {
-      c.textContent = shown ? c.dataset.code : '••••••';
-      c.classList.toggle('hidden-code', !shown);
-    });
-    panel.querySelector('#tg-all').textContent = shown ? 'Nascondi i codici' : 'Mostra i codici';
-  };
-  panel.querySelector('#tg-all').onclick = () => { shown = !shown; applyMask(); };
-  panel.querySelectorAll('.code-cell').forEach(c => c.onclick = () => copyText(c.dataset.code));
-  applyMask();
-
-  panel.querySelector('#cp-all').onclick = () => {
-    const lines = S.meta.players.map(p => {
-      const u = S.users.find(u => u.playerId === p.id);
-      return `${p.name} — utente: ${u ? u.username : usernameFor(p)} · codice: ${u ? (u.password || '(illeggibile)') : '(da creare)'}`;
-    });
-    copyText('Accessi al minigioco\n' + lines.join('\n'));
-  };
-
-  panel.querySelector('#mk-all').onclick = async () => {
-    const missing = S.meta.players.filter(p => !S.users.find(u => u.playerId === p.id));
-    if(!missing.length){ toast('Hanno già tutti un accesso.', ''); return; }
-    if(!await confirmBox('Creo l\'accesso per ' + missing.length + ' partecipanti, con un codice generato per ciascuno?')) return;
-    const created = [];
-    for(const p of missing){
+  const mk = bulk.querySelector('#mk');
+  if(mk) mk.onclick = async () => {
+    mk.disabled = true;
+    const lines = [];
+    for(const p of without){
       const code = generateCode();
       try{
-        await createUser({ username: usernameFor(p), password: code, role:'player', playerId: p.id, displayName: p.name });
-        created.push(`${p.name} — utente: ${usernameFor(p)} · codice: ${code}`);
-      }catch(e){ toast(p.name + ': ' + e.message, 'err'); }
+        await createUser({ username: p.id.replace(/^p-/,''), password: code, role:'player', playerId: p.id, displayName: p.name });
+        lines.push(`${p.name} — utente: ${p.id.replace(/^p-/,'')} — codice: ${code}`);
+      }catch(e){}
     }
     await loadUsers(); await loadClaims();
-    if(created.length) copyText('Accessi al minigioco\n' + created.join('\n'));
-    toast(created.length + ' accessi creati e copiati.', 'ok');
+    if(lines.length) copyText(`FantaList — accessi al minigioco\nSito: ${location.href}\n\n` + lines.join('\n'));
+    toast(lines.length + ' accessi creati e copiati negli appunti.', 'ok');
     render();
   };
-
-  wrap.appendChild(panel);
+  const sh = bulk.querySelector('#show');
+  if(sh) sh.onclick = () => { S.showCodes = !S.showCodes; render(); };
+  const cpall = bulk.querySelector('#cpall');
+  if(cpall) cpall.onclick = () => {
+    const lines = (S.core?.players || []).map(p => {
+      const u = S.users.find(x => x.username === S.claims[p.id]);
+      return u ? `${p.name} — utente: ${u.username} — codice: ${u.password}` : null;
+    }).filter(Boolean);
+    copyText(`FantaList — accessi al minigioco\nSito: ${location.href}\n\n` + lines.join('\n'));
+  };
+  wrap.appendChild(bulk);
   return wrap;
 }
 
 /* =========================================================================
-   16. SCHERMATA — lega e storico (tutti)
-   ========================================================================= */
-function viewLeague(){
-  const wrap = el(`<div class="stack"></div>`);
-  if(S.meta.phase === 'finished') wrap.appendChild(viewWinner());
-
-  const alive = activePlayers(), out = S.meta.players.filter(p => p.eliminated);
-  const hidePicks = !isAdmin() && !allApproved() && S.meta.phase === 'playing';
-
-  const panel = el(`
-    <div class="panel">
-      <div class="panel-head"><h2>Chi è ancora in piedi</h2><span class="eyebrow">${alive.length} su ${S.meta.players.length}</span></div>
-      <div class="panel-body" style="padding:0;"><table>
-        <thead><tr><th>Partecipante</th><th>Giornate superate</th><th style="text-align:right;">Giornata ${S.meta.round}</th></tr></thead>
-        <tbody></tbody></table></div>
-    </div>`);
-  const tb = panel.querySelector('tbody');
-  const rank = [...alive].sort((a,b) => (b.usedTeamIds?.length || 0) - (a.usedTeamIds?.length || 0) || a.name.localeCompare(b.name));
-  rank.forEach(p => {
-    const r = S.requests[p.id];
-    const cell = !r ? '<span class="tag mute">manca</span>'
-      : hidePicks ? '<span class="tag ok">inviato</span>'
-      : `<span class="chip-mini"><span class="dot" style="background:${team(r.teamId).color}"></span>${esc(team(r.teamId).name)}</span> <span class="tag ${r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'pending' : 'ko'}">${r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'attesa' : 'respinto'}</span>`;
-    tb.appendChild(el(`<tr><td><strong>${esc(p.name)}</strong></td><td class="num">${(p.usedTeamIds || []).length}</td><td style="text-align:right;">${cell}</td></tr>`));
-  });
-  out.sort((a,b) => (b.eliminatedRound || 0) - (a.eliminatedRound || 0)).forEach(p => {
-    tb.appendChild(el(`<tr class="out-row"><td><strong>${esc(p.name)}</strong></td><td class="num">${(p.usedTeamIds || []).length}</td><td style="text-align:right;"><span class="tag ko">fuori G${p.eliminatedRound}</span></td></tr>`));
-  });
-  if(hidePicks) panel.querySelector('.panel-body').appendChild(el(`<p class="note-dim" style="padding:12px 18px;">Le squadre scelte restano coperte finché non hanno inviato tutti.</p>`));
-  wrap.appendChild(panel);
-
-  const hist = el(`<div class="panel"><div class="panel-head"><h2>Giornate giocate</h2></div><div class="panel-body"></div></div>`);
-  const hb = hist.querySelector('.panel-body');
-  if(!S.meta.history.length){ hb.appendChild(el(`<div class="empty">Nessuna giornata chiusa finora.</div>`)); }
-  else {
-    [...S.meta.history].reverse().forEach(h => {
-      const box = el(`
-        <div class="panel" style="border-color:var(--line);">
-          <div class="panel-head" style="background:transparent;"><h2 style="font-size:0.92rem;">Giornata ${h.round}</h2>
-            <span class="eyebrow">${h.eliminatedIds.length ? h.eliminatedIds.length + ' eliminati' : 'nessun eliminato'}</span></div>
-          <div class="panel-body" style="padding:0;"><table><tbody>${h.entries.map(e => `
-            <tr><td>${esc(player(e.playerId)?.name || '—')}</td>
-                <td><span class="chip-mini"><span class="dot" style="background:${team(e.teamId).color}"></span>${esc(team(e.teamId).name)}</span></td>
-                <td style="text-align:right;" class="${e.result === 'win' ? 'res-win' : 'res-lose'}">${e.result === 'win' ? 'V' : 'NV'}</td></tr>`).join('')}
-          </tbody></table></div>
-        </div>`);
-      hb.appendChild(box);
-    });
-  }
-  wrap.appendChild(hist);
-  return wrap;
-}
-
-function viewWinner(){
-  const names = S.meta.winners.map(id => player(id)?.name || '—');
-  return el(`
-    <div class="panel" style="border-color:var(--amber);">
-      <div class="panel-body" style="text-align:center; padding:40px 22px;">
-        <div class="eyebrow">Minigioco concluso</div>
-        <h2 style="font-size:clamp(1.8rem,6vw,2.8rem); color:var(--amber); margin:8px 0;">${names.length ? esc(names.join(' · ')) : 'Nessun vincitore'}</h2>
-        <p class="note">${names.length > 1
-          ? 'Eliminati nella stessa giornata: il montepremi si divide.'
-          : names.length === 1 ? 'Ultimo in piedi. Montepremi suo.' : 'Tutti eliminati senza superstiti.'}</p>
-      </div>
-    </div>`);
-}
-
-/* =========================================================================
-   17. SCHERMATA — file Excel (organizzatore)
+   17. SCHERMATA — file Excel
    ========================================================================= */
 function importPanel(compact){
   const panel = el(`
     <div class="panel">
-      <div class="panel-head"><h2>${compact ? 'Ricarica il file' : 'Carica il file del minigioco'}</h2><span class="eyebrow">.xlsx</span></div>
+      <div class="panel-head"><h2>${compact ? 'Ricarica il file' : 'Carica il file della lega'}</h2><span class="eyebrow">.xlsx</span></div>
       <div class="panel-body">
-        <p class="note">Il file viene letto così: la colonna <strong>Partecipanti</strong> dà i nomi, le colonne delle squadre con la <strong>X</strong> le squadre già usate, le colonne <strong>Giornata N</strong> gli esiti nel formato <span class="mono">V (Inter)</span> o <span class="mono">NV (Inter)</span>. Il minigioco riparte dalla prima giornata libera.</p>
+        <p class="note">Un solo file comanda tutti e tre i minigiochi. Vengono cercati i fogli
+          <span class="mono">Minigioco_LastManStanding</span> (MG_A, giornate 1–19),
+          <span class="mono">…_Ritorno</span> (MG_R, giornate 20–38) e
+          <span class="mono">Minigioco_Stagionale</span> (MG_S, giornate 1–38 + Totale Vittorie).
+          I fogli mancanti vengono creati la prima volta che scarichi il file aggiornato.</p>
         <label class="checkline"><input type="checkbox" id="imp-ph" checked><span>Salta i nomi segnaposto ("partecipante 12", ecc.)</span></label>
-        <label class="checkline"><input type="checkbox" id="imp-pay" checked><span>Tieni solo chi ha la x su "Quota MiniGiochi" nel foglio dei partecipanti</span></label>
+        <label class="checkline"><input type="checkbox" id="imp-pay" checked><span>Tieni solo chi ha la x su "Quota MiniGiochi"</span></label>
         <input type="file" id="imp-file" accept=".xlsx,.xlsm">
-        ${compact ? `<div class="banner err">Ricaricare il file sostituisce partecipanti, storico e giornata in corso. Gli account restano, ma solo se i nomi non cambiano.</div>` : ''}
+        ${compact ? `<div class="banner err">Ricaricare il file sostituisce partecipanti e storico di tutti e tre i minigiochi. Gli account restano, ma solo se i nomi non cambiano.</div>` : ''}
       </div>
     </div>`);
-  panel.querySelector('#imp-file').onchange = async (e) => {
+  panel.querySelector('#imp-file').onchange = async e => {
     const f = e.target.files[0];
     if(!f) return;
-    const opts = { skipPlaceholders: panel.querySelector('#imp-ph').checked, onlyPaying: panel.querySelector('#imp-pay').checked };
     try{
-      const res = await importWorkbook(f, opts);
-      toast(`Caricati ${res.players} partecipanti e ${res.teams} squadre dal foglio "${res.sheetName}". Si riparte dalla giornata ${res.round}.`, 'ok');
+      const res = await importWorkbook(f, {
+        skipPlaceholders: panel.querySelector('#imp-ph').checked,
+        onlyPaying: panel.querySelector('#imp-pay').checked });
+      toast(`${res.players} partecipanti, ${res.teams} squadre. Fogli letti: ${res.sheets.join(', ') || 'nessuno'}. Si riparte dalla giornata ${res.round}.`, 'ok');
       S.tab = isAdmin() ? 'requests' : 'mine';
       render();
     }catch(err){ toast(err.message, 'err'); e.target.value = ''; }
   };
   return panel;
 }
-
 function viewExcel(){
   const wrap = el(`<div class="stack"></div>`);
   wrap.appendChild(el(`
     <div class="panel">
-      <div class="panel-head"><h2>File collegato</h2>${S.meta.fileName ? `<span class="eyebrow mono">${esc(S.meta.fileName)}</span>` : ''}</div>
+      <div class="panel-head"><h2>File collegato</h2>${S.core?.fileName ? `<span class="eyebrow mono">${esc(S.core.fileName)}</span>` : ''}</div>
       <div class="panel-body">
-        <p class="note">${S.meta.fileName
-          ? `Il sito lavora sulla copia del file <strong>${esc(S.meta.fileName)}</strong> (foglio "${esc(S.meta.sheetName || '')}"). Scarica la versione aggiornata quando vuoi: contiene le X delle squadre usate e gli esiti di ogni giornata chiusa, con il resto del file intatto.`
-          : 'Nessun file caricato: il download genera comunque un foglio con la stessa struttura.'}</p>
+        <p class="note">${S.core?.fileName
+          ? `Il sito lavora sulla copia di <strong>${esc(S.core.fileName)}</strong>. Il file che scarichi contiene i tre fogli aggiornati — X e conteggi sulle squadre usate, <span class="mono">V (Inter)</span> / <span class="mono">NV (Inter)</span> / <span class="mono">ASSENTE</span> sulle giornate, e il Totale Vittorie di WhoWin? — con gli altri fogli intatti.`
+          : 'Nessun file caricato: il download genera comunque i tre fogli nel formato giusto.'}</p>
         <div class="btn-row" id="dl-row"></div>
       </div>
     </div>`));
@@ -1815,20 +2240,6 @@ function viewExcel(){
   dl.onclick = downloadWorkbook;
   wrap.querySelector('#dl-row').appendChild(dl);
   wrap.appendChild(importPanel(true));
-
-  if(S.meta.history.length){
-    const back = el(`
-      <div class="panel"><div class="panel-body" style="display:flex; justify-content:space-between; gap:14px; align-items:center; flex-wrap:wrap;">
-        <div><h2 style="font-size:1rem;">Riapri l'ultima giornata</h2>
-          <p class="note">Annulla la chiusura della giornata ${S.meta.history[S.meta.history.length-1].round}: esiti ed eliminazioni tornano modificabili.</p></div>
-        <button class="btn btn-ghost" id="reopen">Riapri G${S.meta.history[S.meta.history.length-1].round}</button>
-      </div></div>`);
-    back.querySelector('#reopen').onclick = async () => {
-      if(!await confirmBox('Riapro l\'ultima giornata chiusa?')) return;
-      await reopenRound();
-    };
-    wrap.appendChild(back);
-  }
   return wrap;
 }
 
@@ -1837,81 +2248,72 @@ function viewExcel(){
    ========================================================================= */
 function viewSettings(){
   const wrap = el(`<div class="stack"></div>`);
-  const sb = el(`<div>${storageBanner()}</div>`);
-  if(sb.firstElementChild){ wireStorageBanner(sb); wrap.appendChild(sb); }
+  const me = S.me;
 
   const acc = el(`
     <div class="panel">
-      <div class="panel-head"><h2>Il tuo account</h2><span class="eyebrow mono">${esc(S.me.username)}</span></div>
+      <div class="panel-head"><h2>Il tuo accesso</h2><span class="eyebrow">${esc(me.role === 'admin' ? 'organizzatore' : 'partecipante')}</span></div>
       <div class="panel-body">
-        <label class="field"><span>Nuovo codice di accesso</span><input type="password" id="pw1" autocomplete="new-password"></label>
-        <label class="field"><span>Ripeti</span><input type="password" id="pw2" autocomplete="new-password"></label>
-        <button class="btn btn-ghost" id="pw-go">Cambia codice</button>
+        <p class="note">Nome utente <span class="mono">${esc(me.username)}</span>.</p>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="chg">Cambia il mio codice</button>
+          <button class="btn btn-ghost" id="out">Esci</button>
+        </div>
       </div>
     </div>`);
-  acc.querySelector('#pw-go').onclick = async () => {
-    const a = acc.querySelector('#pw1').value, b = acc.querySelector('#pw2').value;
-    if(a !== b){ toast('I due codici non coincidono.', 'err'); return; }
-    try{ await changePassword(S.me.username, a); toast('Codice cambiato.', 'ok'); acc.querySelector('#pw1').value = acc.querySelector('#pw2').value = ''; }
+  acc.querySelector('#chg').onclick = async () => {
+    const np = await modal({ title:'Nuovo codice di accesso', message:'Almeno 6 caratteri.', input:'password', confirmText:'Salva' });
+    if(!np) return;
+    try{ await changePassword(me.username, np); toast('Codice aggiornato.', 'ok'); }
     catch(e){ toast(e.message, 'err'); }
   };
+  acc.querySelector('#out').onclick = logout;
   wrap.appendChild(acc);
 
-  const info = el(`
-    <div class="panel">
-      <div class="panel-head"><h2>Dove finiscono i dati</h2></div>
+  const sb = el(`<div>${storageBanner()}</div>`);
+  if(sb.firstElementChild){ wireStorageBanner(sb); wrap.appendChild(sb); }
+
+  if(!isAdmin()) return wrap;
+
+  const zone = el(`
+    <div class="panel" style="border-color:rgba(242,99,95,0.4);">
+      <div class="panel-head"><h2 style="color:var(--ko);">Azzeramenti</h2></div>
       <div class="panel-body">
-        <p class="note">Modalità archivio: <strong class="mono">${Store.mode()}</strong>${Store.mode() === 'supabase' ? ` · <span class="mono">${esc(Store.config().url)}</span>` : ''}.</p>
-        <p class="note-dim">I codici di accesso sono salvati in chiaro, perché l'organizzatore deve poterli leggere e ridarli a chi li dimentica. Servono a evitare che qualcuno mandi il pronostico al posto di un altro, niente di più: <strong>non usare qui una password che usi altrove</strong>.</p>
-        <div class="btn-row"><button class="btn btn-ghost" id="cfg-open">Cambia archivio</button></div>
+        <p class="note">Puoi azzerare un solo minigioco, oppure tutto insieme. Gli account dei partecipanti restano sempre.</p>
+        <div class="reset-list"></div>
       </div>
     </div>`);
-  info.querySelector('#cfg-open').onclick = openBackendSetup;
-  wrap.appendChild(info);
-
-  if(isAdmin()){
-    const admins = S.users.filter(u => u.role === 'admin');
-    const co = el(`
-      <div class="panel">
-        <div class="panel-head"><h2>Altri organizzatori</h2><span class="eyebrow">${admins.length} attivi</span></div>
-        <div class="panel-body">
-          <p class="note">${admins.map(u => esc(u.username)).join(', ')}. Un secondo organizzatore serve se vuoi che qualcun altro possa approvare al posto tuo.</p>
-          <div class="btn-row"><button class="btn btn-ghost" id="mk-admin">Promuovi un partecipante</button></div>
-        </div>
+  const list = zone.querySelector('.reset-list');
+  GAMES.forEach(g => {
+    const m = gmeta(g.key);
+    const done = m ? m.history.length : 0;
+    const row = el(`
+      <div class="reset-row">
+        <div><strong>${esc(g.name)}</strong>
+          <div class="p-sub">${done ? done + ' giornate chiuse' : 'nessuna giornata chiusa'} · giornate ${g.first}–${g.last}</div></div>
+        <button class="btn btn-sm btn-ko" ${m ? '' : 'disabled'}>Azzera</button>
       </div>`);
-    co.querySelector('#mk-admin').onclick = async () => {
-      const u = await modal({ title:'Promuovi a organizzatore', message:'Scrivi il nome utente di chi deve poter approvare i pronostici.', input:'text', placeholder:'nome utente', confirmText:'Promuovi' });
-      if(!u) return;
-      const rec = await findUser(u);
-      if(!rec){ toast('Account non trovato.', 'err'); return; }
-      rec.role = 'admin'; await Store.set(K.user(rec.username), rec); await loadUsers();
-      toast(rec.username + ' ora è organizzatore.', 'ok'); render();
-    };
-    wrap.appendChild(co);
+    row.querySelector('button').onclick = () => wipeGame(g.key);
+    list.appendChild(row);
+  });
+  const rowRes = el(`
+    <div class="reset-row">
+      <div><strong>Solo i risultati</strong>
+        <div class="p-sub">Cancella storico ed esiti di tutti e tre, ma tiene partecipanti, accessi e file. Si riparte dalla giornata 1.</div></div>
+      <button class="btn btn-sm btn-ko">Azzera i risultati</button>
+    </div>`);
+  rowRes.querySelector('button').onclick = wipeResultsOnly;
+  list.appendChild(rowRes);
 
-    const danger = el(`
-      <div class="panel" style="border-color:rgba(242,99,95,0.4);">
-        <div class="panel-head"><h2 style="color:var(--ko);">Azzera il minigioco</h2></div>
-        <div class="panel-body">
-          <p class="note">Cancella partecipanti, storico, pronostici e file collegato. Gli account restano: chi vuole rigiocare dovrà solo essere ricollegato al proprio nome.</p>
-          <button class="btn btn-ko" id="wipe">Azzera tutto</button>
-        </div>
-      </div>`);
-    danger.querySelector('#wipe').onclick = async () => {
-      const c = await modal({ title:'Azzera il minigioco', message:'Scrivi AZZERA per confermare: l\'operazione non si annulla.', input:'text', placeholder:'AZZERA', confirmText:'Azzera' });
-      if(c !== 'AZZERA') return;
-      for(const h of S.meta.history){
-        for(const e of h.entries) await Store.del(K.req(h.round, e.playerId));
-      }
-      for(const pid of Object.keys(S.requests)) await Store.del(K.req(S.meta.round, pid));
-      for(const tid of Object.keys(S.results)) await Store.del(K.res(S.meta.round, tid));
-      for(const p of S.meta.players) await Store.del(K.claim(p.id));
-      S.meta = emptyMeta(); await saveMeta();
-      S.me.playerId = null; await Store.set(K.user(S.me.username), S.me);
-      await refresh(false); toast('Minigioco azzerato.', 'ok');
-    };
-    wrap.appendChild(danger);
-  }
+  const rowAll = el(`
+    <div class="reset-row danger">
+      <div><strong>Tutto</strong>
+        <div class="p-sub">Cancella anche partecipanti e file collegato: il sito torna come appena installato.</div></div>
+      <button class="btn btn-sm btn-ko">Azzera tutto</button>
+    </div>`);
+  rowAll.querySelector('button').onclick = wipeAll;
+  list.appendChild(rowAll);
+  wrap.appendChild(zone);
   return wrap;
 }
 
@@ -1921,65 +2323,45 @@ function viewSettings(){
 function renderWho(){
   const box = document.getElementById('who');
   box.innerHTML = '';
-  if(!S.me){ box.appendChild(el(`<span class="note-dim">accesso riservato ai partecipanti</span>`)); return; }
-  box.appendChild(el(`<span class="badge-user ${isAdmin() ? 'admin' : ''}">${esc(S.me.displayName || S.me.username)}${isAdmin() ? ' · organizzatore' : ''}</span>`));
-  if(S.offline) box.appendChild(el(`<span class="tag ko">archivio irraggiungibile</span>`));
-  const out = el(`<button class="btn-link">Esci</button>`);
-  out.onclick = logout;
-  box.appendChild(out);
-}
 
+  if(!S.me){
+    const btn = el(`<button class="who-login-btn">Accedi</button>`);
+    btn.onclick = () => {
+      S.gateTab = 'login';
+      render();
+      document.getElementById('li-user')?.focus();
+    };
+    box.appendChild(btn);
+    return;
+  }
+
+  const btn = el(`
+    <button class="who-btn" title="Clicca per uscire">
+      <span class="badge-user ${S.me.role === 'admin' ? 'admin' : ''}">${esc(S.me.displayName || S.me.username)} · ${S.me.role === 'admin' ? 'organizzatore' : 'partecipante'}</span>
+      <span class="logout-hint">esci ↦</span>
+    </button>`);
+  btn.onclick = logout;
+  box.appendChild(btn);
+  if(S.offline) box.appendChild(el(`<span class="who-role" style="color:var(--ko); font-size:0.75rem;">archivio offline</span>`));
+}
 function tabsFor(){
   if(isAdmin()){
-    const pending = activePlayers().filter(p => S.requests[p.id]?.status === 'pending').length;
-    const t = [{ k:'requests', l:'Richieste', c:pending }, { k:'results', l:'Risultati' },
-               { k:'league', l:'Lega' }, { k:'players', l:'Partecipanti' },
+    const t = [{ k:'requests', l:'Richieste', c: totalPending() }, { k:'results', l:'Esiti' },
+               { k:'board', l:'Classifiche' }, { k:'players', l:'Partecipanti' },
                { k:'excel', l:'File Excel' }, { k:'settings', l:'Impostazioni' }];
-    if(myPlayer()) t.unshift({ k:'mine', l:'La mia schedina' });
+    if(myPlayer()) t.unshift({ k:'mine', l:'I miei pronostici' });
     return t;
   }
-  return [{ k:'mine', l:'La mia schedina' }, { k:'league', l:'Lega' }, { k:'settings', l:'Impostazioni' }];
+  return [{ k:'mine', l:'I miei pronostici' }, { k:'board', l:'Classifiche' }, { k:'settings', l:'Impostazioni' }];
 }
-
 function render(){
   renderWho();
   const app = document.getElementById('app');
   app.innerHTML = '';
   document.getElementById('foot').textContent =
-    'FantaList · minigioco a eliminazione' + (S.meta?.fileName ? ' · file ' + S.meta.fileName : '') + ' · archivio: ' + Store.mode();
+    'FantaList · 2 Last Man Standing + WhoWin?' + (S.core?.fileName ? ' · ' + S.core.fileName : '') + ' · archivio: ' + Store.mode();
 
   if(!S.me){ app.appendChild(renderGate()); return; }
-
-  if(!S.meta || S.meta.players.length === 0){
-    const wrap = el(`<div class="stack"></div>`);
-    if(isAdmin()){
-      wrap.appendChild(el(`
-        <div class="panel"><div class="panel-body">
-          <span class="eyebrow">passo 2 di 2</span>
-          <h2 style="font-size:1.5rem; margin:4px 0 8px;">Apri il minigioco</h2>
-          <p class="note">Carica il file Excel della lega: da lì escono partecipanti, squadre e le giornate già giocate. In alternativa aggiungi i nomi a mano dalla sezione Partecipanti.</p>
-        </div></div>`));
-      wrap.appendChild(importPanel(false));
-      const manual = el(`<div class="panel"><div class="panel-body"><div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <input type="text" id="mp" placeholder="Nome partecipante" style="flex:1; min-width:200px;">
-          <button class="btn btn-ghost" id="mp-go">Aggiungi a mano</button></div></div></div>`);
-      const addManual = async () => {
-        const name = manual.querySelector('#mp').value.trim();
-        if(!name) return;
-        if(!S.meta) S.meta = emptyMeta();
-        S.meta.players.push({ id:'p-' + slug(name), name, usedTeamIds:[], eliminated:false, eliminatedRound:null, rowIndex:null });
-        S.meta.phase = 'playing';
-        await saveMeta(); toast(name + ' aggiunto.', 'ok'); S.tab = 'players'; render();
-      };
-      manual.querySelector('#mp-go').onclick = addManual;
-      manual.querySelector('#mp').onkeydown = e => { if(e.key === 'Enter') addManual(); };
-      wrap.appendChild(manual);
-    } else {
-      wrap.appendChild(el(`<div class="empty">L'organizzatore non ha ancora aperto il minigioco. Torna più tardi.</div>`));
-    }
-    app.appendChild(wrap);
-    return;
-  }
 
   const tabs = tabsFor();
   if(!S.tab || !tabs.find(t => t.k === S.tab)) S.tab = tabs[0].k;
@@ -1990,41 +2372,59 @@ function render(){
     bar.appendChild(b);
   });
   app.appendChild(bar);
-  if(isAdmin() && S.meta.phase !== 'setup') app.appendChild(scoreboard());
+
+  const empty = !S.core || !S.core.players.length;
+  if(empty && S.tab !== 'settings'){
+    const w = el(`<div class="stack"></div>`);
+    if(isAdmin()){
+      w.appendChild(el(`
+        <div class="panel"><div class="panel-body">
+          <span class="eyebrow">passo 2 di 2</span>
+          <h2 style="font-size:1.5rem; margin:4px 0 8px;">Apri i minigiochi</h2>
+          <p class="note">Carica il file Excel della lega: da lì escono partecipanti, squadre e le giornate già giocate di tutti e tre i minigiochi.</p>
+        </div></div>`));
+      w.appendChild(importPanel(false));
+    } else {
+      w.appendChild(el(`<div class="empty">L'organizzatore non ha ancora aperto i minigiochi. Torna più tardi.</div>`));
+    }
+    app.appendChild(w);
+    return;
+  }
+
+  if(isAdmin() && !empty && S.tab !== 'settings') app.appendChild(scoreboard());
 
   const views = { mine: viewMine, requests: viewRequests, results: viewResults,
-                  players: viewPlayers, league: viewLeague, excel: viewExcel, settings: viewSettings };
-  app.appendChild((views[S.tab] || viewLeague)());
+                  board: viewBoard, players: viewPlayers, excel: viewExcel, settings: viewSettings };
+  app.appendChild((views[S.tab] || viewMine)());
 }
 
 /* =========================================================================
    20. AVVIO
    ========================================================================= */
-let poller = null;
 async function boot(){
   Store.init();
   try{
     await loadUsers();
     await loadClaims();
     await restoreSession();
-    await loadMeta();
+    await loadCore();
+    await loadGames();
     await loadRound();
   }catch(e){
     S.offline = true;
-    document.getElementById('app').innerHTML =
-      `<div class="banner err">Non riesco a leggere l'archivio: ${esc(e.message)}. Controlla la configurazione Supabase (URL, chiave e tabella) e ricarica la pagina.</div>`;
-    return;
+    toast('Archivio non raggiungibile: ' + e.message, 'err');
   }
+  if(!S.core && S.me) { S.core = emptyCore(); }
   render();
-  poller = setInterval(async () => {
-    if(!S.me || document.hidden) return;
-    if(document.querySelector('.overlay')) return;      // non ricaricare mentre una finestra è aperta
-    const focus = document.activeElement;
-    if(focus && ['INPUT','SELECT','TEXTAREA'].includes(focus.tagName)) return;
-    await refresh(true);
+  setInterval(async () => {
+    const a = document.activeElement;
+    if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    if(document.querySelector('.overlay')) return;
+    if(S.me) await refresh(true);
   }, 8000);
 }
 boot();
+
 </script>
 </body>
 </html>
