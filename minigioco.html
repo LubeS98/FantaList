@@ -1163,7 +1163,7 @@ async function findUser(username){
   return await Store.get(K.user(slug(username)));
 }
 /* Il nome utente di un partecipante non si sceglie: è il suo nome nel file Excel,
-   normalizzato (Peppe Verbaro -> peppe-verbaro). Così l'organizzatore sa sempre
+   normalizzato (AC Picchia -> ac-picchia). Così l'organizzatore sa sempre
    con quale nome accede ciascuno. */
 function usernameFor(p){ return String(p.id).replace(/^p-/, ''); }
 
@@ -1736,7 +1736,7 @@ function renderGate(){
   if(S.gateTab === 'login'){
     const box = el(`
       <div class="panel"><div class="panel-body">
-        <label class="field"><span>Nome utente</span><input type="text" id="li-user" placeholder="il tuo nome, es. peppe verbaro" autocomplete="username"></label>
+        <label class="field"><span>Nome utente</span><input type="text" id="li-user" placeholder="il tuo nome, es. AC Picchia" autocomplete="username"></label>
         <label class="field"><span>Codice di accesso</span><input type="password" id="li-pass" autocomplete="current-password"></label>
         <button class="btn btn-primary" id="li-go" style="width:100%;">Accedi</button>
         <p class="note-dim">Il nome utente è il tuo nome come sta nel file della lega: puoi scriverlo con le maiuscole e gli spazi. Codice dimenticato? Chiedilo all'organizzatore, lo vede dalla sua schermata.</p>
@@ -2743,7 +2743,7 @@ function viewHelp(){
   const gb = guide.querySelector('.panel-body');
 
   gb.appendChild(ruleItem(null, 'Accedere al sito', `
-    <div class="step"><span class="n">1</span><p>Il tuo nome utente è il tuo nome come registrato dall'organizzatore (es. "Peppe Verbaro" → <span class="mono">peppe-verbaro</span>) — puoi scriverlo anche con maiuscole e spazi, il sito lo capisce comunque.</p></div>
+    <div class="step"><span class="n">1</span><p>Il tuo nome utente è il tuo nome come registrato dall'organizzatore (es. "AC Picchia" → <span class="mono">ac-picchia</span>) — puoi scriverlo anche con maiuscole e spazi, il sito lo capisce comunque.</p></div>
     <div class="step"><span class="n">2</span><p>Il codice di accesso te lo dà l'organizzatore. Se lo dimentichi, chiediglielo: lui lo vede sempre.</p></div>
     <div class="step"><span class="n">3</span><p>Il pulsante in alto a destra è cliccabile: da sloggato porta al modulo di accesso, da loggato ti fa uscire.</p></div>`));
 
