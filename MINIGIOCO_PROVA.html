@@ -1,0 +1,3247 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FantaList — Minigiochi</title>
+<meta name="theme-color" content="#0A2A20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Minigioco">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Gestione del minigioco della lega: pronostici dei partecipanti, approvazioni e risultati di giornata.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================================
+   FANTALIST — MINIGIOCO
+   Identità visiva ereditata dal sito "La Lega": verde campo, rosa Gazzetta,
+   ambra da tabellone. Anton per i titoli, Work Sans per il testo,
+   Space Mono per numeri, orari e codici.
+   ========================================================================= */
+:root{
+  --pitch:oklch(21% 0.025 260);
+  --pitch-dark:oklch(14% 0.02 260);
+  --pitch-light:oklch(29% 0.03 260);
+  --ink:oklch(18% 0.02 258);
+  --chalk:oklch(97% 0.008 90);
+  --chalk-soft:rgba(245,243,240,0.72);
+  --chalk-mute:rgba(245,243,240,0.45);
+  --gazzetta:oklch(66% 0.19 35);
+  --gazzetta-dark:oklch(56% 0.19 35);
+  --amber:oklch(78% 0.13 195);
+  --amber-soft:oklch(85% 0.1 195);
+  --line:rgba(245,243,240,0.12);
+  --line-strong:rgba(245,242,234,0.22);
+  --ok:oklch(72% 0.15 150);
+  --ko:oklch(62% 0.19 25);
+  --radius:14px;
+  --radius-sm:8px;
+  --radius-pill:999px;
+  --shadow-card:0 1px 2px rgba(0,0,0,0.2), 0 12px 32px -12px rgba(0,0,0,0.55);
+  --shadow-pop:0 24px 64px -16px rgba(0,0,0,0.6);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  background:
+    radial-gradient(1200px 700px at 15% -10%, rgba(94,200,210,0.08), transparent 60%),
+    linear-gradient(180deg, var(--pitch-dark) 0%, var(--pitch) 45%, var(--pitch) 100%);
+  background-attachment:fixed;
+  color:var(--chalk);
+  font-family:'Work Sans',system-ui,sans-serif;
+  line-height:1.5;
+  min-height:100vh;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,0.02) 0 2px,transparent 2px 64px);
+}
+.panel,.slip{transition:box-shadow .3s var(--ease), border-color .2s var(--ease);}
+h1,h2,h3,.display{font-family:'Anton',sans-serif; text-transform:uppercase; letter-spacing:0.02em; font-weight:400;}
+.mono{font-family:'Space Mono',monospace;}
+a{color:var(--amber); text-decoration-thickness:1px;}
+a:hover{color:var(--amber-soft);}
+:focus-visible{outline:2px solid var(--amber); outline-offset:2px; border-radius:4px;}
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important;}}
+
+/* ---------- SMARTPHONE ---------- */
+@media (max-width:820px){
+  input[type=text],input[type=password],input[type=datetime-local],input[type=number],select,textarea{font-size:16px;}
+  .btn{padding:13px 20px;}
+  .btn-sm{padding:9px 14px; font-size:0.8rem;}
+  .team-btn{padding:12px 11px;}
+  .btn-link{padding:6px 2px;}
+  body{padding-bottom:env(safe-area-inset-bottom);}
+  .topbar-inner{padding:12px 16px;}
+}
+@media (max-width:420px){
+  .team-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));}
+}
+
+/* ---------- TOPBAR ---------- */
+.topbar{
+  position:sticky; top:0; z-index:60;
+  background:rgba(8,31,24,0.82); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  box-shadow:0 1px 0 rgba(255,182,39,0.25), 0 12px 30px -18px rgba(0,0,0,0.8);
+}
+.topbar-inner{
+  max-width:1080px; margin:0 auto; padding:14px 20px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:10px; font-family:'Anton',sans-serif; font-size:1.25rem; letter-spacing:0.03em;}
+.brand .dot{width:10px; height:10px; border-radius:50%; background:var(--gazzetta); box-shadow:0 0 0 4px rgba(232,84,140,0.18), 0 0 14px rgba(232,84,140,0.55);}
+.brand small{display:block; font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:0.16em; color:var(--chalk-mute); text-transform:uppercase; margin-top:2px;}
+.who{display:flex; align-items:center; gap:10px; font-size:0.85rem;}
+.who-btn{
+  display:flex; align-items:center; gap:9px; background:transparent; border:none; padding:4px 4px 4px 8px;
+  border-radius:var(--radius-pill); cursor:pointer; transition:background .15s var(--ease);
+}
+.who-btn:hover{background:rgba(245,242,234,0.06);}
+.who-btn .who-name{color:var(--chalk); font-weight:600; font-size:0.88rem;}
+.who .badge-user{
+  font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;
+  background:rgba(255,182,39,0.12); color:var(--amber); border:1px solid rgba(255,182,39,0.35);
+  padding:5px 10px; border-radius:var(--radius-pill);
+}
+.who .badge-user.admin{background:rgba(232,84,140,0.14); color:var(--gazzetta); border-color:rgba(232,84,140,0.4);}
+.who-btn .logout-hint{
+  font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--chalk-mute); opacity:0; transition:opacity .15s var(--ease);
+}
+.who-btn:hover .logout-hint{opacity:1;}
+.who-login-btn{
+  font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;
+  background:var(--gazzetta); color:var(--chalk); border:none; padding:8px 16px; border-radius:var(--radius-pill);
+  font-weight:700; box-shadow:0 6px 16px -6px rgba(232,84,140,0.6); transition:filter .15s var(--ease), transform .15s var(--ease);
+}
+.who-login-btn:hover{filter:brightness(1.08); transform:translateY(-1px);}
+
+/* ---------- LAYOUT ---------- */
+.shell{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:28px 20px 96px;}
+.stack{display:flex; flex-direction:column; gap:18px;}
+.grid-2{display:grid; grid-template-columns:1.15fr 0.85fr; gap:18px; align-items:start;}
+@media (max-width:860px){.grid-2{grid-template-columns:1fr;}}
+
+.panel{
+  background:linear-gradient(180deg, rgba(245,242,234,0.035), rgba(245,242,234,0.015)), var(--ink);
+  border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  box-shadow:var(--shadow-card);
+  transition:border-color .2s var(--ease);
+}
+.panel-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  padding:15px 20px; border-bottom:1px solid var(--line); background:rgba(245,242,234,0.03);
+}
+.panel-head h2{font-size:1.02rem;}
+.panel-head .eyebrow{font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:0.14em; color:var(--amber); text-transform:uppercase;}
+.panel-body{padding:20px;}
+.panel-body > * + *{margin-top:14px;}
+.note{font-size:0.87rem; color:var(--chalk-soft);}
+.note-dim{font-size:0.8rem; color:var(--chalk-mute);}
+.empty{
+  border:1px dashed var(--line-strong); border-radius:var(--radius); padding:26px 18px; text-align:center;
+  color:var(--chalk-mute); font-size:0.88rem;
+}
+
+/* ---------- TABS ---------- */
+.tabs{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:18px; border-bottom:1px solid var(--line); padding-bottom:10px;}
+.tab{
+  font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase;
+  padding:10px 16px; border-radius:var(--radius-pill); border:1px solid transparent; background:transparent;
+  color:var(--chalk-mute); cursor:pointer; transition:all .18s var(--ease);
+}
+.tab:hover{color:var(--chalk); background:rgba(245,242,234,0.07);}
+.tab.on{color:var(--ink); background:linear-gradient(180deg, var(--amber-soft), var(--amber)); font-weight:700; box-shadow:0 6px 18px -6px rgba(255,182,39,0.55);}
+.tab .count{
+  display:inline-block; margin-left:7px; background:var(--gazzetta); color:var(--chalk);
+  border-radius:10px; padding:0 6px; font-size:0.66rem;
+}
+.tab.on .count{background:var(--ink); color:var(--amber);}
+
+/* ---------- BUTTONS ---------- */
+button{font-family:'Work Sans',sans-serif; cursor:pointer; border:none; border-radius:var(--radius-sm); transition:filter .15s var(--ease), background .15s var(--ease), color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease);}
+button:disabled{opacity:0.4; cursor:not-allowed; transform:none !important;}
+.btn{padding:12px 20px; font-size:0.92rem; font-weight:600;}
+.btn-primary{background:linear-gradient(180deg, var(--amber-soft), var(--amber)); color:var(--ink); box-shadow:0 8px 20px -8px rgba(255,182,39,0.55);}
+.btn-primary:hover:not(:disabled){filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 10px 24px -8px rgba(255,182,39,0.65);}
+.btn-primary:active:not(:disabled){transform:translateY(0);}
+.btn-pink{background:linear-gradient(180deg, var(--gazzetta), var(--gazzetta-dark)); color:var(--chalk); box-shadow:0 8px 20px -8px rgba(232,84,140,0.5);}
+.btn-pink:hover:not(:disabled){filter:brightness(1.06); transform:translateY(-1px);}
+.btn-ghost{background:rgba(245,242,234,0.03); border:1px solid var(--line-strong); color:var(--chalk-soft); padding:11px 18px; font-size:0.88rem;}
+.btn-ghost:hover:not(:disabled){border-color:var(--amber); color:var(--amber); background:rgba(255,182,39,0.06);}
+.btn-sm{padding:8px 13px; font-size:0.78rem; font-weight:600; border-radius:var(--radius-sm);}
+.btn-ok{background:rgba(87,201,138,0.12); border:1px solid rgba(87,201,138,0.4); color:var(--ok);}
+.btn-ok:hover:not(:disabled){background:var(--ok); color:var(--ink); transform:translateY(-1px);}
+.btn-ko{background:rgba(242,99,95,0.1); border:1px solid rgba(242,99,95,0.38); color:var(--ko);}
+.btn-ko:hover:not(:disabled){background:var(--ko); color:var(--ink); transform:translateY(-1px);}
+.btn-ok.on{background:var(--ok); color:var(--ink);}
+.btn-ko.on{background:var(--ko); color:var(--ink);}
+.btn-row{display:flex; gap:9px; flex-wrap:wrap;}
+.btn-link{background:none; border:none; color:var(--amber); font-size:0.8rem; text-decoration:underline; padding:2px;}
+
+/* ---------- FORMS ---------- */
+label.field{display:block;}
+label.field span{
+  display:block; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--chalk-mute); margin-bottom:7px;
+}
+input[type=text],input[type=password],input[type=datetime-local],input[type=number],select,textarea{
+  width:100%; background:rgba(8,31,24,0.6); border:1px solid var(--line-strong); color:var(--chalk);
+  padding:12px 14px; border-radius:var(--radius-sm); font-size:0.95rem; font-family:'Work Sans',sans-serif;
+  transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+input::placeholder,textarea::placeholder{color:rgba(245,242,234,0.28);}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--amber); box-shadow:0 0 0 3px rgba(255,182,39,0.2);}
+input[type=file]{color:var(--chalk-soft); font-size:0.85rem; max-width:100%;}
+input[type=file]::file-selector-button{
+  background:var(--amber); color:var(--ink); border:none; padding:9px 14px; border-radius:var(--radius-sm);
+  font-weight:700; font-family:'Work Sans',sans-serif; cursor:pointer; margin-right:10px;
+}
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+@media (max-width:620px){.form-grid{grid-template-columns:1fr;}}
+.checkline{display:flex; align-items:flex-start; gap:9px; font-size:0.88rem; color:var(--chalk-soft);}
+.checkline input{margin-top:3px; accent-color:var(--amber); width:auto;}
+
+/* ---------- GATE (login / registrazione / setup) ---------- */
+.gate{max-width:460px; margin:48px auto 0;}
+.gate .lead{text-align:center; margin-bottom:26px;}
+.gate .lead h1{font-size:clamp(2rem,7vw,2.9rem); line-height:0.98;}
+.gate .lead h1 em{font-style:normal; color:var(--gazzetta);}
+.gate .lead p{color:var(--chalk-soft); margin-top:10px; font-size:0.94rem;}
+.switcher{display:flex; gap:3px; border:1px solid var(--line); border-radius:var(--radius-pill); overflow:hidden; margin-bottom:18px; padding:3px; background:rgba(0,0,0,0.15);}
+.switcher button{flex:1; padding:11px; background:transparent; color:var(--chalk-mute); font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; border-radius:var(--radius-pill);}
+.switcher button.on{background:var(--gazzetta); color:var(--chalk); font-weight:700; box-shadow:0 6px 16px -6px rgba(232,84,140,0.6);}
+
+/* ---------- SCHEDINA (elemento firma) ---------- */
+.slip{
+  position:relative; background:var(--chalk); color:var(--ink);
+  border-radius:var(--radius-sm); padding:24px 22px 22px; margin-top:8px; overflow:hidden;
+  box-shadow:0 20px 44px -18px rgba(0,0,0,0.65);
+}
+.slip::before{
+  content:""; position:absolute; top:-1px; left:0; right:0; height:9px;
+  background-image:radial-gradient(circle at 8px 0, var(--ink) 5px, transparent 5.5px);
+  background-size:16px 9px; background-repeat:repeat-x;
+}
+.slip.on-pitch::before{background-image:radial-gradient(circle at 8px 0, var(--pitch) 5px, transparent 5.5px);}
+.slip-head{
+  display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap;
+  border-bottom:2px solid var(--ink); padding-bottom:9px; margin-bottom:14px;
+}
+.slip-head .who-slip{font-family:'Anton',sans-serif; font-size:1.25rem; text-transform:uppercase;}
+.slip-head .code{font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; color:rgba(11,36,28,0.6);}
+.slip-pick{display:flex; align-items:center; gap:11px; font-family:'Anton',sans-serif; font-size:1.6rem; text-transform:uppercase;}
+.slip-pick .dot{width:15px; height:15px; border-radius:50%; flex:none; box-shadow:0 0 0 1px rgba(11,36,28,0.35);}
+.slip-meta{font-family:'Space Mono',monospace; font-size:0.72rem; color:rgba(11,36,28,0.62); margin-top:6px;}
+.slip-fixtures{
+  border-bottom:1px dashed rgba(11,36,28,0.25); padding-bottom:12px; margin-bottom:14px;
+  display:flex; flex-direction:column; gap:5px;
+}
+.slip-fixtures.empty-fx{
+  color:rgba(11,36,28,0.5); font-size:0.78rem; font-style:italic; border-bottom:none; padding-bottom:0;
+}
+.slip-fixtures .fx-row{display:flex; align-items:center; gap:8px; font-size:0.8rem; color:rgba(11,36,28,0.85);}
+.slip-fixtures .fx-team{display:flex; align-items:center; gap:6px; flex:1; min-width:0;}
+.slip-fixtures .fx-team.right{justify-content:flex-end; text-align:right;}
+.slip-fixtures .fx-team .dot{width:8px; height:8px; border-radius:50%; flex:none;}
+.slip-fixtures .fx-vs{font-family:'Space Mono',monospace; font-size:0.7rem; color:rgba(11,36,28,0.4); flex:none;}
+.slip-fixtures .fx-date{font-family:'Space Mono',monospace; font-size:0.66rem; color:rgba(11,36,28,0.45); flex:none; margin-left:6px;}
+
+/* ---------- CALENDARIO SERIE A (scheda dedicata, su sfondo scuro) ---------- */
+.fixtures-list{display:flex; flex-direction:column; gap:8px;}
+.fixture-row{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  background:rgba(8,31,24,0.5); border:1px solid var(--line); border-radius:var(--radius-sm);
+  padding:11px 14px; font-size:0.9rem;
+}
+.fixture-row .fx-team{display:flex; align-items:center; gap:7px; flex:1; min-width:120px;}
+.fixture-row .fx-team .dot{width:9px; height:9px; border-radius:50%; flex:none;}
+.fixture-row .fx-vs{font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--chalk-mute); text-transform:uppercase; flex:none;}
+.fixture-row .fx-date{font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--chalk-mute); flex:none;}
+.fixture-row .fx-rm{margin-left:auto;}
+.stamp{
+  position:absolute; right:14px; bottom:14px; transform:rotate(-11deg);
+  font-family:'Anton',sans-serif; font-size:0.9rem; letter-spacing:0.16em; text-transform:uppercase;
+  border:3px double currentColor; border-radius:5px; padding:5px 12px; opacity:0.85;
+}
+.stamp.ok{color:#1E7F4E;}
+.stamp.pending{color:#B07600;}
+.stamp.ko{color:#B3312D;}
+.stamp.win{color:#1E7F4E;}
+.stamp.lose{color:#B3312D;}
+
+/* ---------- SELETTORE SQUADRE ---------- */
+.team-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:9px;}
+.team-btn{
+  display:flex; align-items:center; gap:9px; text-align:left;
+  background:rgba(8,31,24,0.55); border:1px solid var(--line); color:var(--chalk);
+  padding:11px 12px; font-size:0.86rem; font-weight:500; border-radius:var(--radius-sm);
+  transition:all .15s var(--ease);
+}
+.team-btn .dot{width:11px; height:11px; border-radius:50%; flex:none; box-shadow:0 0 0 3px rgba(255,255,255,0.05);}
+.team-btn:hover:not(:disabled){border-color:var(--amber); transform:translateY(-1px); background:rgba(255,182,39,0.06);}
+.team-btn.on{background:linear-gradient(180deg, var(--amber-soft), var(--amber)); color:var(--ink); border-color:var(--amber); font-weight:700; box-shadow:0 8px 20px -8px rgba(255,182,39,0.55);}
+.team-btn.used{opacity:0.3; text-decoration:line-through; cursor:not-allowed;}
+
+/* ---------- RIGHE RICHIESTA (tabellone) ---------- */
+.board{display:flex; flex-direction:column; gap:9px;}
+.req{
+  display:grid; grid-template-columns:1.1fr 1fr auto; gap:12px; align-items:center;
+  background:rgba(8,31,24,0.5); border:1px solid var(--line); border-left:3px solid var(--line);
+  border-radius:var(--radius-sm); padding:13px 15px; transition:border-color .15s var(--ease);
+}
+.req.pending{border-left-color:var(--amber);}
+.req.approved{border-left-color:var(--ok);}
+.req.rejected{border-left-color:var(--ko);}
+.req.missing{border-left-color:rgba(245,242,234,0.18); opacity:0.7;}
+.req .p-name{font-weight:600; font-size:0.95rem;}
+.req .p-sub{font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--chalk-mute); letter-spacing:0.06em;}
+.req .p-team{display:flex; align-items:center; gap:9px; font-size:0.95rem;}
+.req .p-team .dot{width:11px; height:11px; border-radius:50%; flex:none;}
+.req .p-actions{display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;}
+@media (max-width:700px){
+  .req{grid-template-columns:1fr; align-items:flex-start;}
+  .req .p-actions{justify-content:flex-start;}
+}
+.tag{
+  font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase;
+  padding:3px 8px; border-radius:var(--radius-pill); border:1px solid currentColor; white-space:nowrap;
+}
+.tag.ok{color:var(--ok);} .tag.pending{color:var(--amber);} .tag.ko{color:var(--ko);} .tag.mute{color:var(--chalk-mute);}
+.warn-inline{color:var(--ko); font-size:0.76rem; font-family:'Space Mono',monospace;}
+
+/* ---------- TABELLE / STORICO ---------- */
+.table-scroll{overflow-x:auto;}
+table{width:100%; border-collapse:collapse; font-size:0.88rem;}
+.code-cell{letter-spacing:0.08em; color:var(--amber); cursor:pointer; user-select:all;}
+.code-cell.hidden-code{letter-spacing:0.16em; color:var(--chalk-mute); cursor:pointer; user-select:none;}
+th{
+  text-align:left; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--chalk-mute); padding:10px 12px; border-bottom:1px solid var(--line);
+}
+td{padding:11px 12px; border-bottom:1px solid var(--line);}
+tr{transition:background .12s var(--ease);}
+tr:hover td{background:rgba(245,242,234,0.02);}
+tr:last-child td{border-bottom:none;}
+td.num{font-family:'Space Mono',monospace; color:var(--chalk-mute);}
+.out-row{opacity:0.5;}
+.chip-mini{
+  display:inline-flex; align-items:center; gap:5px; font-family:'Space Mono',monospace; font-size:0.66rem;
+  background:rgba(245,242,234,0.06); padding:4px 8px; border-radius:var(--radius-pill); margin:2px 3px 2px 0;
+}
+.chip-mini .dot{width:8px; height:8px; border-radius:50%;}
+.res-win{color:var(--ok); font-weight:700;}
+.res-lose{color:var(--ko); font-weight:700;}
+
+/* ---------- SCOREBOARD ---------- */
+.scoreboard{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; background:var(--line); border-radius:var(--radius); overflow:hidden;}
+.sb-cell{background:var(--ink); padding:17px 16px; transition:background .15s var(--ease);}
+.sb-cell .k{font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--chalk-mute);}
+.sb-cell .v{font-family:'Anton',sans-serif; font-size:1.9rem; line-height:1.1; color:var(--amber); margin-top:4px;}
+.sb-cell .v.small{font-size:1.1rem; color:var(--chalk);}
+.sb-cell.alert{background:rgba(232,84,140,0.08);}
+.sb-cell.alert .v{color:var(--gazzetta);}
+
+/* ---------- BANNER / TOAST / MODALE ---------- */
+.banner{border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:var(--radius-sm); padding:13px 16px; font-size:0.87rem; color:var(--chalk-soft); background:rgba(255,182,39,0.06);}
+.banner.err{border-left-color:var(--ko); background:rgba(242,99,95,0.08); color:#FFD3D1;}
+.banner.ok{border-left-color:var(--ok); background:rgba(87,201,138,0.08); color:#CFF3E0;}
+.toast-wrap{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:200; display:flex; flex-direction:column; gap:8px; width:min(420px,calc(100% - 32px));}
+.toast{background:rgba(11,36,28,0.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid var(--line); border-left:3px solid var(--amber); padding:13px 16px; font-size:0.87rem; box-shadow:var(--shadow-pop); border-radius:var(--radius-sm); animation:toast-in .25s var(--ease);}
+@keyframes toast-in{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+.toast.err{border-left-color:var(--ko);} .toast.ok{border-left-color:var(--ok);}
+.overlay{position:fixed; inset:0; background:rgba(5,20,14,0.7); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px; z-index:300;}
+.modal{background:var(--ink); border:1px solid var(--line); border-top:3px solid var(--gazzetta); border-radius:var(--radius); padding:24px; width:min(420px,100%); box-shadow:var(--shadow-pop);}
+.modal h3{font-size:1.1rem; margin-bottom:8px;}
+.modal p{font-size:0.88rem; color:var(--chalk-soft); margin-bottom:14px;}
+.modal .btn-row{justify-content:flex-end; margin-top:16px;}
+.hidden{display:none !important;}
+.spinner{display:inline-block; width:14px; height:14px; border:2px solid rgba(245,242,234,0.25); border-top-color:var(--amber); border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+footer.site{max-width:1080px; margin:0 auto; padding:0 20px 40px; color:var(--chalk-mute); font-size:0.75rem; font-family:'Space Mono',monospace; letter-spacing:0.06em;}
+
+
+/* ---------- TRE MINIGIOCHI ---------- */
+.games-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; align-items:start;}
+.panel.out{border-color:rgba(242,99,95,0.35);}
+.uses{
+  font-family:'Space Mono',monospace; font-size:0.66rem; padding:2px 7px; border-radius:var(--radius-pill);
+  background:rgba(245,242,234,0.1); margin-left:6px; letter-spacing:0.04em;
+}
+.uses.full{background:rgba(242,99,95,0.22); color:var(--ko);}
+.sub-head{
+  font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--chalk-mute);
+  padding:16px 2px 6px; border-top:1px solid var(--line); margin-top:8px;
+}
+details.mini-hist{margin-top:16px; border-top:1px solid var(--line); padding-top:12px;}
+details.mini-hist>summary{cursor:pointer; font-size:0.8rem; color:var(--chalk-mute); list-style:none; transition:color .15s var(--ease);}
+details.mini-hist>summary:hover{color:var(--amber);}
+details.mini-hist>summary::-webkit-details-marker{display:none;}
+details.mini-hist>summary::before{content:'\25B8 ';}
+details.mini-hist[open]>summary::before{content:'\25BE ';}
+
+/* ---------- CLASSIFICA INTERATTIVA ---------- */
+.board-table th.sortable{cursor:pointer; user-select:none; white-space:nowrap; transition:color .15s var(--ease);}
+.board-table th.sortable:hover{color:var(--amber);}
+.board-table th.sortable.on{color:var(--amber);}
+.board-table th.sortable.on::after{content:' \25BC'; font-size:0.6rem;}
+.board-table th.sortable.on.asc::after{content:' \25B2'; font-size:0.6rem;}
+.rank-row{cursor:pointer; transition:background .15s var(--ease);}
+.rank-row:hover td{background:rgba(245,242,234,0.04);}
+.rank-row.me td{background:rgba(255,182,39,0.09);}
+.rank-row.out td{opacity:0.55;}
+.rank-row.open td{background:rgba(245,242,234,0.06);}
+.rank-row td.wins{color:var(--amber); font-weight:700; font-size:1.05rem;}
+.rank-detail>td{padding:0 16px 16px; background:rgba(0,0,0,0.18);}
+.bar{height:5px; border-radius:var(--radius-pill); background:rgba(245,242,234,0.09); margin-top:7px; overflow:hidden; max-width:200px;}
+.bar>span{display:block; height:100%; background:linear-gradient(90deg,var(--amber),var(--gazzetta)); border-radius:var(--radius-pill);}
+
+/* ---------- AZZERAMENTI ---------- */
+.reset-list{margin-top:8px;}
+.reset-row{
+  display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:14px 0; border-top:1px solid var(--line);
+}
+.reset-row:first-child{border-top:none;}
+.reset-row.danger{border-top:2px solid rgba(242,99,95,0.4); margin-top:8px; padding-top:16px;}
+@media (max-width:820px){ .games-grid{grid-template-columns:1fr;} }
+
+/* ---------- UNDICI 1V1 ---------- */
+.tag.pink{color:var(--gazzetta);}
+.form-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;}
+.form-card{background:rgba(8,31,24,0.55); border:1px solid var(--line); color:var(--chalk);
+  border-radius:var(--radius-sm); padding:14px 12px; text-align:left; transition:all .15s var(--ease);}
+.form-card:hover:not(:disabled){border-color:var(--amber); transform:translateY(-2px); background:rgba(255,182,39,0.06);}
+.form-card.on{border-color:var(--amber); background:linear-gradient(180deg, rgba(255,182,39,0.18), rgba(255,182,39,0.06));
+  box-shadow:0 8px 20px -8px rgba(255,182,39,0.45);}
+.form-card .fm{font-family:'Anton',sans-serif; font-size:1.4rem; letter-spacing:0.06em;}
+.form-card .fd{font-size:0.72rem; color:var(--chalk-mute); margin-top:3px;}
+
+.draw{position:relative; background:var(--chalk); color:var(--ink); border-radius:var(--radius-sm);
+  padding:24px 20px 20px; overflow:hidden; box-shadow:0 20px 44px -18px rgba(0,0,0,0.65);}
+.draw::before{content:""; position:absolute; top:-1px; left:0; right:0; height:9px;
+  background-image:radial-gradient(circle at 8px 0, var(--pitch) 5px, transparent 5.5px);
+  background-size:16px 9px; background-repeat:repeat-x;}
+.draw .kicker{font-family:'Space Mono',monospace; font-size:0.64rem; letter-spacing:0.16em;
+  text-transform:uppercase; color:rgba(11,36,28,0.55); margin-bottom:6px;}
+.draw .club{font-family:'Anton',sans-serif; font-size:clamp(1.5rem,5vw,2.2rem); line-height:1; text-transform:uppercase;}
+.draw .club .yr{color:var(--gazzetta-dark);}
+.draw .league{font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.1em;
+  color:rgba(11,36,28,0.6); margin-top:6px;}
+.draw.rolling .club{animation:jitter .09s steps(2) infinite;}
+@keyframes jitter{0%{transform:translateX(-2px);} 100%{transform:translateX(2px);}}
+
+.picks{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:9px;}
+.pick{display:flex; align-items:center; gap:11px; text-align:left; background:rgba(8,31,24,0.55);
+  border:1px solid var(--line); color:var(--chalk); padding:11px 13px; border-radius:var(--radius-sm);}
+.pick:hover:not(:disabled){border-color:var(--amber); transform:translateY(-1px); background:rgba(255,182,39,0.06);}
+.pick .ovr{font-family:'Anton',sans-serif; font-size:1.3rem; color:var(--amber); min-width:2.1ch; text-align:center;}
+.pick .nm{flex:1; min-width:0; font-weight:600; font-size:0.88rem;}
+.pick .rl{font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:0.08em; color:var(--chalk-mute); display:block; font-weight:400;}
+.pick:disabled{opacity:0.32; cursor:not-allowed;}
+.pick.adapt .ovr{color:var(--gazzetta);}
+
+.field-wrap{position:relative; width:100%; aspect-ratio:3/4; max-width:460px; margin:0 auto;
+  background:linear-gradient(180deg, rgba(30,90,66,0.55), rgba(16,58,42,0.55));
+  border:1px solid var(--line-strong); border-radius:var(--radius); overflow:hidden;}
+.field-wrap::before,.field-wrap::after{content:""; position:absolute; left:50%; transform:translateX(-50%); border:1px solid rgba(245,242,234,0.16);}
+.field-wrap::before{top:0; width:44%; height:15%; border-top:none;}
+.field-wrap::after{bottom:0; width:44%; height:15%; border-bottom:none;}
+.midline{position:absolute; top:50%; left:0; right:0; height:1px; background:rgba(245,242,234,0.16);}
+.midcircle{position:absolute; top:50%; left:50%; width:22%; aspect-ratio:1; transform:translate(-50%,-50%);
+  border:1px solid rgba(245,242,234,0.16); border-radius:50%;}
+.slot{position:absolute; transform:translate(-50%,-50%); width:66px; text-align:center;}
+.slot .badge{width:34px; height:34px; margin:0 auto; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; font-family:'Anton',sans-serif; font-size:0.9rem;
+  border:1px dashed rgba(245,242,234,0.35); color:var(--chalk-mute); background:rgba(8,31,24,0.5);}
+.slot.filled .badge{border-style:solid; border-color:var(--amber); color:var(--ink);
+  background:linear-gradient(180deg,var(--amber-soft),var(--amber)); box-shadow:0 6px 16px -6px rgba(255,182,39,0.6);}
+.slot.next .badge{border-color:var(--gazzetta); color:var(--gazzetta); animation:slotpulse 1.4s var(--ease) infinite;}
+@keyframes slotpulse{0%,100%{box-shadow:0 0 0 0 rgba(232,84,140,0.5);} 50%{box-shadow:0 0 0 7px rgba(232,84,140,0);}}
+.slot .nm{font-size:0.6rem; font-weight:600; margin-top:4px; line-height:1.15;
+  text-shadow:0 1px 3px rgba(0,0,0,0.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.slot .sq{font-family:'Space Mono',monospace; font-size:0.52rem; color:var(--chalk-mute); line-height:1.2;}
+.slot .rl{font-family:'Space Mono',monospace; font-size:0.52rem; letter-spacing:0.06em; color:var(--chalk-mute);}
+
+.opp-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:9px;}
+.opp-card{display:flex; align-items:center; gap:9px; background:rgba(8,31,24,0.55); border:1px solid var(--line);
+  color:var(--chalk); padding:11px 12px; border-radius:var(--radius-sm); text-align:left; transition:all .15s var(--ease);}
+.opp-card:hover:not(:disabled){border-color:var(--amber); background:rgba(255,182,39,0.06);}
+.opp-card.on{border-color:var(--amber); background:linear-gradient(180deg, rgba(255,182,39,0.18), rgba(255,182,39,0.06));}
+.opp-card .av{width:30px; height:30px; border-radius:50%; background:rgba(255,182,39,0.14); color:var(--amber);
+  display:flex; align-items:center; justify-content:center; font-family:'Anton',sans-serif; font-size:0.85rem;
+  flex:none; text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="dot"></span>
+      <span>FantaList<small>Minigioco · ultimo in piedi</small></span>
+    </div>
+    <div class="who" id="who"></div>
+  </div>
+</div>
+
+<main class="shell" id="app"><div class="empty">Caricamento…</div></main>
+<footer class="site" id="foot"></footer>
+<div class="toast-wrap" id="toasts"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* =========================================================================
+   1. CONFIGURAZIONE — L'UNICO BLOCCO DA MODIFICARE A MANO
+   -------------------------------------------------------------------------
+   Per far funzionare il sito online (più persone, più dispositivi) serve un
+   archivio condiviso. Il modo più semplice e gratuito è Supabase:
+   crea un progetto, esegui la query SQL che trovi nel README, poi incolla
+   qui sotto l'URL del progetto e la chiave "anon public".
+   Finché restano vuoti il sito funziona lo stesso, ma i dati restano
+   solo su questo dispositivo (utile per provarlo).
+   ========================================================================= */
+const CONFIG = {
+  supabaseUrl:     "https://blnrucninethpwvhlcsc.supabase.co",           // es. "https://abcdefgh.supabase.co"
+  supabaseAnonKey: "sb_publishable_89xr7FlglRmI6xWdsbmEwQ_Yrkc1lDF",           // la chiave "anon public" del progetto
+  tableName:       "fantalist_kv"
+};
+
+
+/* =========================================================================
+   2. ARCHIVIO — un semplice magazzino chiave/valore con tre modalità
+   ========================================================================= */
+const Store = (() => {
+  let mode = 'local', sb = null;
+
+  function readLocalCfg(){
+    try { return JSON.parse(localStorage.getItem('fantalist.backend') || 'null'); } catch(e){ return null; }
+  }
+  function writeLocalCfg(cfg){
+    if(cfg) localStorage.setItem('fantalist.backend', JSON.stringify(cfg));
+    else localStorage.removeItem('fantalist.backend');
+  }
+  function init(){
+    const cfg = (CONFIG.supabaseUrl && CONFIG.supabaseAnonKey) ? CONFIG : readLocalCfg();
+    if(cfg && cfg.supabaseUrl && cfg.supabaseAnonKey){
+      sb = { url: String(cfg.supabaseUrl).trim().replace(/\/+$/,'').replace(/\/rest\/v1$/i,''), key: cfg.supabaseAnonKey, table: cfg.tableName || 'fantalist_kv' };
+      mode = 'supabase';
+    } else if(typeof window.storage === 'object' && window.storage && typeof window.storage.get === 'function'){
+      mode = 'artifact';
+    } else {
+      mode = 'local';
+    }
+    return mode;
+  }
+  const H = () => ({ apikey: sb.key, Authorization: 'Bearer ' + sb.key, 'Content-Type': 'application/json' });
+  async function sbFetch(path, opts){
+    const r = await fetch(sb.url + '/rest/v1/' + sb.table + path, opts);
+    if(!r.ok){
+      let msg = 'HTTP ' + r.status;
+      try { const j = await r.json(); msg = j.message || j.hint || msg; } catch(e){}
+      throw new Error(msg);
+    }
+    return r;
+  }
+
+  const LP = 'fl:';
+  return {
+    init, mode: () => mode, config: () => sb,
+    setConfig(cfg){ writeLocalCfg(cfg); },
+    clearConfig(){ writeLocalCfg(null); },
+
+    async get(key){
+      try{
+        if(mode === 'supabase'){
+          const r = await sbFetch('?k=eq.' + encodeURIComponent(key) + '&select=v', { headers: H() });
+          const j = await r.json();
+          return j.length ? JSON.parse(j[0].v) : null;
+        }
+        if(mode === 'artifact'){
+          const r = await window.storage.get(key, true);
+          return (r && r.value) ? JSON.parse(r.value) : null;
+        }
+        const raw = localStorage.getItem(LP + key);
+        return raw ? JSON.parse(raw) : null;
+      }catch(e){
+        if(mode === 'supabase') throw e;
+        return null;   // chiave inesistente: le altre modalità lanciano eccezione
+      }
+    },
+
+    async set(key, value){
+      const s = JSON.stringify(value);
+      if(mode === 'supabase'){
+        await sbFetch('', { method:'POST', headers:{ ...H(), Prefer:'resolution=merge-duplicates,return=minimal' },
+                            body: JSON.stringify({ k:key, v:s }) });
+        return;
+      }
+      if(mode === 'artifact'){ await window.storage.set(key, s, true); return; }
+      localStorage.setItem(LP + key, s);
+    },
+
+    async del(key){
+      if(mode === 'supabase'){ await sbFetch('?k=eq.' + encodeURIComponent(key), { method:'DELETE', headers:H() }); return; }
+      if(mode === 'artifact'){ try{ await window.storage.delete(key, true); }catch(e){} return; }
+      localStorage.removeItem(LP + key);
+    },
+
+    /* restituisce [{key, value}] per tutte le chiavi che iniziano con "prefix" */
+    async list(prefix){
+      if(mode === 'supabase'){
+        const r = await sbFetch('?k=like.' + encodeURIComponent(prefix + '*') + '&select=k,v', { headers:H() });
+        const j = await r.json();
+        return j.map(row => { try{ return { key: row.k, value: JSON.parse(row.v) }; }catch(e){ return null; } }).filter(Boolean);
+      }
+      if(mode === 'artifact'){
+        let keys = [];
+        try{ const res = await window.storage.list(prefix, true); keys = (res && res.keys) ? res.keys : []; }catch(e){ keys = []; }
+        const out = [];
+        for(const k of keys){
+          try{ const r = await window.storage.get(k, true); if(r && r.value) out.push({ key:k, value: JSON.parse(r.value) }); }catch(e){}
+        }
+        return out;
+      }
+      const out = [];
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.startsWith(LP + prefix)){
+          try{ out.push({ key:k.slice(LP.length), value: JSON.parse(localStorage.getItem(k)) }); }catch(e){}
+        }
+      }
+      return out;
+    }
+  };
+})();
+
+/* Chiavi usate nell'archivio (niente spazi, slash o virgolette) */
+/* =========================================================================
+   3. PASSWORD — PBKDF2 (SHA-256, 150.000 giri) con sale casuale per utente
+   ========================================================================= */
+const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+const fromHex = hex => new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b,16)));
+function randomHex(n){ const a = new Uint8Array(n); crypto.getRandomValues(a); return toHex(a); }
+
+async function derive(password, saltHex, iterations = 150000){
+  if(!crypto.subtle) throw new Error('Il browser non supporta la cifratura richiesta: apri il sito su https.');
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name:'PBKDF2', salt: fromHex(saltHex), iterations, hash:'SHA-256' }, key, 256);
+  return toHex(bits);
+}
+
+/* =========================================================================
+   4. SQUADRE, NOMI, UTILITÀ
+   ========================================================================= */
+const TEAM_COLORS = {
+  atalanta:'#1B5EA6', bologna:'#8E1B2E', cagliari:'#A3122B', como:'#0B4DA2', cremonese:'#8B1F2E',
+  empoli:'#1E86C7', fiorentina:'#6B32A0', genoa:'#C8102E', hellasverona:'#F2C400', inter:'#1264B4',
+  juventus:'#D9D9D9', lazio:'#7FC4EC', lecce:'#E8B123', milan:'#E2071B', monza:'#D91C3D',
+  napoli:'#1C8FDB', parma:'#F4D53A', pisa:'#0A4C9E', roma:'#8E1F2F', salernitana:'#9C1B2E',
+  sassuolo:'#1FA35A', torino:'#7B2038', udinese:'#B7B7B7', venezia:'#E8722C', verona:'#F2C400',
+  frosinone:'#F2C400', palermo:'#E39BC0', sampdoria:'#1B4F9C', spezia:'#1A1A1A'
+};
+const FALLBACK = ['#1B5EA6','#8E1B2E','#0B4DA2','#6B32A0','#C8102E','#1C8FDB','#E8722C','#7B2038','#1FA35A','#D91C3D'];
+const DEFAULT_TEAMS = ['Atalanta','Bologna','Cagliari','Como','Fiorentina','Frosinone','Genoa','Inter','Juventus','Lazio',
+  'Lecce','Milan','Monza','Napoli','Parma','Roma','Sassuolo','Torino','Udinese','Venezia'];
+
+/* Calendario di esempio: solo la 1a giornata, verificata al sorteggio del
+   5 giugno 2026. Le altre 37 vanno importate dall'Excel (foglio "Calendario")
+   o inserite a mano dalla scheda Calendario — non le ho precompilate tutte
+   per non rischiare di mostrare date sbagliate in caso di variazioni TV. */
+const DEFAULT_CALENDAR = [
+  { round:1, home:'Atalanta', away:'Sassuolo' }, { round:1, home:'Bologna', away:'Lazio' },
+  { round:1, home:'Frosinone', away:'Juventus' }, { round:1, home:'Genoa', away:'Napoli' },
+  { round:1, home:'Inter', away:'Monza' }, { round:1, home:'Parma', away:'Cagliari' },
+  { round:1, home:'Roma', away:'Fiorentina' }, { round:1, home:'Torino', away:'Milan' },
+  { round:1, home:'Udinese', away:'Como' }, { round:1, home:'Venezia', away:'Lecce' }
+];
+
+const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+const teamColor = (name, i) => TEAM_COLORS[slug(name).replace(/-/g,'')] || FALLBACK[i % FALLBACK.length];
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const isPlaceholder = n => /^partecipante\s*\d+$/i.test(String(n).trim());
+
+/* Codice di accesso facile da dettare al telefono: niente caratteri ambigui. */
+function generateCode(){
+  const A = 'abcdefghijkmnpqrstuvwxyz', N = '23456789';
+  const pick = set => set[Math.floor(Math.random() * set.length)];
+  let out = '';
+  for(let i=0;i<4;i++) out += pick(A);
+  for(let i=0;i<3;i++) out += pick(N);
+  return out;
+}
+
+function el(html){ const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+function fmtDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  if(isNaN(d)) return '—';
+  return d.toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+function toInputDT(iso){
+  if(!iso) return '';
+  const d = new Date(iso); if(isNaN(d)) return '';
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function copyText(text){
+  const done = () => toast('Copiato negli appunti.', 'ok');
+  if(navigator.clipboard?.writeText){ navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done)); }
+  else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){ toast('Copia non riuscita: seleziona il testo a mano.', 'err'); }
+  ta.remove();
+}
+
+function toast(message, kind = ''){
+  const box = el(`<div class="toast ${kind}">${esc(message)}</div>`);
+  document.getElementById('toasts').appendChild(box);
+  setTimeout(() => box.remove(), 4200);
+}
+function modal({ title, message, input = null, placeholder = '', prefill = '', confirmText = 'Conferma', cancelText = 'Annulla' }){
+  return new Promise(resolve => {
+    const ov = el(`<div class="overlay"></div>`);
+    const box = el(`
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3>${esc(title)}</h3>
+        ${message ? `<p>${esc(message)}</p>` : ''}
+        ${input ? `<input type="${input}" placeholder="${esc(placeholder)}" value="${esc(prefill)}">` : ''}
+        <div class="btn-row">
+          <button class="btn btn-ghost" data-x>${esc(cancelText)}</button>
+          <button class="btn btn-primary" data-y>${esc(confirmText)}</button>
+        </div>
+      </div>`);
+    ov.appendChild(box); document.body.appendChild(ov);
+    const inp = box.querySelector('input');
+    if(inp) setTimeout(() => { inp.focus(); inp.select(); }, 40);
+    const done = v => { ov.remove(); resolve(v); };
+    box.querySelector('[data-x]').onclick = () => done(input ? null : false);
+    box.querySelector('[data-y]').onclick = () => done(input ? inp.value : true);
+    if(inp) inp.onkeydown = e => { if(e.key === 'Enter') done(inp.value); if(e.key === 'Escape') done(null); };
+    ov.onclick = e => { if(e.target === ov) done(input ? null : false); };
+  });
+}
+const confirmBox = message => modal({ title:'Confermi?', message, confirmText:'Sì, procedi' });
+const alertBox   = message => modal({ title:'Attenzione', message, confirmText:'Ho capito', cancelText:'Chiudi' });
+
+
+/* =========================================================================
+   5. I TRE MINIGIOCHI
+   -------------------------------------------------------------------------
+   Due "Last Man Standing" (andata: giornate 1-19, ritorno: giornate 20-38) e
+   un "WhoWin?" che copre tutte le 38 giornate. Le giornate sono numerate in
+   modo assoluto (1..38) in tutti e tre: è questo che permette di assegnare
+   una sola volta l'esito di ogni squadra e farlo valere per tutti i minigiochi
+   in corso in quella giornata.
+   ========================================================================= */
+const SEASON_ROUNDS = 38;
+
+const GAMES = [
+  { key:'lms_a',  name:'Last Man Standing — Andata',  short:'LMS Andata',  kind:'lms',
+    first:1,  last:19, maxUses:1, sheet:'Minigioco_LastManStanding', table:'MG_A',
+    match:/lastmanstanding|last man standing|\blms\b|minigioco.*andata/i, exclude:/ritorno|stagional|whowin/i },
+  /* Il nome del foglio deve stare in 31 caratteri: è il limite di Excel. */
+  { key:'lms_r',  name:'Last Man Standing — Ritorno', short:'LMS Ritorno', kind:'lms',
+    first:20, last:38, maxUses:1, sheet:'Minigioco_LMS_Ritorno', table:'MG_R',
+    match:/ritorno/i, exclude:/stagional|whowin/i },
+  { key:'whowin', name:'WhoWin?',                     short:'WhoWin?',     kind:'season',
+    first:1,  last:38, maxUses:3, sheet:'Minigioco_Stagionale',              table:'MG_S',
+    match:/stagional|whowin|mg[_ ]?s\b/i, exclude:null }
+];
+const G = key => GAMES.find(g => g.key === key);
+
+const K = {
+  core:  'core',
+  user:  u => 'user-' + u,
+  claim: pid => 'claim-' + pid,
+  gmeta: g => 'gmeta-' + g,
+  req:       (g, r, pid) => `req-${g}-r${r}-${pid}`,
+  reqPrefix: (g, r)      => `req-${g}-r${r}-`,
+  res:       (r, tid)    => `res-g${r}-${tid}`,
+  resPrefix: r           => `res-g${r}-`
+};
+
+/* =========================================================================
+   6. STATO
+   ========================================================================= */
+function emptyCore(){
+  return {
+    createdAt: new Date().toISOString(),
+    teams: DEFAULT_TEAMS.map((n,i) => ({ id: slug(n), name: n, color: teamColor(n,i) })),
+    players: [],          // [{id, name}] — gli stessi per tutti e tre i minigiochi
+    round: 1,             // giornata corrente della lega (1..38)
+    deadline: null,       // termine unico d'invio per la giornata corrente
+    autoApprove: false,
+    fileName: null,
+    originalB64: null,
+    sheetNames: {},        // gameKey -> nome del foglio da cui è stato letto
+    calendar: DEFAULT_CALENDAR.slice()   // [{round, home, away}] — calendario Serie A
+  };
+}
+function emptyGame(){
+  return { phase:'playing', history:[], st:{} };
+}
+
+const S = {
+  core: null,
+  games: {},      // gameKey -> { phase, history, st }
+  reqs: {},       // gameKey -> { playerId: richiesta della giornata corrente }
+  results: {},    // teamId -> 'win' | 'lose'   (CONDIVISI: valgono per tutti i minigiochi)
+  duels: {},      // id -> sfida 1v1 (Undici Leggendario)
+  users: [], claims: {}, me: null,
+  tab: null, gameTab: 'lms_a', boardGame: 'whowin',
+  boardSort: 'wins', boardDir: 'desc', boardOpen: {},
+  gateTab: 'login', offline: false
+};
+
+/* ---- helper derivati ---- */
+const isAdmin   = () => S.me?.role === 'admin';
+const player    = id => (S.core?.players || []).find(p => p.id === id) || null;
+const myPlayer  = () => S.me?.playerId ? player(S.me.playerId) : null;
+const team      = id => (S.core?.teams || []).find(t => t.id === id) || { id, name: id || '—', color:'#8A8A8A' };
+const deadlinePassed = () => !!(S.core?.deadline && new Date(S.core.deadline) < new Date());
+function matchesForRound(round){
+  return (S.core?.calendar || []).filter(m => m.round === round);
+}
+/* Prova a collegare il nome della squadra in calendario (testo libero,
+   può venire da un Excel esterno) alla squadra vera per colore/coerenza. */
+function teamByName(name){
+  const s = slug(name);
+  return (S.core?.teams || []).find(t => t.id === s) || { id:s, name, color:'#8A8A8A' };
+}
+const gmeta     = key => S.games[key];
+
+function gstate(key, pid){
+  const m = gmeta(key);
+  if(!m) return { used:[], eliminated:false, eliminatedRound:null, eliminatedReason:null };
+  if(!m.st[pid]) m.st[pid] = { used:[], eliminated:false, eliminatedRound:null, eliminatedReason:null };
+  return m.st[pid];
+}
+/* Un minigioco è "in corso" se la giornata della lega rientra nel suo
+   intervallo e non si è già concluso (nel Last Man Standing può finire prima,
+   quando resta un solo partecipante in piedi). */
+function gameOpen(key){
+  const g = G(key), m = gmeta(key);
+  if(!m || m.phase === 'finished') return false;
+  return S.core.round >= g.first && S.core.round <= g.last;
+}
+function gameStarted(key){
+  const g = G(key);
+  return !!gmeta(key) && S.core.round >= g.first;
+}
+const openGames = () => GAMES.filter(g => gameOpen(g.key));
+function aliveIn(key){
+  return (S.core?.players || []).filter(p => !gstate(key, p.id).eliminated);
+}
+function usesOf(key, pid, tid){
+  return gstate(key, pid).used.filter(t => t === tid).length;
+}
+function availableIn(key, p){
+  const max = G(key).maxUses;
+  return (S.core.teams || []).map(t => {
+    const count = usesOf(key, p.id, t.id);
+    return { ...t, count, max, full: count >= max };
+  });
+}
+function winsIn(key, pid){
+  return (gmeta(key)?.history || []).reduce((s,h) => {
+    const e = h.entries.find(x => x.playerId === pid);
+    return s + (e && e.result === 'win' ? 1 : 0);
+  }, 0);
+}
+function playedIn(key, pid){
+  return (gmeta(key)?.history || []).filter(h => h.entries.some(e => e.playerId === pid && e.teamId)).length;
+}
+function approvedIn(key){
+  const out = {};
+  for(const [pid, r] of Object.entries(S.reqs[key] || {})) if(r.status === 'approved') out[pid] = r.teamId;
+  return out;
+}
+/* Tutte le squadre pronosticate (e approvate) in questa giornata, in qualunque
+   minigioco: è su queste che l'organizzatore segna l'esito, una volta sola. */
+function pickedTeamsThisRound(){
+  const map = new Map();   // teamId -> [{gameKey, playerId}]
+  openGames().forEach(g => {
+    const ap = approvedIn(g.key);
+    Object.entries(ap).forEach(([pid, tid]) => {
+      if(!map.has(tid)) map.set(tid, []);
+      map.get(tid).push({ gameKey: g.key, playerId: pid });
+    });
+  });
+  return map;
+}
+function allResultsIn(){
+  const ids = [...pickedTeamsThisRound().keys()];
+  return ids.length > 0 && ids.every(t => S.results[t]);
+}
+function missingIn(key){
+  return aliveIn(key).filter(p => !S.reqs[key]?.[p.id] || S.reqs[key][p.id].status === 'rejected');
+}
+function pendingIn(key){
+  return aliveIn(key).filter(p => S.reqs[key]?.[p.id]?.status === 'pending');
+}
+const totalPending = () => openGames().reduce((n,g) => n + pendingIn(g.key).length, 0);
+
+/* =========================================================================
+   7. CARICAMENTO E SALVATAGGIO
+   ========================================================================= */
+async function saveCore(){
+  S.core.updatedAt = new Date().toISOString();
+  await Store.set(K.core, S.core);
+}
+async function saveGame(key){
+  await Store.set(K.gmeta(key), S.games[key]);
+}
+async function loadCore(){
+  const c = await Store.get(K.core);
+  S.core = c ? { ...emptyCore(), ...c } : null;
+}
+async function loadGames(){
+  S.games = {};
+  for(const g of GAMES){
+    const m = await Store.get(K.gmeta(g.key));
+    if(m) S.games[g.key] = { ...emptyGame(), ...m };
+  }
+}
+async function loadRound(){
+  S.reqs = {}; S.results = {};
+  if(!S.core) return;
+  const r = S.core.round;
+  for(const g of GAMES){
+    S.reqs[g.key] = {};
+    if(!S.games[g.key]) continue;
+    const pfx = K.reqPrefix(g.key, r);
+    (await Store.list(pfx)).forEach(({ key, value }) => { S.reqs[g.key][key.slice(pfx.length)] = value; });
+  }
+  const rpfx = K.resPrefix(r);
+  (await Store.list(rpfx)).forEach(({ key, value }) => { S.results[key.slice(rpfx.length)] = value; });
+}
+async function loadClaims(){
+  S.claims = {};
+  (await Store.list('claim-')).forEach(({ key, value }) => { S.claims[key.slice('claim-'.length)] = value; });
+}
+async function loadUsers(){
+  S.users = (await Store.list('user-')).map(x => x.value);
+}
+async function refresh(silent = true){
+  try{
+    await loadCore();
+    await loadGames();
+    await loadRound();
+    await loadClaims();
+    await loadDuels();
+    S.offline = false;
+    if(isAdmin()) await loadUsers();
+  }catch(e){
+    S.offline = true;
+    if(!silent) toast('Archivio non raggiungibile: ' + e.message, 'err');
+  }
+  render();
+}
+
+/* =========================================================================
+   8. RICHIESTE DI PRONOSTICO
+   ========================================================================= */
+async function submitPick(gameKey, playerId, teamId, byAdmin = false){
+  const g = G(gameKey);
+  const p = player(playerId);
+  if(!p) throw new Error('Partecipante non trovato.');
+  if(!gameOpen(gameKey)) throw new Error(g.name + ' non è in corso in questa giornata.');
+  if(gstate(gameKey, playerId).eliminated) throw new Error(p.name + ' è già fuori da ' + g.name + '.');
+  const used = usesOf(gameKey, playerId, teamId);
+  if(used >= g.maxUses){
+    throw new Error(g.maxUses === 1
+      ? 'Questa squadra è già stata usata da ' + p.name + ' in ' + g.short + '.'
+      : 'Questa squadra è già stata scelta ' + g.maxUses + ' volte da ' + p.name + ' in ' + g.short + '.');
+  }
+  if(!byAdmin && deadlinePassed()) throw new Error('Il termine per questa giornata è scaduto: scrivi all\'organizzatore.');
+
+  const prev = S.reqs[gameKey]?.[playerId];
+  const auto = byAdmin || S.core.autoApprove;
+  const rec = {
+    teamId,
+    status: auto ? 'approved' : 'pending',
+    note: '',
+    sentAt: new Date().toISOString(),
+    sentBy: S.me ? S.me.username : 'sistema',
+    decidedAt: auto ? new Date().toISOString() : null,
+    decidedBy: auto ? (S.me ? S.me.username : 'sistema') : null
+  };
+  await Store.set(K.req(gameKey, S.core.round, playerId), rec);
+  if(!S.reqs[gameKey]) S.reqs[gameKey] = {};
+  S.reqs[gameKey][playerId] = rec;
+}
+async function decidePick(gameKey, playerId, status, note = ''){
+  const rec = S.reqs[gameKey]?.[playerId];
+  if(!rec) return;
+  rec.status = status; rec.note = note;
+  rec.decidedAt = new Date().toISOString();
+  rec.decidedBy = S.me ? S.me.username : 'organizzatore';
+  await Store.set(K.req(gameKey, S.core.round, playerId), rec);
+  S.reqs[gameKey][playerId] = rec;
+}
+
+/* ---- ESITI DELLE SQUADRE: UNICI PER TUTTA LA LEGA ----
+   Segnare "Milan ha vinto" vale nello stesso momento per chi l'ha scelto nel
+   Last Man Standing e per chi l'ha scelto in WhoWin?. */
+async function writeTeamResult(teamId, result, round = S.core.round){
+  await Store.set(K.res(round, teamId), result);
+  if(round === S.core.round) S.results[teamId] = result;
+}
+async function setTeamResult(teamId, result){
+  const r = S.core.round;
+  if(S.results[teamId] === result){
+    await Store.del(K.res(r, teamId));
+    delete S.results[teamId];
+  } else {
+    await writeTeamResult(teamId, result);
+  }
+}
+
+/* ---- ELIMINAZIONE PER ASSENZA (solo Last Man Standing) ---- */
+async function eliminateAbsent(gameKey){
+  const missing = missingIn(gameKey);
+  if(!missing.length) return;
+  const ok = await confirmBox(
+    `Elimino da ${G(gameKey).name} ${missing.length === 1 ? 'il partecipante' : 'i ' + missing.length + ' partecipanti'} ` +
+    `che non ${missing.length === 1 ? 'ha' : 'hanno'} inviato il pronostico: ${missing.map(p => p.name).join(', ')}. ` +
+    `Restano ripescabili finché non chiudi la giornata.`);
+  if(!ok) return;
+  missing.forEach(p => {
+    const st = gstate(gameKey, p.id);
+    st.eliminated = true; st.eliminatedRound = S.core.round; st.eliminatedReason = 'assente';
+  });
+  await saveGame(gameKey);
+  toast('Eliminati per assenza: ' + missing.length + '.', 'ok');
+  render();
+}
+async function readmit(gameKey, pid){
+  const st = gstate(gameKey, pid);
+  st.eliminated = false; st.eliminatedRound = null; st.eliminatedReason = null;
+  await saveGame(gameKey);
+  toast(player(pid).name + ' ripescato.', 'ok');
+  render();
+}
+
+/* ---- CHIUSURA DELLA GIORNATA (una sola, per tutti i minigiochi) ---- */
+function closeSummary(){
+  const rows = [];
+  openGames().forEach(g => {
+    const ap = approvedIn(g.key);
+    const alive = aliveIn(g.key);
+    const withPick = alive.filter(p => ap[p.id]).length;
+    const noPick = alive.filter(p => !ap[p.id]);
+    rows.push({ g, withPick, noPick, alive: alive.length });
+  });
+  return rows;
+}
+async function closeGiornata(){
+  if(!openGames().length || !allResultsIn()) return;
+  const summary = closeSummary();
+  const absLines = summary.filter(r => r.noPick.length).map(r =>
+    `${r.g.short}: ${r.noPick.map(p => p.name).join(', ')} senza pronostico` +
+    (r.g.kind === 'lms' ? ' → eliminati' : ' → giornata persa'));
+  const ok = await confirmBox(
+    `Chiudo la giornata ${S.core.round} per ${summary.length === 1 ? 'il minigioco in corso' : 'tutti i minigiochi in corso'}. ` +
+    `Gli esiti diventano definitivi.` + (absLines.length ? '\n\n' + absLines.join('\n') : ''));
+  if(!ok) return;
+
+  for(const g of openGames()){
+    const m = gmeta(g.key);
+    const ap = approvedIn(g.key);
+    const entries = [];
+    aliveIn(g.key).forEach(p => {
+      const st = gstate(g.key, p.id);
+      const teamId = ap[p.id];
+      if(teamId){
+        const result = S.results[teamId];
+        entries.push({ playerId: p.id, teamId, result });
+        st.used = [ ...(st.used || []), teamId ];
+        if(result === 'lose' && g.kind === 'lms'){
+          st.eliminated = true; st.eliminatedRound = S.core.round; st.eliminatedReason = null;
+        }
+      } else {
+        /* nessun pronostico: nel Last Man Standing è un'eliminazione, in
+           WhoWin? semplicemente una giornata senza vittoria. */
+        entries.push({ playerId: p.id, teamId: null, result: 'absent' });
+        if(g.kind === 'lms'){
+          st.eliminated = true; st.eliminatedRound = S.core.round;
+          st.eliminatedReason = st.eliminatedReason || 'assente';
+        }
+      }
+    });
+    m.history.push({ round: S.core.round, entries, closedAt: new Date().toISOString() });
+
+    if(g.kind === 'lms'){
+      const still = aliveIn(g.key);
+      if(still.length <= 1 || S.core.round >= g.last){
+        m.phase = 'finished';
+        m.winners = still.map(p => p.id);
+        if(!m.winners.length){
+          /* tutti eliminati nella stessa giornata: vincono a pari merito */
+          m.winners = entries.filter(e => e.result === 'lose' || e.result === 'absent').map(e => e.playerId);
+        }
+      }
+    } else if(S.core.round >= g.last){
+      m.phase = 'finished';
+    }
+    await saveGame(g.key);
+  }
+
+  if(S.core.round < SEASON_ROUNDS) S.core.round += 1;
+  S.core.deadline = null;
+  await saveCore();
+  await loadRound();
+  toast('Giornata chiusa. Si passa alla ' + S.core.round + '.', 'ok');
+  render();
+}
+async function reopenGiornata(){
+  const last = Math.max(...GAMES.map(g => {
+    const h = gmeta(g.key)?.history || [];
+    return h.length ? h[h.length-1].round : 0;
+  }), 0);
+  if(!last) return;
+  if(!await confirmBox('Riapro la giornata ' + last + ': esiti ed eliminazioni tornano modificabili in tutti i minigiochi.')) return;
+
+  for(const g of GAMES){
+    const m = gmeta(g.key);
+    if(!m || !m.history.length) continue;
+    const h = m.history[m.history.length - 1];
+    if(h.round !== last) continue;
+    h.entries.forEach(e => {
+      const st = gstate(g.key, e.playerId);
+      if(e.teamId){
+        const i = (st.used || []).lastIndexOf(e.teamId);
+        if(i >= 0) st.used.splice(i, 1);
+      }
+      if(st.eliminatedRound === last){ st.eliminated = false; st.eliminatedRound = null; st.eliminatedReason = null; }
+    });
+    m.history.pop();
+    if(m.phase === 'finished'){ m.phase = 'playing'; m.winners = []; }
+    await saveGame(g.key);
+  }
+  S.core.round = last;
+  await saveCore();
+  await loadRound();
+  toast('Giornata ' + last + ' riaperta.', 'ok');
+  render();
+}
+
+/* ---- AZZERAMENTI ---- */
+async function wipeGame(key){
+  const g = G(key);
+  const c = await modal({ title:'Azzera ' + g.name, message:'Scrivi AZZERA per confermare: si cancellano storico, pronostici ed eliminazioni di questo minigioco. Gli altri restano intatti.', input:'text', placeholder:'AZZERA', confirmText:'Azzera' });
+  if(c !== 'AZZERA') return;
+  for(let r = g.first; r <= g.last; r++){
+    for(const { key: k } of await Store.list(K.reqPrefix(key, r))) await Store.del(k);
+  }
+  S.games[key] = emptyGame();
+  await saveGame(key);
+  await refresh(false);
+  toast(g.name + ' azzerato.', 'ok');
+}
+async function wipeAll(){
+  const c = await modal({ title:'Azzera tutti i minigiochi', message:'Scrivi AZZERA TUTTO per confermare: si cancellano partecipanti, storico, pronostici, esiti e file collegato di tutti e tre i minigiochi. Gli account restano.', input:'text', placeholder:'AZZERA TUTTO', confirmText:'Azzera tutto' });
+  if(c !== 'AZZERA TUTTO') return;
+  for(const g of GAMES){
+    for(let r = g.first; r <= g.last; r++){
+      for(const { key: k } of await Store.list(K.reqPrefix(g.key, r))) await Store.del(k);
+    }
+    S.games[g.key] = emptyGame();
+    await saveGame(g.key);
+  }
+  for(let r = 1; r <= SEASON_ROUNDS; r++){
+    for(const { key: k } of await Store.list(K.resPrefix(r))) await Store.del(k);
+  }
+  for(const p of (S.core?.players || [])) await Store.del(K.claim(p.id));
+  S.core = emptyCore();
+  await saveCore();
+  if(S.me){ S.me.playerId = null; await Store.set(K.user(S.me.username), S.me); }
+  await refresh(false);
+  toast('Tutti i minigiochi azzerati.', 'ok');
+}
+async function wipeResultsOnly(){
+  const c = await modal({ title:'Azzera solo i risultati', message:'Scrivi AZZERA per confermare: si cancellano storico, esiti e pronostici di tutti e tre i minigiochi, ma restano i partecipanti, gli account e il file collegato. Si riparte dalla giornata 1.', input:'text', placeholder:'AZZERA', confirmText:'Azzera i risultati' });
+  if(c !== 'AZZERA') return;
+  for(const g of GAMES){
+    for(let r = g.first; r <= g.last; r++){
+      for(const { key: k } of await Store.list(K.reqPrefix(g.key, r))) await Store.del(k);
+    }
+    S.games[g.key] = emptyGame();
+    await saveGame(g.key);
+  }
+  for(let r = 1; r <= SEASON_ROUNDS; r++){
+    for(const { key: k } of await Store.list(K.resPrefix(r))) await Store.del(k);
+  }
+  S.core.round = 1; S.core.deadline = null;
+  await saveCore();
+  await refresh(false);
+  toast('Risultati azzerati: si riparte dalla giornata 1.', 'ok');
+}
+
+/* =========================================================================
+   7. ACCOUNT
+   ========================================================================= */
+const SESSION_KEY = 'fantalist.session';
+
+async function findUser(username){
+  return await Store.get(K.user(slug(username)));
+}
+/* Il nome utente di un partecipante non si sceglie: è il suo nome nel file Excel,
+   normalizzato (Peppe Verbaro -> peppe-verbaro). Così l'organizzatore sa sempre
+   con quale nome accede ciascuno. */
+function usernameFor(p){ return String(p.id).replace(/^p-/, ''); }
+
+async function createUser({ username, password, role, playerId, displayName }){
+  const u = slug(username);
+  if(u.length < 3) throw new Error('Il nome utente deve avere almeno 3 caratteri.');
+  if(password.length < 6) throw new Error('Il codice di accesso deve avere almeno 6 caratteri.');
+  if(await findUser(u)) throw new Error('Questo nome utente è già stato preso.');
+  const salt = randomHex(16);
+  const rec = {
+    username: u, displayName: displayName || username, role: role || 'player',
+    playerId: playerId || null, salt, hash: await derive(password, salt),
+    password,                                  // leggibile: serve all'organizzatore
+    createdAt: new Date().toISOString()
+  };
+  await Store.set(K.user(u), rec);
+  if(playerId) await Store.set(K.claim(playerId), u);
+  return rec;
+}
+async function login(username, password){
+  const rec = await findUser(username);
+  if(!rec) throw new Error('Nome utente o password non validi.');
+  const h = await derive(password, rec.salt);
+  if(h !== rec.hash) throw new Error('Nome utente o password non validi.');
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: rec.username, verifier: h }));
+  S.me = rec;
+  return rec;
+}
+async function restoreSession(){
+  let s = null;
+  try{ s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }catch(e){}
+  if(!s) return null;
+  const rec = await findUser(s.username);
+  if(rec && rec.hash === s.verifier){ S.me = rec; return rec; }
+  localStorage.removeItem(SESSION_KEY);
+  return null;
+}
+function logout(){
+  localStorage.removeItem(SESSION_KEY);
+  S.me = null; S.tab = null;
+  D.screen = 'menu'; D.squad = [];
+  render();
+}
+async function changePassword(username, newPassword){
+  const rec = await findUser(username);
+  if(!rec) throw new Error('Account non trovato.');
+  if(newPassword.length < 6) throw new Error('Il codice di accesso deve avere almeno 6 caratteri.');
+  rec.salt = randomHex(16);
+  rec.hash = await derive(newPassword, rec.salt);
+  rec.password = newPassword;
+  await Store.set(K.user(rec.username), rec);
+  if(S.me && S.me.username === rec.username){
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ username: rec.username, verifier: rec.hash }));
+    S.me = rec;
+  }
+  return rec;
+}
+
+
+/* =========================================================================
+   9. FOGLIO EXCEL — un solo file comanda tutti e tre i minigiochi
+   -------------------------------------------------------------------------
+   Fogli attesi (i nomi possono variare, vengono riconosciuti dal contenuto):
+     · "Partecipanti e Premi"            — elenco iscritti e quota minigiochi
+     · "Minigioco_LastManStanding" (MG_A) — LMS andata,  Giornata 1..19
+     · "Minigioco_..._Ritorno"     (MG_R) — LMS ritorno, Giornata 20..38
+     · "Minigioco_Stagionale"      (MG_S) — WhoWin?,     Giornata 1..38 + Totale Vittorie
+   Nelle colonne delle squadre: "X" (Last Man Standing) o un numero da 1 a 3
+   (WhoWin?, quante volte quella squadra è stata usata). Nelle colonne
+   Giornata: "V (Inter)", "NV (Inter)" oppure "ASSENTE".
+   ========================================================================= */
+function b64FromBuffer(buffer){
+  let bin = ''; const bytes = new Uint8Array(buffer), chunk = 0x8000;
+  for(let i=0;i<bytes.length;i+=chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  return btoa(bin);
+}
+
+/* Trova la riga di intestazione (nelle prime 3 righe) e mappa le colonne. */
+function parseGrid(ws){
+  if(!ws || !ws['!ref']) return null;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let hr = range.s.r; hr <= Math.min(range.s.r + 2, range.e.r); hr++){
+    let partCol = null; const teams = [], giornate = []; let winsCol = null;
+    for(let c = range.s.c; c <= range.e.c; c++){
+      const cell = ws[XLSX.utils.encode_cell({ r: hr, c })];
+      if(!cell || cell.v == null || cell.v === '') continue;
+      const label = String(cell.v).trim();
+      /* "Partecipanti" può comparire più volte sulla stessa riga (nel foglio
+         dei premi c'è anche nei riepiloghi a destra): vale la prima. */
+      if(/^partecipant/i.test(label)){ if(partCol == null) partCol = c; }
+      else if(/^giornata\s*\d+/i.test(label)) giornate.push({ col:c, num: parseInt(label.match(/\d+/)[0], 10) });
+      else if(/^totale/i.test(label)) winsCol = c;
+      else teams.push({ col:c, name: label });
+    }
+    if(partCol != null && teams.length){
+      giornate.sort((a,b) => a.num - b.num);
+      return { range, headerRow: hr, firstDataRow: hr + 1, partCol, teams, giornate, winsCol };
+    }
+  }
+  return null;
+}
+function findSheet(wb, game){
+  const byName = wb.SheetNames.find(n =>
+    game.match.test(n) && !(game.exclude && game.exclude.test(n)));
+  return byName || null;
+}
+/* Chi ha la x su "Quota MiniGiochi" nel foglio dei partecipanti. */
+function readEligible(wb){
+  const name = wb.SheetNames.find(n => /partecipanti/i.test(n));
+  if(!name) return null;
+  const ws = wb.Sheets[name];
+  const grid = parseGrid(ws);
+  if(!grid) return null;
+  const quotaCol = grid.teams.find(t => /quota\s*minigioch/i.test(t.name));
+  if(!quotaCol) return null;
+  const out = new Set();
+  for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+    const n = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
+    const q = ws[XLSX.utils.encode_cell({ r, c: quotaCol.col })];
+    if(!n || n.v == null) continue;
+    if(q && String(q.v).trim().toLowerCase() === 'x') out.add(String(n.v).trim().toLowerCase());
+  }
+  return out;
+}
+
+async function importWorkbook(file, opts){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array' });
+  const eligible = opts.onlyPaying ? readEligible(wb) : null;
+
+  /* --- 1. elenco partecipanti: dal foglio "Partecipanti e Premi" se c'è,
+         altrimenti dal primo foglio di minigioco disponibile --- */
+  let names = [];
+  const partSheet = wb.SheetNames.find(n => /partecipanti/i.test(n));
+  const sourceSheets = partSheet ? [partSheet] : [];
+  GAMES.forEach(g => { const s = findSheet(wb, g); if(s) sourceSheets.push(s); });
+  for(const sn of sourceSheets){
+    const grid = parseGrid(wb.Sheets[sn]);
+    if(!grid) continue;
+    for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+      const c = wb.Sheets[sn][XLSX.utils.encode_cell({ r, c: grid.partCol })];
+      if(!c || c.t === 'e' || c.v == null) continue;
+      const nm = String(c.v).trim();
+      if(!nm) continue;
+      if(opts.skipPlaceholders && isPlaceholder(nm)) continue;
+      if(eligible && !eligible.has(nm.toLowerCase())) continue;
+      if(!names.includes(nm)) names.push(nm);
+    }
+    if(names.length) break;
+  }
+  if(!names.length) throw new Error('Non trovo nessun partecipante nel file. Controlla il foglio "Partecipanti e Premi" e le due spunte qui sopra.');
+
+  const seen = new Set();
+  const players = names.map(nm => {
+    let id = 'p-' + slug(nm), n = 2;
+    while(seen.has(id)) id = 'p-' + slug(nm) + '-' + (n++);
+    seen.add(id);
+    return { id, name: nm };
+  });
+  const byName = {}; players.forEach(p => { byName[p.name.toLowerCase()] = p.id; });
+
+  /* --- 2. squadre: dal primo foglio di minigioco che le contiene --- */
+  let teams = null, sheetNames = {};
+  for(const g of GAMES){
+    const sn = findSheet(wb, g);
+    if(!sn) continue;
+    sheetNames[g.key] = sn;
+    if(!teams){
+      const grid = parseGrid(wb.Sheets[sn]);
+      if(grid) teams = grid.teams.map((t,i) => ({ id: slug(t.name), name: t.name, color: teamColor(t.name, i) }));
+    }
+  }
+  if(!teams) teams = DEFAULT_TEAMS.map((n,i) => ({ id: slug(n), name: n, color: teamColor(n,i) }));
+
+  /* --- 3. stato di ciascun minigioco --- */
+  const games = {}; let maxDone = 0;
+  for(const g of GAMES){
+    const m = emptyGame();
+    players.forEach(p => { m.st[p.id] = { used:[], eliminated:false, eliminatedRound:null, eliminatedReason:null }; });
+    const sn = sheetNames[g.key];
+    if(sn){
+      const ws = wb.Sheets[sn], grid = parseGrid(ws);
+      if(grid){
+        const histByRound = {};
+        for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+          const nc = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
+          if(!nc || nc.t === 'e' || nc.v == null) continue;
+          const pid = byName[String(nc.v).trim().toLowerCase()];
+          if(!pid) continue;
+          const st = m.st[pid];
+          const entries = [];
+          grid.giornate.forEach(gi => {
+            if(gi.num < g.first || gi.num > g.last) return;
+            const cell = ws[XLSX.utils.encode_cell({ r, c: gi.col })];
+            if(!cell || cell.v == null) return;
+            const raw = String(cell.v).trim();
+            if(/^assente$/i.test(raw)){ entries.push({ round: gi.num, teamId: null, result: 'absent' }); return; }
+            const mt = raw.match(/^(V|NV)\s*\(([^)]+)\)$/i);
+            if(!mt) return;
+            const label = mt[2].trim();
+            const t = teams.find(x => x.name.toLowerCase() === label.toLowerCase()) || teams.find(x => x.id === slug(label));
+            if(!t) return;
+            entries.push({ round: gi.num, teamId: t.id, result: mt[1].toUpperCase() === 'V' ? 'win' : 'lose' });
+          });
+          entries.sort((a,b) => a.round - b.round);
+          st.used = entries.filter(e => e.teamId).map(e => e.teamId);
+          if(g.kind === 'lms'){
+            const out = entries.find(e => e.result === 'lose' || e.result === 'absent');
+            if(out){
+              st.eliminated = true; st.eliminatedRound = out.round;
+              if(out.result === 'absent') st.eliminatedReason = 'assente';
+            }
+          }
+          entries.forEach(e => {
+            (histByRound[e.round] = histByRound[e.round] || []).push({ playerId: pid, teamId: e.teamId, result: e.result });
+            if(e.round > maxDone) maxDone = e.round;
+          });
+        }
+        m.history = Object.keys(histByRound).map(k => ({ round: parseInt(k,10), entries: histByRound[k] }))
+          .sort((a,b) => a.round - b.round);
+      }
+    }
+    if(g.kind === 'lms'){
+      const alive = players.filter(p => !m.st[p.id].eliminated);
+      const lastPlayed = m.history.length ? m.history[m.history.length-1].round : 0;
+      if(m.history.length && (alive.length <= 1 || lastPlayed >= g.last)){
+        m.phase = 'finished'; m.winners = alive.map(p => p.id);
+      }
+    } else if(m.history.length && m.history[m.history.length-1].round >= g.last){
+      m.phase = 'finished';
+    }
+    games[g.key] = m;
+  }
+
+  const round = Math.min(maxDone + 1, SEASON_ROUNDS);
+  const calendar = parseCalendarSheet(wb) || DEFAULT_CALENDAR.slice();
+  S.core = { ...emptyCore(), teams, players, round, calendar,
+    fileName: file.name, originalB64: b64FromBuffer(buf), sheetNames };
+  S.games = games;
+  await saveCore();
+  for(const g of GAMES) await saveGame(g.key);
+  await loadRound();
+  return { players: players.length, teams: teams.length, round,
+           sheets: GAMES.filter(g => sheetNames[g.key]).map(g => g.short) };
+}
+
+/* ---- CALENDARIO SERIE A ----
+   Foglio "Calendario": colonne Giornata, Casa, Trasferta (e opzionalmente
+   Data). Un foglio semplice, non nel formato a griglia degli altri —
+   basta trovare l'intestazione nelle prime righe. */
+function parseCalendarSheet(wb){
+  const sn = wb.SheetNames.find(n => /calendario/i.test(n));
+  if(!sn) return null;
+  const ws = wb.Sheets[sn];
+  if(!ws || !ws['!ref']) return null;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  let headerRow = null, roundCol = null, homeCol = null, awayCol = null, dateCol = null, resCol = null;
+  for(let r = range.s.r; r <= Math.min(range.s.r + 2, range.e.r); r++){
+    let rc=null, hc=null, ac=null, dc=null, sc=null;
+    for(let c = range.s.c; c <= range.e.c; c++){
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if(!cell || cell.v == null) continue;
+      const label = String(cell.v).trim().toLowerCase();
+      if(/^giornata$/.test(label)) rc = c;
+      else if(/^(casa|squadra casa)$/.test(label)) hc = c;
+      else if(/^(trasferta|squadra trasferta|ospite)$/.test(label)) ac = c;
+      else if(/^data$/.test(label)) dc = c;
+      else if(/^(risultato|esito|score)$/.test(label)) sc = c;
+    }
+    if(rc != null && hc != null && ac != null){ headerRow = r; roundCol = rc; homeCol = hc; awayCol = ac; dateCol = dc; resCol = sc; break; }
+  }
+  if(headerRow == null) return null;
+  const matches = [];
+  for(let r = headerRow + 1; r <= range.e.r; r++){
+    const rc = ws[XLSX.utils.encode_cell({ r, c: roundCol })];
+    const hc = ws[XLSX.utils.encode_cell({ r, c: homeCol })];
+    const ac = ws[XLSX.utils.encode_cell({ r, c: awayCol })];
+    if(!rc || rc.v == null || !hc || hc.v == null || !ac || ac.v == null) continue;
+    const round = parseInt(rc.v, 10);
+    if(!round) continue;
+    const dc = dateCol != null ? ws[XLSX.utils.encode_cell({ r, c: dateCol })] : null;
+    const sc = resCol != null ? ws[XLSX.utils.encode_cell({ r, c: resCol })] : null;
+    matches.push({
+      round, home: String(hc.v).trim(), away: String(ac.v).trim(),
+      date: dc && dc.v != null ? String(dc.v).trim() : '',
+      result: sc && sc.v != null ? String(sc.v).trim() : ''
+    });
+  }
+  return matches.length ? matches : null;
+}
+/* "2-1", "2 - 1", "2:1" → chi ha vinto. Pareggio: nessuna delle due squadre
+   ha vinto (coerente con "ha vinto"/"non ha vinto" usato negli esiti). */
+function parseScore(raw){
+  const m = String(raw || '').trim().match(/^(\d+)\s*[-:]\s*(\d+)$/);
+  if(!m) return null;
+  const h = parseInt(m[1],10), a = parseInt(m[2],10);
+  if(h === a) return { home:'lose', away:'lose', draw:true };
+  return h > a ? { home:'win', away:'lose', draw:false } : { home:'lose', away:'win', draw:false };
+}
+/* Importa SOLO il calendario da un file a parte (foglio "Calendario" con
+   Giornata, Casa, Trasferta, e opzionalmente Risultato). Se una partita ha
+   il risultato compilato ed è della giornata in corso, l'esito delle due
+   squadre viene scritto subito — così non serve più segnarlo a mano nella
+   scheda Esiti. Le giornate diverse da quella in corso aggiornano solo il
+   calendario mostrato: gli esiti si applicano solo quando tocca a loro. */
+async function importCalendarOnly(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array' });
+  const matches = parseCalendarSheet(wb);
+  if(!matches) throw new Error('Non trovo un foglio "Calendario" con le colonne Giornata, Casa, Trasferta.');
+  if(!S.core) S.core = emptyCore();
+  S.core.calendar = matches.map(m => ({ round:m.round, home:m.home, away:m.away, date:m.date }));
+  await saveCore();
+
+  let applied = 0;
+  for(const m of matches){
+    if(m.round !== S.core.round || !m.result) continue;
+    const outcome = parseScore(m.result);
+    if(!outcome) continue;
+    const th = teamByName(m.home), ta = teamByName(m.away);
+    await writeTeamResult(th.id, outcome.home, m.round);
+    await writeTeamResult(ta.id, outcome.away, m.round);
+    applied++;
+  }
+  return { matches: matches.length, applied };
+}
+function writeCalendarSheet(wb){
+  const sn = wb.SheetNames.find(n => /calendario/i.test(n)) || 'Calendario';
+  const aoa = [['Giornata','Casa','Trasferta','Data']];
+  (S.core.calendar || []).forEach(m => aoa.push([m.round, m.home, m.away, m.date || '']));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  if(!wb.SheetNames.includes(sn)) wb.SheetNames.push(sn);
+  wb.Sheets[sn] = ws;
+}
+
+/* ---- SCRITTURA ---- */
+function ensureSheet(wb, game){
+  let sn = S.core.sheetNames?.[game.key] && wb.Sheets[S.core.sheetNames[game.key]]
+    ? S.core.sheetNames[game.key] : findSheet(wb, game);
+  if(sn && parseGrid(wb.Sheets[sn])) return sn;
+
+  /* foglio assente (tipico del ritorno la prima volta): lo creo da zero */
+  const header = ['Partecipanti', ...S.core.teams.map(t => t.name)];
+  for(let n = game.first; n <= game.last; n++) header.push('Giornata ' + n);
+  if(game.kind === 'season') header.push('Totale Vittorie');
+  const aoa = [ ['Tabella ' + game.name + ' - disponibilità'], header, ...S.core.players.map(p => [p.name]) ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  sn = game.sheet;
+  if(!wb.SheetNames.includes(sn)) wb.SheetNames.push(sn);
+  wb.Sheets[sn] = ws;
+  return sn;
+}
+function writeGameSheet(wb, game){
+  const sn = ensureSheet(wb, game);
+  const ws = wb.Sheets[sn];
+  const grid = parseGrid(ws);
+  if(!grid) return;
+  const m = gmeta(game.key) || emptyGame();
+
+  let lastCol = Math.max(grid.partCol, ...grid.teams.map(t => t.col),
+    ...(grid.giornate.length ? grid.giornate.map(g => g.col) : [-1]),
+    grid.winsCol == null ? -1 : grid.winsCol);
+  const have = new Set(grid.giornate.map(g => g.num));
+  for(let n = game.first; n <= game.last; n++){
+    if(!have.has(n)){
+      lastCol += 1;
+      ws[XLSX.utils.encode_cell({ r: grid.headerRow, c: lastCol })] = { t:'s', v:'Giornata ' + n };
+      grid.giornate.push({ col: lastCol, num: n });
+    }
+  }
+  grid.giornate.sort((a,b) => a.num - b.num);
+  let winsCol = grid.winsCol;
+  if(game.kind === 'season' && winsCol == null){
+    lastCol += 1; winsCol = lastCol;
+    ws[XLSX.utils.encode_cell({ r: grid.headerRow, c: winsCol })] = { t:'s', v:'Totale Vittorie' };
+  }
+
+  const rowOf = {};
+  for(let r = grid.firstDataRow; r <= grid.range.e.r; r++){
+    const c = ws[XLSX.utils.encode_cell({ r, c: grid.partCol })];
+    if(c && c.v != null) rowOf[String(c.v).trim().toLowerCase()] = r;
+  }
+  let appendRow = Math.max(grid.range.e.r, grid.firstDataRow - 1);
+
+  S.core.players.forEach(p => {
+    let row = rowOf[p.name.toLowerCase()];
+    if(row == null){ row = ++appendRow; ws[XLSX.utils.encode_cell({ r: row, c: grid.partCol })] = { t:'s', v: p.name }; }
+    const st = m.st[p.id] || { used:[] };
+
+    const counts = {};
+    (st.used || []).forEach(tid => { counts[tid] = (counts[tid] || 0) + 1; });
+    grid.teams.forEach(t => {
+      const addr = XLSX.utils.encode_cell({ r: row, c: t.col });
+      const n = counts[slug(t.name)] || 0;
+      if(!n) delete ws[addr];
+      else if(game.kind === 'lms') ws[addr] = { t:'s', v:'X' };
+      else ws[addr] = { t:'n', v: n };
+    });
+
+    grid.giornate.forEach(gi => {
+      const addr = XLSX.utils.encode_cell({ r: row, c: gi.col });
+      const h = m.history.find(x => x.round === gi.num);
+      const e = h && h.entries.find(x => x.playerId === p.id);
+      if(!e) delete ws[addr];
+      else if(e.result === 'absent') ws[addr] = { t:'s', v:'ASSENTE' };
+      else ws[addr] = { t:'s', v: (e.result === 'win' ? 'V' : 'NV') + ' (' + team(e.teamId).name + ')' };
+    });
+
+    if(winsCol != null) ws[XLSX.utils.encode_cell({ r: row, c: winsCol })] = { t:'n', v: winsIn(game.key, p.id) };
+  });
+
+  const maxRow = Math.max(grid.range.e.r, appendRow);
+  const maxCol = Math.max(grid.range.e.c, lastCol, winsCol == null ? -1 : winsCol);
+  ws['!ref'] = XLSX.utils.encode_range({ s:{ r: grid.range.s.r, c: grid.range.s.c }, e:{ r: maxRow, c: maxCol } });
+}
+function buildWorkbook(){
+  if(!S.core || !S.core.players.length) throw new Error('Nessun partecipante caricato: non c\'è nulla da esportare.');
+  let wb;
+  if(S.core.originalB64) wb = XLSX.read(S.core.originalB64, { type:'base64' });
+  else { wb = XLSX.utils.book_new(); }
+  GAMES.forEach(g => writeGameSheet(wb, g));
+  writeCalendarSheet(wb);
+  return wb;
+}
+function downloadWorkbook(){
+  try{
+    const wb = buildWorkbook();
+    const base = (S.core.fileName || 'FantaList.xlsx').replace(/\.xlsx?$/i, '');
+    XLSX.writeFile(wb, base + '_G' + S.core.round + '.xlsx');
+    toast('File Excel scaricato: contiene tutti e tre i minigiochi aggiornati.', 'ok');
+  }catch(e){ toast('Non riesco a generare il file: ' + e.message, 'err'); }
+}
+
+/* =========================================================================
+   10. SCHERMATE — accesso, registrazione, prima configurazione
+   ========================================================================= */
+function storageBanner(){
+  const m = Store.mode();
+  if(m === 'supabase') return '';
+  if(m === 'artifact') return `<div class="banner">Stai usando l'anteprima: i dati sono condivisi tra chi apre questa stessa anteprima. Per il sito pubblico collega un archivio Supabase (istruzioni nel README).</div>`;
+  return `<div class="banner err">Archivio non collegato: quello che salvi resta <strong>solo su questo dispositivo</strong>. Per far giocare tutti serve un archivio condiviso — <button class="btn-link" data-cfg>collega Supabase</button>.</div>`;
+}
+function wireStorageBanner(root){
+  const b = root.querySelector('[data-cfg]');
+  if(b) b.onclick = openBackendSetup;
+}
+async function openBackendSetup(){
+  const ov = el(`<div class="overlay"></div>`);
+  ov.appendChild(el(`
+    <div class="modal">
+      <h3>Collega l'archivio condiviso</h3>
+      <p>Incolla i due valori del tuo progetto Supabase (li trovi in Project settings → API). Restano salvati su questo dispositivo; per il sito pubblico incollali anche nel blocco CONFIG in cima al file.</p>
+      <label class="field" style="margin-bottom:12px;"><span>URL del progetto</span><input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co"></label>
+      <label class="field"><span>Chiave anon public</span><input type="text" id="cfg-key" placeholder="eyJhbGciOi…"></label>
+      <div class="btn-row"><button class="btn btn-ghost" data-x>Annulla</button><button class="btn btn-primary" data-y>Collega</button></div>
+    </div>`));
+  document.body.appendChild(ov);
+  const cfg = Store.config();
+  if(cfg){ ov.querySelector('#cfg-url').value = cfg.url; ov.querySelector('#cfg-key').value = cfg.key; }
+  ov.querySelector('[data-x]').onclick = () => ov.remove();
+  ov.querySelector('[data-y]').onclick = () => {
+    const url = ov.querySelector('#cfg-url').value.trim();
+    const key = ov.querySelector('#cfg-key').value.trim();
+    if(!url || !key){ toast('Servono entrambi i valori.', 'err'); return; }
+    Store.setConfig({ supabaseUrl:url, supabaseAnonKey:key, tableName: CONFIG.tableName });
+    location.reload();
+  };
+}
+
+function renderGate(){
+  const wrap = el(`<div class="gate stack"></div>`);
+  const first = S.users.length === 0;
+
+  wrap.appendChild(el(`
+    <div class="lead">
+      <h1>Il minigioco<br><em>si gioca qui</em></h1>
+      <p>${first
+        ? 'Nessun account ancora. Crea quello dell\'organizzatore: sarà l\'unico a poter approvare i pronostici e chiudere le giornate.'
+        : 'Accedi con il tuo nome utente per inviare il pronostico della giornata.'}</p>
+    </div>`));
+
+  const sb = el(`<div>${storageBanner()}</div>`);
+  if(sb.firstElementChild){ wireStorageBanner(sb); wrap.appendChild(sb); }
+
+  if(first){
+    const box = el(`
+      <div class="panel"><div class="panel-head"><h2>Crea l'organizzatore</h2><span class="eyebrow">passo 1 di 2</span></div>
+        <div class="panel-body">
+          <label class="field"><span>Nome utente</span><input type="text" id="su-user" placeholder="salvo" autocomplete="username"></label>
+          <label class="field"><span>Codice di accesso</span><input type="password" id="su-pass" placeholder="almeno 6 caratteri" autocomplete="new-password"></label>
+          <label class="field"><span>Ripeti il codice</span><input type="password" id="su-pass2" autocomplete="new-password"></label>
+          <button class="btn btn-primary" id="su-go" style="width:100%;">Crea l'account e continua</button>
+        </div>
+      </div>`);
+    box.querySelector('#su-go').onclick = async (ev) => {
+      const u = box.querySelector('#su-user').value.trim();
+      const p = box.querySelector('#su-pass').value;
+      const p2 = box.querySelector('#su-pass2').value;
+      if(p !== p2){ toast('I due codici non coincidono.', 'err'); return; }
+      ev.target.disabled = true; ev.target.innerHTML = '<span class="spinner"></span> Creo l\'account…';
+      try{
+        await createUser({ username:u, password:p, role:'admin', displayName:u });
+        await login(u, p);
+        await loadUsers();
+        if(!S.core){ S.core = emptyCore(); await saveCore(); }
+        toast('Account creato. Ora carica il file del minigioco.', 'ok');
+        render();
+      }catch(e){ toast(e.message, 'err'); ev.target.disabled = false; ev.target.textContent = 'Crea l\'account e continua'; }
+    };
+    wrap.appendChild(box);
+    return wrap;
+  }
+
+  const sw = el(`
+    <div class="switcher">
+      <button data-t="login" class="${S.gateTab==='login'?'on':''}">Accedi</button>
+      <button data-t="register" class="${S.gateTab==='register'?'on':''}">Primo accesso</button>
+    </div>`);
+  sw.querySelectorAll('button').forEach(b => b.onclick = () => { S.gateTab = b.dataset.t; render(); });
+  wrap.appendChild(sw);
+
+  if(S.gateTab === 'login'){
+    const box = el(`
+      <div class="panel"><div class="panel-body">
+        <label class="field"><span>Nome utente</span><input type="text" id="li-user" placeholder="il tuo nome, es. peppe verbaro" autocomplete="username"></label>
+        <label class="field"><span>Codice di accesso</span><input type="password" id="li-pass" autocomplete="current-password"></label>
+        <button class="btn btn-primary" id="li-go" style="width:100%;">Accedi</button>
+        <p class="note-dim">Il nome utente è il tuo nome come sta nel file della lega: puoi scriverlo con le maiuscole e gli spazi. Codice dimenticato? Chiedilo all'organizzatore, lo vede dalla sua schermata.</p>
+      </div></div>`);
+    const go = async (ev) => {
+      const btn = box.querySelector('#li-go');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Verifico…';
+      try{
+        await login(box.querySelector('#li-user').value.trim(), box.querySelector('#li-pass').value);
+        await refresh(false);
+        toast('Bentornato, ' + S.me.displayName + '.', 'ok');
+      }catch(e){ toast(e.message, 'err'); btn.disabled = false; btn.textContent = 'Accedi'; }
+    };
+    box.querySelector('#li-go').onclick = go;
+    box.querySelectorAll('input').forEach(i => i.onkeydown = e => { if(e.key === 'Enter') go(); });
+    wrap.appendChild(box);
+  } else {
+    const free = (S.core?.players || []).filter(p => !S.claims[p.id]);
+    const box = el(`
+      <div class="panel"><div class="panel-body">
+        ${!S.core || !S.core.players.length
+          ? `<div class="empty">L'organizzatore non ha ancora caricato l'elenco dei partecipanti. Riprova più tardi.</div>`
+          : free.length === 0
+            ? `<div class="empty">Tutti i partecipanti hanno già un account. Se non riesci ad accedere, chiedi all'organizzatore di azzerarti la password.</div>`
+            : `
+        <label class="field"><span>Chi sei</span>
+          <select id="rg-player">${free.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>Il tuo nome utente</span>
+          <input type="text" id="rg-user" value="${usernameFor(free[0])}" readonly autocomplete="username"></label>
+        <label class="field"><span>Codice di accesso</span><input type="password" id="rg-pass" placeholder="almeno 6 caratteri" autocomplete="new-password"></label>
+        <button class="btn btn-primary" id="rg-go" style="width:100%;">Crea il mio accesso</button>
+        <p class="note-dim">Il nome utente non si sceglie: è il tuo nome come compare nel file della lega. L'organizzatore vede i codici di accesso di tutti, quindi usane uno solo per il minigioco.</p>`}
+      </div></div>`);
+    const sel = box.querySelector('#rg-player');
+    if(sel) sel.onchange = () => { box.querySelector('#rg-user').value = usernameFor(player(sel.value)); };
+    const go = box.querySelector('#rg-go');
+    if(go) go.onclick = async () => {
+      const pid = sel.value;
+      const u = usernameFor(player(pid));
+      const p = box.querySelector('#rg-pass').value;
+      go.disabled = true; go.innerHTML = '<span class="spinner"></span> Creo l\'accesso…';
+      try{
+        await loadClaims();
+        if(S.claims[pid]) throw new Error('Questo nome è appena stato collegato da qualcun altro.');
+        await createUser({ username:u, password:p, role:'player', playerId:pid, displayName: player(pid).name });
+        await login(u, p);
+        await loadUsers(); await loadClaims();
+        await refresh(false);
+        toast('Accesso creato. Buon minigioco!', 'ok');
+      }catch(e){ toast(e.message, 'err'); go.disabled = false; go.textContent = 'Crea il mio accesso'; }
+    };
+    wrap.appendChild(box);
+  }
+  return wrap;
+}
+
+
+/* =========================================================================
+   11. PEZZI RIUTILIZZABILI
+   ========================================================================= */
+function scoreboard(){
+  const open = openGames();
+  const pending = totalPending();
+  const missing = open.reduce((n,g) => n + missingIn(g.key).length, 0);
+  return el(`
+    <div class="panel"><div class="scoreboard">
+      <div class="sb-cell"><div class="k">Giornata</div><div class="v">${String(S.core.round).padStart(2,'0')}<span style="font-size:1rem; color:var(--chalk-mute);">/${SEASON_ROUNDS}</span></div></div>
+      <div class="sb-cell"><div class="k">In corso</div><div class="v small">${open.length ? open.map(g => g.short).join('<br>') : 'nessuno'}</div></div>
+      <div class="sb-cell ${pending ? 'alert' : ''}"><div class="k">Da approvare</div><div class="v">${pending}</div></div>
+      <div class="sb-cell ${missing ? 'alert' : ''}"><div class="k">Non pervenuti</div><div class="v">${missing}</div></div>
+      <div class="sb-cell"><div class="k">Termine</div><div class="v small mono">${S.core.deadline ? fmtDate(S.core.deadline) : 'libero'}</div></div>
+    </div></div>`);
+}
+
+function teamPickerFor(gameKey, p, selected, onPick){
+  const wrap = el(`<div class="team-grid"></div>`);
+  availableIn(gameKey, p).forEach(t => {
+    const badge = t.max > 1 ? ` <span class="uses ${t.full ? 'full' : ''}">${t.count}/${t.max}</span>` : '';
+    const b = el(`<button class="team-btn ${t.full ? 'used' : ''} ${t.id === selected ? 'on' : ''}" data-team="${t.id}" ${t.full ? 'disabled' : ''}>
+        <span class="dot" style="background:${t.color}"></span>${esc(t.name)}${badge}</button>`);
+    if(!t.full) b.onclick = () => onPick(t.id);
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
+function historyTable(gameKey, pid){
+  const m = gmeta(gameKey);
+  const rows = (m?.history || []).map(h => {
+    const e = h.entries.find(x => x.playerId === pid);
+    return e ? { round: h.round, ...e } : null;
+  }).filter(Boolean);
+  if(!rows.length) return el(`<div class="empty">Nessuna giornata giocata finora.</div>`);
+  return el(`
+    <table><thead><tr><th>G</th><th>Squadra</th><th style="text-align:right;">Esito</th></tr></thead>
+      <tbody>${rows.map(r => `
+        <tr><td class="num">G${String(r.round).padStart(2,'0')}</td>
+            <td>${r.teamId
+              ? `<span class="chip-mini"><span class="dot" style="background:${team(r.teamId).color}"></span>${esc(team(r.teamId).name)}</span>`
+              : '<span class="tag mute">nessun pronostico</span>'}</td>
+            <td style="text-align:right;" class="${r.result === 'win' ? 'res-win' : 'res-lose'}">${
+              r.result === 'win' ? 'Vittoria' : r.result === 'absent' ? 'Assente' : 'Non vince'}</td></tr>`).join('')}
+      </tbody></table>`);
+}
+
+/* =========================================================================
+   12. SCHERMATA — i miei pronostici (uno per minigioco)
+   ========================================================================= */
+function myPanel(gameKey){
+  const g = G(gameKey);
+  const p = myPlayer();
+  const m = gmeta(gameKey);
+  const st = p ? gstate(gameKey, p.id) : null;
+
+  const head = (tag, tagClass) => `
+    <div class="panel-head">
+      <div><span class="eyebrow">${esc(g.short)} · giornate ${g.first}–${g.last}</span><h2>${esc(g.name)}</h2></div>
+      <span class="tag ${tagClass}">${tag}</span>
+    </div>`;
+
+  if(!m) return el(`<div class="panel">${head('non avviato','mute')}<div class="panel-body"><div class="empty">L'organizzatore non ha ancora avviato questo minigioco.</div></div></div>`);
+  if(!p)  return el(`<div class="panel">${head('non iscritto','mute')}<div class="panel-body"><div class="empty">Il tuo account non è collegato a nessun partecipante. Chiedi all'organizzatore di collegarlo.</div></div></div>`);
+
+  if(S.core.round < g.first)
+    return el(`<div class="panel">${head('non ancora iniziato','mute')}<div class="panel-body">
+      <div class="empty">Comincia alla giornata ${g.first}. Mancano ${g.first - S.core.round} giornate.</div></div></div>`);
+
+  if(m.phase === 'finished' || S.core.round > g.last){
+    const won = (m.winners || []).includes(p.id);
+    const wrap = el(`<div class="panel">${head('concluso', won ? 'ok' : 'mute')}<div class="panel-body"></div></div>`);
+    const body = wrap.querySelector('.panel-body');
+    body.appendChild(el(g.kind === 'lms'
+      ? `<div style="text-align:center; padding:16px 0;">
+           <h2 style="font-size:1.3rem; color:${won ? 'var(--amber)' : 'var(--chalk-mute)'};">${won ? '🏆 Sei arrivato in fondo' : 'Minigioco concluso'}</h2>
+           <p class="note">${(m.winners || []).length ? 'Vincitori: ' + m.winners.map(id => esc(player(id)?.name || '?')).join(', ') : 'Nessun vincitore.'}</p>
+         </div>`
+      : `<div style="text-align:center; padding:16px 0;">
+           <h2 style="font-size:1.3rem;">Stagione conclusa</h2>
+           <p class="note">Hai totalizzato <strong class="mono" style="color:var(--amber);">${winsIn(gameKey, p.id)}</strong> vittorie su ${g.last} giornate.</p>
+         </div>`));
+    body.appendChild(historyTable(gameKey, p.id));
+    return wrap;
+  }
+
+  if(st.eliminated){
+    const others = GAMES.filter(x => x.key !== gameKey && gameOpen(x.key)).map(x => x.short);
+    const wrap = el(`<div class="panel out">${head('eliminato G' + st.eliminatedRound,'ko')}<div class="panel-body"></div></div>`);
+    const body = wrap.querySelector('.panel-body');
+    body.appendChild(el(`
+      <div style="text-align:center; padding:14px 0 18px;">
+        <h2 style="font-size:1.25rem; color:var(--ko);">Eliminato alla giornata ${st.eliminatedRound}${st.eliminatedReason === 'assente' ? ' (assente)' : ''}</h2>
+        <p class="note">${others.length
+          ? 'Qui finisce, ma continui a giocare a <strong>' + others.map(esc).join('</strong> e <strong>') + '</strong>.'
+          : 'Qui il tuo percorso finisce.'}</p>
+      </div>`));
+    body.appendChild(historyTable(gameKey, p.id));
+    return wrap;
+  }
+
+  /* --- minigioco in corso: schedina --- */
+  const req = S.reqs[gameKey]?.[p.id];
+  let selected = req ? req.teamId : null;
+  const closed = deadlinePassed();
+  const status = req ? (req.status === 'approved' ? 'registrato' : req.status === 'pending' ? 'in attesa' : 'respinto') : 'da inviare';
+  const statusClass = req ? (req.status === 'approved' ? 'ok' : req.status === 'pending' ? 'pending' : 'ko') : 'mute';
+
+  const wrap = el(`<div class="panel">${head(status, statusClass)}<div class="panel-body"></div></div>`);
+  const body = wrap.querySelector('.panel-body');
+
+  const t = req ? team(req.teamId) : null;
+  const fixtures = matchesForRound(S.core.round);
+  body.appendChild(el(`
+    <div class="slip on-pitch">
+      <div class="slip-head"><span class="who-slip">${esc(p.name)}</span><span class="code mono">G${String(S.core.round).padStart(2,'0')}</span></div>
+      ${fixtures.length ? `<div class="slip-fixtures">${fixtures.map(m => {
+          const h = teamByName(m.home), a = teamByName(m.away);
+          return `<div class="fx-row"><span class="fx-team"><span class="dot" style="background:${h.color}"></span>${esc(m.home)}</span>
+                  <span class="fx-vs">–</span>
+                  <span class="fx-team right"><span class="dot" style="background:${a.color}"></span>${esc(m.away)}</span>${m.date ? `<span class="fx-date">${esc(m.date)}</span>` : ''}</div>`;
+        }).join('')}</div>`
+        : `<div class="slip-fixtures empty-fx">Calendario di questa giornata non ancora caricato.</div>`}
+      ${req
+        ? `<div class="slip-pick"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}</div>
+           <div class="slip-meta">Inviato ${fmtDate(req.sentAt)} da ${esc(req.sentBy)}</div>
+           <div class="stamp ${statusClass}">${status}</div>`
+        : `<div class="slip-pick" style="opacity:0.35;">— — —</div>
+           <div class="slip-meta">Nessun pronostico inviato per questa giornata.</div>`}
+    </div>`));
+
+  if(req && req.status === 'rejected' && req.note)
+    body.appendChild(el(`<div class="banner err">Respinto dall'organizzatore: ${esc(req.note)}. Scegline un altro qui sotto.</div>`));
+  if(closed)
+    body.appendChild(el(`<div class="banner err">Termine scaduto (${fmtDate(S.core.deadline)}). Per cambiare, scrivi all'organizzatore.</div>`));
+
+  if(!closed){
+    body.appendChild(el(`<p class="note">${g.maxUses === 1
+      ? 'Scegli la squadra: quelle sbarrate le hai già usate in questo minigioco.'
+      : `Ogni squadra vale fino a ${g.maxUses} volte in stagione: il contatore dice quante ne hai già usate.`}</p>`));
+    const picker = teamPickerFor(gameKey, p, selected, id => {
+      selected = id;
+      picker.querySelectorAll('.team-btn').forEach(b => b.classList.toggle('on', b.dataset.team === id));
+      send.disabled = false;
+    });
+    body.appendChild(picker);
+    var send = el(`<button class="btn btn-primary" style="width:100%;" ${selected ? '' : 'disabled'}>${req ? 'Aggiorna il pronostico' : 'Invia il pronostico'}</button>`);
+    send.onclick = async () => {
+      if(!selected) return;
+      send.disabled = true; send.innerHTML = '<span class="spinner"></span> Invio…';
+      try{
+        await submitPick(gameKey, p.id, selected);
+        toast(S.core.autoApprove ? 'Pronostico registrato.' : 'Pronostico inviato: aspetta l\'approvazione.', 'ok');
+        render();
+      }catch(e){ toast(e.message, 'err'); send.disabled = false; send.textContent = 'Invia il pronostico'; }
+    };
+    body.appendChild(send);
+  }
+  const det = el(`<details class="mini-hist"><summary>Il tuo percorso in ${esc(g.short)}</summary></details>`);
+  det.appendChild(historyTable(gameKey, p.id));
+  body.appendChild(det);
+  return wrap;
+}
+
+function viewMine(){
+  const wrap = el(`<div class="stack"></div>`);
+  if(!S.core || !S.core.players.length){
+    wrap.appendChild(el(`<div class="empty">L'organizzatore non ha ancora caricato i partecipanti. Torna più tardi.</div>`));
+    return wrap;
+  }
+  wrap.appendChild(el(`<div class="banner">Giornata <strong class="mono">${S.core.round}</strong> di ${SEASON_ROUNDS}. Ogni minigioco ha le sue squadre disponibili: puoi scegliere la stessa squadra in più minigiochi.${S.core.deadline ? ` Termine: <strong class="mono">${fmtDate(S.core.deadline)}</strong>.` : ''}</div>`));
+  const grid = el(`<div class="games-grid"></div>`);
+  GAMES.forEach(g => grid.appendChild(myPanel(g.key)));
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+/* =========================================================================
+   13. SCHERMATA — richieste (organizzatore), un pannello per minigioco
+   ========================================================================= */
+async function pickForModal(gameKey, p){
+  return new Promise(resolve => {
+    const ov = el(`<div class="overlay"></div>`);
+    const box = el(`
+      <div class="modal" style="width:min(620px,100%);">
+        <h3>${esc(G(gameKey).short)} — pronostico per ${esc(p.name)}</h3>
+        <p>Scegli tu la squadra: viene registrata subito come approvata.</p>
+        <div class="btn-row" style="justify-content:flex-end;"><button class="btn btn-ghost" data-x>Annulla</button></div>
+      </div>`);
+    const picker = teamPickerFor(gameKey, p, S.reqs[gameKey]?.[p.id]?.teamId, id => { ov.remove(); resolve(id); });
+    picker.style.marginBottom = '14px';
+    box.insertBefore(picker, box.querySelector('.btn-row'));
+    ov.appendChild(box); document.body.appendChild(ov);
+    box.querySelector('[data-x]').onclick = () => { ov.remove(); resolve(null); };
+    ov.onclick = e => { if(e.target === ov){ ov.remove(); resolve(null); } };
+  });
+}
+
+function requestsPanel(gameKey){
+  const g = G(gameKey);
+  const alive = aliveIn(gameKey);
+  const pending = pendingIn(gameKey);
+  const missing = missingIn(gameKey);
+  const out = (S.core.players || []).filter(p => gstate(gameKey, p.id).eliminated);
+  const absentNow = out.filter(p => gstate(gameKey, p.id).eliminatedRound === S.core.round && gstate(gameKey, p.id).eliminatedReason === 'assente');
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head">
+        <div><span class="eyebrow">giornate ${g.first}–${g.last}</span><h2>${esc(g.name)}</h2></div>
+        <div class="btn-row">
+          ${pending.length ? `<button class="btn btn-sm btn-ok" data-all>Approva tutte (${pending.length})</button>` : ''}
+          ${missing.length && g.kind === 'lms' ? `<button class="btn btn-sm btn-ko" data-abs>Elimina i ${missing.length} assenti</button>` : ''}
+          ${missing.length ? `<button class="btn btn-sm btn-ghost" data-copy>Promemoria</button>` : ''}
+        </div>
+      </div>
+      <div class="panel-body"><div class="board"></div></div>
+    </div>`);
+  const board = panel.querySelector('.board');
+
+  if(!gameOpen(gameKey)){
+    board.appendChild(el(`<div class="empty">${
+      S.core.round < g.first ? 'Comincia alla giornata ' + g.first + '.' :
+      gmeta(gameKey)?.phase === 'finished' ? 'Minigioco concluso.' : 'Non in corso.'}</div>`));
+    return panel;
+  }
+
+  alive.forEach(p => {
+    const req = S.reqs[gameKey]?.[p.id];
+    const state = req ? req.status : 'missing';
+    const t = req ? team(req.teamId) : null;
+    const row = el(`
+      <div class="req ${state}">
+        <div>
+          <div class="p-name">${esc(p.name)}</div>
+          <div class="p-sub">${req ? 'inviato ' + fmtDate(req.sentAt) : 'nessuna richiesta'}</div>
+        </div>
+        <div>${req
+          ? `<div class="p-team"><span class="dot" style="background:${t.color}"></span>${esc(t.name)}</div>
+             ${req.note ? `<div class="p-sub">nota: ${esc(req.note)}</div>` : ''}`
+          : `<span class="tag mute">in attesa di risposta</span>`}</div>
+        <div class="p-actions"></div>
+      </div>`);
+    const acts = row.querySelector('.p-actions');
+    if(state === 'pending'){
+      const ok = el(`<button class="btn btn-sm btn-ok">Approva</button>`);
+      ok.onclick = async () => { await decidePick(gameKey, p.id, 'approved'); toast('Approvato: ' + p.name + ' → ' + t.name, 'ok'); render(); };
+      const ko = el(`<button class="btn btn-sm btn-ko">Respingi</button>`);
+      ko.onclick = async () => {
+        const note = await modal({ title:'Respingi il pronostico', message:'Scrivi il motivo: ' + p.name + ' lo vedrà e potrà rifare la scelta.', input:'text', placeholder:'es. squadra non più disponibile', confirmText:'Respingi' });
+        if(note === null) return;
+        await decidePick(gameKey, p.id, 'rejected', note); toast('Richiesta respinta.', ''); render();
+      };
+      acts.append(ok, ko);
+    } else if(state === 'approved'){
+      acts.appendChild(el(`<span class="tag ok">registrato</span>`));
+      const undo = el(`<button class="btn btn-sm btn-ghost">Annulla</button>`);
+      undo.onclick = async () => { await decidePick(gameKey, p.id, 'pending'); render(); };
+      acts.appendChild(undo);
+    } else {
+      acts.appendChild(el(`<span class="tag ${state === 'rejected' ? 'ko' : 'mute'}">${state === 'rejected' ? 'respinto' : 'manca'}</span>`));
+    }
+    const set = el(`<button class="btn btn-sm btn-ghost">Scegli tu</button>`);
+    set.onclick = async () => {
+      const tid = await pickForModal(gameKey, p);
+      if(!tid) return;
+      try{ await submitPick(gameKey, p.id, tid, true); toast(p.name + ' → ' + team(tid).name, 'ok'); render(); }
+      catch(e){ toast(e.message, 'err'); }
+    };
+    acts.appendChild(set);
+    board.appendChild(row);
+  });
+
+  if(absentNow.length){
+    board.appendChild(el(`<div class="sub-head">Eliminati per assenza in questa giornata — ancora ripescabili</div>`));
+    absentNow.forEach(p => {
+      const row = el(`<div class="req missing"><div class="p-name">${esc(p.name)}</div>
+        <div><span class="tag ko">eliminato per assenza</span></div>
+        <div class="p-actions"><button class="btn btn-sm btn-ghost">Ripesca</button></div></div>`);
+      row.querySelector('button').onclick = () => readmit(gameKey, p.id);
+      board.appendChild(row);
+    });
+  }
+  if(!alive.length) board.appendChild(el(`<div class="empty">Nessun partecipante ancora in gioco.</div>`));
+
+  const all = panel.querySelector('[data-all]');
+  if(all) all.onclick = async () => { all.disabled = true; for(const p of pending) await decidePick(gameKey, p.id, 'approved'); toast(pending.length + ' approvati.', 'ok'); render(); };
+  const abs = panel.querySelector('[data-abs]');
+  if(abs) abs.onclick = () => eliminateAbsent(gameKey);
+  const cp = panel.querySelector('[data-copy]');
+  if(cp) cp.onclick = () => copyText(`${g.name} — giornata ${S.core.round}\nManca il pronostico di: ${missing.map(p => p.name).join(', ')}.` +
+    (S.core.deadline ? `\nTermine: ${fmtDate(S.core.deadline)}.` : ''));
+  return panel;
+}
+
+function viewRequests(){
+  const wrap = el(`<div class="stack"></div>`);
+  const ctl = el(`
+    <div class="panel">
+      <div class="panel-head"><div><span class="eyebrow">giornata ${S.core.round} / ${SEASON_ROUNDS}</span><h2>Regole d'invio</h2></div></div>
+      <div class="panel-body">
+        <p class="note">Il termine e l'approvazione automatica valgono per tutti i minigiochi in corso.</p>
+        <div class="form-grid">
+          <label class="field"><span>Termine per l'invio</span><input type="datetime-local" id="dl" value="${toInputDT(S.core.deadline)}"></label>
+          <div style="display:flex; align-items:flex-end; gap:8px;">
+            <button class="btn btn-ghost" id="dl-save">Salva</button>
+            <button class="btn btn-ghost" id="dl-clear">Togli</button>
+          </div>
+        </div>
+        <label class="checkline"><input type="checkbox" id="auto" ${S.core.autoApprove ? 'checked' : ''}>
+          <span>Approva da solo i pronostici validi, in tutti i minigiochi.</span></label>
+      </div>
+    </div>`);
+  ctl.querySelector('#dl-save').onclick = async () => {
+    const v = ctl.querySelector('#dl').value;
+    S.core.deadline = v ? new Date(v).toISOString() : null;
+    await saveCore(); toast('Termine aggiornato.', 'ok'); render();
+  };
+  ctl.querySelector('#dl-clear').onclick = async () => { S.core.deadline = null; await saveCore(); toast('Termine rimosso.', 'ok'); render(); };
+  ctl.querySelector('#auto').onchange = async e => { S.core.autoApprove = e.target.checked; await saveCore(); render(); };
+  wrap.appendChild(ctl);
+  GAMES.forEach(g => wrap.appendChild(requestsPanel(g.key)));
+  return wrap;
+}
+
+/* =========================================================================
+   14. SCHERMATA — esiti condivisi e chiusura della giornata
+   ========================================================================= */
+function viewResults(){
+  const wrap = el(`<div class="stack"></div>`);
+  const picked = pickedTeamsThisRound();
+
+  wrap.appendChild(el(`<div class="banner">L'esito di ogni squadra si segna <strong>una volta sola</strong> e vale per tutti i minigiochi: se il Milan vince, la vittoria va sia a chi l'ha scelto in Last Man Standing sia a chi l'ha scelto in WhoWin?.</div>`));
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><div><span class="eyebrow">giornata ${S.core.round} / ${SEASON_ROUNDS}</span><h2>Esito delle squadre</h2></div>
+        <span class="eyebrow">${picked.size} squadre pronosticate</span></div>
+      <div class="panel-body"><div class="board"></div></div>
+    </div>`);
+  const board = panel.querySelector('.board');
+
+  if(!picked.size){
+    board.appendChild(el(`<div class="empty">Nessun pronostico approvato per questa giornata.</div>`));
+  } else {
+    [...picked.entries()].sort((a,b) => team(a[0]).name.localeCompare(team(b[0]).name)).forEach(([tid, uses]) => {
+      const t = team(tid), cur = S.results[tid];
+      const byGame = {};
+      uses.forEach(u => { (byGame[u.gameKey] = byGame[u.gameKey] || []).push(player(u.playerId)?.name || '?'); });
+      const row = el(`
+        <div class="req ${cur === 'win' ? 'approved' : cur === 'lose' ? 'rejected' : 'pending'}">
+          <div class="p-team"><span class="dot" style="background:${t.color}"></span><strong>${esc(t.name)}</strong></div>
+          <div class="p-sub">${Object.entries(byGame).map(([k,names]) =>
+            `<span class="tag mute">${esc(G(k).short)}</span> ${esc(names.join(', '))}`).join('<br>')}</div>
+          <div class="p-actions">
+            <button class="btn btn-sm btn-ok ${cur === 'win' ? 'on' : ''}" data-r="win">Ha vinto</button>
+            <button class="btn btn-sm btn-ko ${cur === 'lose' ? 'on' : ''}" data-r="lose">Non ha vinto</button>
+          </div>
+        </div>`);
+      row.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => {
+        b.disabled = true;
+        try{ await setTeamResult(tid, b.dataset.r); render(); }
+        catch(e){ toast('Salvataggio non riuscito.', 'err'); b.disabled = false; }
+      });
+      board.appendChild(row);
+    });
+  }
+  wrap.appendChild(panel);
+
+  const ready = openGames().length && allResultsIn();
+  const summary = closeSummary();
+  const close = el(`
+    <div class="panel"><div class="panel-body" style="display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;">
+      <div>
+        <h2 style="font-size:1rem;">Chiudi la giornata ${S.core.round}</h2>
+        <p class="note">${ready
+          ? summary.map(r => `${esc(r.g.short)}: ${r.withPick}/${r.alive} pronostici` + (r.noPick.length ? ` — ${r.noPick.length} senza` : '')).join(' · ')
+          : 'Servono gli esiti di tutte le squadre pronosticate.'}</p>
+      </div>
+      <button class="btn btn-primary" id="close-r" ${ready ? '' : 'disabled'}>Chiudi la giornata</button>
+    </div></div>`);
+  close.querySelector('#close-r').onclick = closeGiornata;
+  wrap.appendChild(close);
+
+  const lastRound = Math.max(...GAMES.map(g => { const h = gmeta(g.key)?.history || []; return h.length ? h[h.length-1].round : 0; }), 0);
+  if(lastRound){
+    const back = el(`
+      <div class="panel"><div class="panel-body" style="display:flex; justify-content:space-between; gap:14px; align-items:center; flex-wrap:wrap;">
+        <div><h2 style="font-size:1rem;">Riapri l'ultima giornata</h2>
+          <p class="note">Annulla la chiusura della giornata ${lastRound} in tutti i minigiochi.</p></div>
+        <button class="btn btn-ghost" id="reopen">Riapri G${lastRound}</button>
+      </div></div>`);
+    back.querySelector('#reopen').onclick = reopenGiornata;
+    wrap.appendChild(back);
+  }
+  return wrap;
+}
+
+/* =========================================================================
+   15. SCHERMATA — classifiche interattive
+   ========================================================================= */
+function viewBoard(){
+  const wrap = el(`<div class="stack"></div>`);
+  if(!GAMES.some(g => gmeta(g.key))){
+    wrap.appendChild(el(`<div class="empty">Nessun minigioco avviato.</div>`));
+    return wrap;
+  }
+  const sw = el(`<div class="switcher"></div>`);
+  GAMES.forEach(g => {
+    const b = el(`<button class="${S.boardGame === g.key ? 'on' : ''}">${esc(g.short)}</button>`);
+    b.onclick = () => { S.boardGame = g.key; render(); };
+    sw.appendChild(b);
+  });
+  wrap.appendChild(sw);
+
+  const key = S.boardGame, g = G(key), m = gmeta(key);
+  if(!m){ wrap.appendChild(el(`<div class="empty">Minigioco non ancora avviato.</div>`)); return wrap; }
+
+  const rows = (S.core.players || []).map(p => {
+    const st = gstate(key, p.id);
+    return { p, wins: winsIn(key, p.id), played: playedIn(key, p.id),
+             used: (st.used || []).length, eliminated: st.eliminated, elimRound: st.eliminatedRound };
+  });
+  const dir = S.boardDir === 'asc' ? 1 : -1;
+  const sorters = {
+    wins:   (a,b) => (a.wins - b.wins) * dir || a.p.name.localeCompare(b.p.name),
+    played: (a,b) => (a.played - b.played) * dir || a.p.name.localeCompare(b.p.name),
+    name:   (a,b) => a.p.name.localeCompare(b.p.name) * dir,
+    status: (a,b) => ((a.eliminated ? 1 : 0) - (b.eliminated ? 1 : 0)) * dir || b.wins - a.wins
+  };
+  rows.sort(sorters[S.boardSort] || sorters.wins);
+  const best = Math.max(1, ...rows.map(r => r.wins));
+  const me = myPlayer();
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head">
+        <div><span class="eyebrow">${g.kind === 'season' ? 'vittorie in stagione' : 'giornate superate'}</span><h2>Classifica — ${esc(g.short)}</h2></div>
+        <span class="eyebrow">giornata ${S.core.round} / ${SEASON_ROUNDS}${m.phase === 'finished' ? ' · conclusa' : ''}</span>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div class="table-scroll"><table class="board-table">
+          <thead><tr>
+            <th style="width:38px;">#</th>
+            <th data-s="name" class="sortable">Partecipante</th>
+            <th data-s="wins" class="sortable num">Vittorie</th>
+            <th data-s="played" class="sortable num">Giornate</th>
+            ${g.kind === 'lms' ? `<th data-s="status" class="sortable" style="text-align:right;">Stato</th>` : ''}
+          </tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <p class="note" style="padding:10px 16px 14px; margin:0;">Tocca l'intestazione di una colonna per riordinare, tocca una riga per vedere giornata per giornata.</p>
+      </div>
+    </div>`);
+  panel.querySelectorAll('.sortable').forEach(th => {
+    if(th.dataset.s === S.boardSort) th.classList.add('on', S.boardDir);
+    th.onclick = () => {
+      if(S.boardSort === th.dataset.s) S.boardDir = S.boardDir === 'desc' ? 'asc' : 'desc';
+      else { S.boardSort = th.dataset.s; S.boardDir = th.dataset.s === 'name' ? 'asc' : 'desc'; }
+      render();
+    };
+  });
+
+  const tb = panel.querySelector('tbody');
+  if(!rows.length) tb.appendChild(el(`<tr><td colspan="5" class="note" style="padding:14px;">Nessun partecipante.</td></tr>`));
+  rows.forEach((r,i) => {
+    const isMe = me && r.p.id === me.id;
+    const open = !!S.boardOpen[key + ':' + r.p.id];
+    const tr = el(`
+      <tr class="rank-row ${isMe ? 'me' : ''} ${r.eliminated ? 'out' : ''} ${open ? 'open' : ''}">
+        <td class="mono">${i+1}</td>
+        <td><strong>${esc(r.p.name)}</strong>${isMe ? ' <span class="tag mute">tu</span>' : ''}
+            <div class="bar"><span style="width:${Math.round(r.wins / best * 100)}%"></span></div></td>
+        <td class="num wins">${r.wins}</td>
+        <td class="num">${r.played}</td>
+        ${g.kind === 'lms' ? `<td style="text-align:right;">${r.eliminated
+          ? `<span class="tag ko">fuori G${r.elimRound}</span>`
+          : `<span class="tag ok">in gioco</span>`}</td>` : ''}
+      </tr>`);
+    tr.onclick = () => { S.boardOpen[key + ':' + r.p.id] = !open; render(); };
+    tb.appendChild(tr);
+    if(open){
+      const det = el(`<tr class="rank-detail"><td colspan="${g.kind === 'lms' ? 5 : 4}"></td></tr>`);
+      det.querySelector('td').appendChild(historyTable(key, r.p.id));
+      tb.appendChild(det);
+    }
+  });
+  wrap.appendChild(panel);
+  return wrap;
+}
+
+/* =========================================================================
+   16. SCHERMATA — partecipanti e accessi (organizzatore)
+   ========================================================================= */
+/* =========================================================================
+   15bis. SCHERMATA — calendario Serie A
+   ========================================================================= */
+function fixturesListEl(round, editable){
+  const list = matchesForRound(round);
+  const box = el(`<div class="fixtures-list"></div>`);
+  if(!list.length){
+    box.appendChild(el(`<div class="empty">Nessuna partita caricata per questa giornata.</div>`));
+  } else {
+    list.forEach((m,i) => {
+      const h = teamByName(m.home), a = teamByName(m.away);
+      const rh = round === S.core.round ? S.results[h.id] : null;
+      const ra = round === S.core.round ? S.results[a.id] : null;
+      const esito = rh === 'win' ? `${esc(m.home)} ha vinto` : ra === 'win' ? `${esc(m.away)} ha vinto` : (rh || ra) ? 'nessuna delle due ha vinto' : null;
+      const row = el(`
+        <div class="fixture-row">
+          <span class="fx-team"><span class="dot" style="background:${h.color}"></span>${esc(m.home)}</span>
+          <span class="fx-vs">vs</span>
+          <span class="fx-team"><span class="dot" style="background:${a.color}"></span>${esc(m.away)}</span>
+          ${m.date ? `<span class="fx-date mono">${esc(m.date)}</span>` : ''}
+          ${esito ? `<span class="tag ok">${esc(esito)}</span>` : ''}
+          ${editable ? `<button class="btn btn-sm btn-ghost fx-rm">Rimuovi</button>` : ''}
+        </div>`);
+      if(editable){
+        row.querySelector('.fx-rm').onclick = async () => {
+          const idx = S.core.calendar.findIndex(x => x === m);
+          if(idx >= 0) S.core.calendar.splice(idx, 1);
+          await saveCore(); render();
+        };
+      }
+      box.appendChild(row);
+    });
+  }
+  return box;
+}
+function viewCalendar(){
+  const wrap = el(`<div class="stack"></div>`);
+  if(!S.core.round) S.core.round = 1;
+  let shown = S.boardRound || S.core.round;
+
+  if(isAdmin()){
+    const imp = el(`
+      <div class="panel">
+        <div class="panel-head"><h2>File del calendario</h2><span class="eyebrow">.xlsx separato</span></div>
+        <div class="panel-body">
+          <p class="note">Un file a parte da quello dei minigiochi: foglio "Calendario" con le colonne <span class="mono">Giornata, Casa, Trasferta</span> e, se vuoi, <span class="mono">Risultato</span> (es. <span class="mono">2-1</span>). Se compili il risultato di una partita della <strong>giornata in corso</strong>, l'esito delle due squadre viene segnato subito da solo — non serve più farlo a mano in Esiti.</p>
+          <input type="file" id="cal-file" accept=".xlsx,.xlsm">
+        </div>
+      </div>`);
+    imp.querySelector('#cal-file').onchange = async e => {
+      const f = e.target.files[0];
+      if(!f) return;
+      try{
+        const res = await importCalendarOnly(f);
+        toast(`Calendario aggiornato: ${res.matches} partite.` + (res.applied ? ` ${res.applied} esiti applicati alla giornata ${S.core.round}.` : ''), 'ok');
+        render();
+      }catch(err){ toast(err.message, 'err'); e.target.value = ''; }
+    };
+    wrap.appendChild(imp);
+  }
+
+  const nav = el(`
+    <div class="panel">
+      <div class="panel-body" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <button class="btn btn-sm btn-ghost" id="prev-r">← Precedente</button>
+        <div style="text-align:center;">
+          <div class="eyebrow">Giornata</div>
+          <div style="font-family:'Anton',sans-serif; font-size:1.6rem;">${String(shown).padStart(2,'0')} <span style="color:var(--chalk-mute); font-size:1rem;">/ ${SEASON_ROUNDS}</span></div>
+        </div>
+        <button class="btn btn-sm btn-ghost" id="next-r">Successiva →</button>
+      </div>
+    </div>`);
+  nav.querySelector('#prev-r').onclick = () => { S.boardRound = Math.max(1, shown - 1); render(); };
+  nav.querySelector('#next-r').onclick = () => { S.boardRound = Math.min(SEASON_ROUNDS, shown + 1); render(); };
+  wrap.appendChild(nav);
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Partite di Serie A</h2>${shown === S.core.round ? '<span class="tag ok">giornata in corso</span>' : ''}</div>
+      <div class="panel-body"></div>
+    </div>`);
+  panel.querySelector('.panel-body').appendChild(fixturesListEl(shown, isAdmin()));
+  wrap.appendChild(panel);
+
+  if(isAdmin()){
+    const add = el(`
+      <div class="panel">
+        <div class="panel-head"><h2>Aggiungi una partita alla giornata ${shown}</h2></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <label class="field"><span>Squadra in casa</span>
+              <select id="fx-home"><option value="">Scegli…</option>${S.core.teams.map(t => `<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('')}</select>
+            </label>
+            <label class="field"><span>Squadra in trasferta</span>
+              <select id="fx-away"><option value="">Scegli…</option>${S.core.teams.map(t => `<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('')}</select>
+            </label>
+          </div>
+          <label class="field"><span>Data/ora (opzionale)</span><input type="text" id="fx-date" placeholder="es. 23/08 15:00"></label>
+          <button class="btn btn-primary" id="fx-add">Aggiungi partita</button>
+          <p class="note-dim" style="margin-top:10px;">Più comodo per tutta la stagione: importa un foglio "Calendario" dal file Excel (colonne Giornata, Casa, Trasferta, Data) dalla scheda File Excel.</p>
+        </div>
+      </div>`);
+    add.querySelector('#fx-add').onclick = async () => {
+      const home = add.querySelector('#fx-home').value, away = add.querySelector('#fx-away').value;
+      const date = add.querySelector('#fx-date').value.trim();
+      if(!home || !away){ toast('Scegli entrambe le squadre.', 'err'); return; }
+      if(home === away){ toast('Una squadra non può giocare contro se stessa.', 'err'); return; }
+      if(!S.core.calendar) S.core.calendar = [];
+      S.core.calendar.push({ round: shown, home, away, date });
+      await saveCore();
+      toast('Partita aggiunta.', 'ok');
+      render();
+    };
+    wrap.appendChild(add);
+  }
+  return wrap;
+}
+
+function viewPlayers(){
+  const wrap = el(`<div class="stack"></div>`);
+
+  const add = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Aggiungi un partecipante</h2></div>
+      <div class="panel-body">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="np" placeholder="Nome e cognome" style="flex:1; min-width:200px;">
+          <button class="btn btn-primary" id="np-go">Aggiungi</button>
+        </div>
+        <p class="note-dim" style="margin-top:10px;">Entra subito in tutti e tre i minigiochi, da questa giornata in poi.</p>
+      </div>
+    </div>`);
+  const doAdd = async () => {
+    const name = add.querySelector('#np').value.trim();
+    if(!name) return;
+    if(!S.core) S.core = emptyCore();
+    let id = 'p-' + slug(name), n = 2;
+    while(player(id)) id = 'p-' + slug(name) + '-' + (n++);
+    S.core.players.push({ id, name });
+    await saveCore();
+    for(const g of GAMES){
+      if(!S.games[g.key]) S.games[g.key] = emptyGame();
+      gstate(g.key, id);
+      await saveGame(g.key);
+    }
+    add.querySelector('#np').value = '';
+    toast(name + ' aggiunto.', 'ok'); render();
+  };
+  add.querySelector('#np-go').onclick = doAdd;
+  add.querySelector('#np').onkeydown = e => { if(e.key === 'Enter') doAdd(); };
+  wrap.appendChild(add);
+
+  const withUser = (S.core?.players || []).filter(p => S.claims[p.id]);
+  const without  = (S.core?.players || []).filter(p => !S.claims[p.id]);
+
+  const bulk = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Accessi</h2>
+        <div class="btn-row">
+          ${without.length ? `<button class="btn btn-sm btn-primary" id="mk">Crea i ${without.length} accessi mancanti</button>` : ''}
+          ${withUser.length ? `<button class="btn btn-sm btn-ghost" id="show">${S.showCodes ? 'Nascondi' : 'Mostra'} i codici</button>
+                               <button class="btn btn-sm btn-ghost" id="cpall">Copia elenco</button>` : ''}
+        </div>
+      </div>
+      <div class="panel-body" style="padding:0;"><div class="table-scroll"><table>
+        <thead><tr><th>Partecipante</th><th>Nome utente</th><th>Codice</th><th style="text-align:right;">Azioni</th></tr></thead>
+        <tbody></tbody></table></div></div>
+    </div>`);
+  const tb = bulk.querySelector('tbody');
+  (S.core?.players || []).forEach(p => {
+    const uname = S.claims[p.id];
+    const u = uname ? S.users.find(x => x.username === uname) : null;
+    const tr = el(`
+      <tr>
+        <td><strong>${esc(p.name)}</strong></td>
+        <td class="mono">${uname ? esc(uname) : '<span class="tag mute">nessun accesso</span>'}</td>
+        <td class="mono">${u ? (S.showCodes ? esc(u.password || '—') : '••••••') : '—'}</td>
+        <td style="text-align:right;"><div class="btn-row" style="justify-content:flex-end;"></div></td>
+      </tr>`);
+    const acts = tr.querySelector('.btn-row');
+    if(u){
+      const cp = el(`<button class="btn btn-sm btn-ghost">Copia</button>`);
+      cp.onclick = () => copyText(`${p.name}\nSito: ${location.href}\nNome utente: ${u.username}\nCodice: ${u.password}`);
+      const ch = el(`<button class="btn btn-sm btn-ghost">Cambia codice</button>`);
+      ch.onclick = async () => {
+        const np = await modal({ title:'Nuovo codice per ' + p.name, input:'text', prefill: generateCode(), confirmText:'Salva' });
+        if(!np) return;
+        try{ await changePassword(u.username, np); await loadUsers(); toast('Codice aggiornato.', 'ok'); render(); }
+        catch(e){ toast(e.message, 'err'); }
+      };
+      acts.append(cp, ch);
+    } else {
+      const mk = el(`<button class="btn btn-sm btn-primary">Crea accesso</button>`);
+      mk.onclick = async () => {
+        const code = generateCode();
+        try{
+          await createUser({ username: p.id.replace(/^p-/,''), password: code, role:'player', playerId: p.id, displayName: p.name });
+          await loadUsers(); await loadClaims();
+          toast('Accesso creato per ' + p.name + '.', 'ok'); render();
+        }catch(e){ toast(e.message, 'err'); }
+      };
+      acts.appendChild(mk);
+    }
+    const rm = el(`<button class="btn btn-sm btn-ko">Rimuovi</button>`);
+    rm.onclick = async () => {
+      if(!await confirmBox('Rimuovo ' + p.name + ' da tutti e tre i minigiochi? Lo storico di questo partecipante andrà perso.')) return;
+      S.core.players = S.core.players.filter(x => x.id !== p.id);
+      await saveCore();
+      for(const g of GAMES){
+        const m = gmeta(g.key); if(!m) continue;
+        delete m.st[p.id];
+        m.history.forEach(h => { h.entries = h.entries.filter(e => e.playerId !== p.id); });
+        await saveGame(g.key);
+      }
+      await Store.del(K.claim(p.id));
+      toast(p.name + ' rimosso.', ''); render();
+    };
+    acts.appendChild(rm);
+    tb.appendChild(tr);
+  });
+
+  const mk = bulk.querySelector('#mk');
+  if(mk) mk.onclick = async () => {
+    mk.disabled = true;
+    const lines = [];
+    for(const p of without){
+      const code = generateCode();
+      try{
+        await createUser({ username: p.id.replace(/^p-/,''), password: code, role:'player', playerId: p.id, displayName: p.name });
+        lines.push(`${p.name} — utente: ${p.id.replace(/^p-/,'')} — codice: ${code}`);
+      }catch(e){}
+    }
+    await loadUsers(); await loadClaims();
+    if(lines.length) copyText(`FantaList — accessi al minigioco\nSito: ${location.href}\n\n` + lines.join('\n'));
+    toast(lines.length + ' accessi creati e copiati negli appunti.', 'ok');
+    render();
+  };
+  const sh = bulk.querySelector('#show');
+  if(sh) sh.onclick = () => { S.showCodes = !S.showCodes; render(); };
+  const cpall = bulk.querySelector('#cpall');
+  if(cpall) cpall.onclick = () => {
+    const lines = (S.core?.players || []).map(p => {
+      const u = S.users.find(x => x.username === S.claims[p.id]);
+      return u ? `${p.name} — utente: ${u.username} — codice: ${u.password}` : null;
+    }).filter(Boolean);
+    copyText(`FantaList — accessi al minigioco\nSito: ${location.href}\n\n` + lines.join('\n'));
+  };
+  wrap.appendChild(bulk);
+  return wrap;
+}
+
+/* =========================================================================
+   17. SCHERMATA — file Excel
+   ========================================================================= */
+function importPanel(compact){
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>${compact ? 'Ricarica il file' : 'Carica il file della lega'}</h2><span class="eyebrow">.xlsx</span></div>
+      <div class="panel-body">
+        <p class="note">Un solo file comanda tutti e tre i minigiochi. Vengono cercati i fogli
+          <span class="mono">Minigioco_LastManStanding</span> (MG_A, giornate 1–19),
+          <span class="mono">…_Ritorno</span> (MG_R, giornate 20–38) e
+          <span class="mono">Minigioco_Stagionale</span> (MG_S, giornate 1–38 + Totale Vittorie).
+          I fogli mancanti vengono creati la prima volta che scarichi il file aggiornato.</p>
+        <label class="checkline"><input type="checkbox" id="imp-ph" checked><span>Salta i nomi segnaposto ("partecipante 12", ecc.)</span></label>
+        <label class="checkline"><input type="checkbox" id="imp-pay" checked><span>Tieni solo chi ha la x su "Quota MiniGiochi"</span></label>
+        <input type="file" id="imp-file" accept=".xlsx,.xlsm">
+        ${compact ? `<div class="banner err">Ricaricare il file sostituisce partecipanti e storico di tutti e tre i minigiochi. Gli account restano, ma solo se i nomi non cambiano.</div>` : ''}
+      </div>
+    </div>`);
+  panel.querySelector('#imp-file').onchange = async e => {
+    const f = e.target.files[0];
+    if(!f) return;
+    try{
+      const res = await importWorkbook(f, {
+        skipPlaceholders: panel.querySelector('#imp-ph').checked,
+        onlyPaying: panel.querySelector('#imp-pay').checked });
+      toast(`${res.players} partecipanti, ${res.teams} squadre. Fogli letti: ${res.sheets.join(', ') || 'nessuno'}. Si riparte dalla giornata ${res.round}.`, 'ok');
+      S.tab = isAdmin() ? 'requests' : 'mine';
+      render();
+    }catch(err){ toast(err.message, 'err'); e.target.value = ''; }
+  };
+  return panel;
+}
+function viewExcel(){
+  const wrap = el(`<div class="stack"></div>`);
+  wrap.appendChild(el(`
+    <div class="panel">
+      <div class="panel-head"><h2>File collegato</h2>${S.core?.fileName ? `<span class="eyebrow mono">${esc(S.core.fileName)}</span>` : ''}</div>
+      <div class="panel-body">
+        <p class="note">${S.core?.fileName
+          ? `Il sito lavora sulla copia di <strong>${esc(S.core.fileName)}</strong>. Il file che scarichi contiene i tre fogli aggiornati — X e conteggi sulle squadre usate, <span class="mono">V (Inter)</span> / <span class="mono">NV (Inter)</span> / <span class="mono">ASSENTE</span> sulle giornate, e il Totale Vittorie di WhoWin? — con gli altri fogli intatti.`
+          : 'Nessun file caricato: il download genera comunque i tre fogli nel formato giusto.'}</p>
+        <div class="btn-row" id="dl-row"></div>
+      </div>
+    </div>`));
+  const dl = el(`<button class="btn btn-primary">Scarica il file aggiornato</button>`);
+  dl.onclick = downloadWorkbook;
+  wrap.querySelector('#dl-row').appendChild(dl);
+  wrap.appendChild(importPanel(true));
+  return wrap;
+}
+
+/* =========================================================================
+   18. SCHERMATA — impostazioni
+   ========================================================================= */
+function viewSettings(){
+  const wrap = el(`<div class="stack"></div>`);
+  const me = S.me;
+
+  const acc = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Il tuo accesso</h2><span class="eyebrow">${esc(me.role === 'admin' ? 'organizzatore' : 'partecipante')}</span></div>
+      <div class="panel-body">
+        <p class="note">Nome utente <span class="mono">${esc(me.username)}</span>.</p>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="chg">Cambia il mio codice</button>
+          <button class="btn btn-ghost" id="out">Esci</button>
+        </div>
+      </div>
+    </div>`);
+  acc.querySelector('#chg').onclick = async () => {
+    const np = await modal({ title:'Nuovo codice di accesso', message:'Almeno 6 caratteri.', input:'password', confirmText:'Salva' });
+    if(!np) return;
+    try{ await changePassword(me.username, np); toast('Codice aggiornato.', 'ok'); }
+    catch(e){ toast(e.message, 'err'); }
+  };
+  acc.querySelector('#out').onclick = logout;
+  wrap.appendChild(acc);
+
+  const sb = el(`<div>${storageBanner()}</div>`);
+  if(sb.firstElementChild){ wireStorageBanner(sb); wrap.appendChild(sb); }
+
+  if(!isAdmin()) return wrap;
+
+  const zone = el(`
+    <div class="panel" style="border-color:rgba(242,99,95,0.4);">
+      <div class="panel-head"><h2 style="color:var(--ko);">Azzeramenti</h2></div>
+      <div class="panel-body">
+        <p class="note">Puoi azzerare un solo minigioco, oppure tutto insieme. Gli account dei partecipanti restano sempre.</p>
+        <div class="reset-list"></div>
+      </div>
+    </div>`);
+  const list = zone.querySelector('.reset-list');
+  GAMES.forEach(g => {
+    const m = gmeta(g.key);
+    const done = m ? m.history.length : 0;
+    const row = el(`
+      <div class="reset-row">
+        <div><strong>${esc(g.name)}</strong>
+          <div class="p-sub">${done ? done + ' giornate chiuse' : 'nessuna giornata chiusa'} · giornate ${g.first}–${g.last}</div></div>
+        <button class="btn btn-sm btn-ko" ${m ? '' : 'disabled'}>Azzera</button>
+      </div>`);
+    row.querySelector('button').onclick = () => wipeGame(g.key);
+    list.appendChild(row);
+  });
+  const rowRes = el(`
+    <div class="reset-row">
+      <div><strong>Solo i risultati</strong>
+        <div class="p-sub">Cancella storico ed esiti di tutti e tre, ma tiene partecipanti, accessi e file. Si riparte dalla giornata 1.</div></div>
+      <button class="btn btn-sm btn-ko">Azzera i risultati</button>
+    </div>`);
+  rowRes.querySelector('button').onclick = wipeResultsOnly;
+  list.appendChild(rowRes);
+
+  const rowAll = el(`
+    <div class="reset-row danger">
+      <div><strong>Tutto</strong>
+        <div class="p-sub">Cancella anche partecipanti e file collegato: il sito torna come appena installato.</div></div>
+      <button class="btn btn-sm btn-ko">Azzera tutto</button>
+    </div>`);
+  rowAll.querySelector('button').onclick = wipeAll;
+  list.appendChild(rowAll);
+  wrap.appendChild(zone);
+  return wrap;
+}
+
+/* =========================================================================
+   21. MINIGIOCO — UNDICI 1V1
+   -------------------------------------------------------------------------
+   Due partecipanti si sfidano: stesso modulo, stesso "seme" di estrazione
+   (quindi le stesse squadre storiche nello stesso ordine per entrambi),
+   vince chi costruisce l'undici con l'overall complessivo più alto — a
+   decidere è la scelta dei giocatori, non la fortuna del sorteggio.
+   Lo storico di ogni coppia si vede solo ai due coinvolti: è filtrato qui
+   nell'interfaccia, sullo stesso principio del resto del sito (i pronostici
+   dei singoli restano nei loro pannelli, non in una vista d'insieme).
+   ========================================================================= */
+const ROLE_NAME = { POR:'Portiere', DD:'Terzino destro', DS:'Terzino sinistro', DC:'Difensore centrale',
+  MED:'Mediano', MC:'Centrocampista', TRQ:'Trequartista',
+  ED:'Esterno destro', ES:'Esterno sinistro', PC:'Punta' };
+/* Un giocatore può occupare la sua casella naturale o una vicina; fuori dal
+   ruolo naturale l'overall scende di 3 (adattarlo costa). */
+const COMPAT = {
+  POR:['POR'], DD:['DD','DS','ED'], DS:['DS','DD','ES'], DC:['DC'], MED:['MED','MC','DC'],
+  MC:['MC','MED','TRQ'], TRQ:['TRQ','MC','ED','ES'], ED:['ED','ES','TRQ','PC'], ES:['ES','ED','TRQ','PC'], PC:['PC','TRQ']
+};
+const ADAPT_MALUS = 3;
+const canFill = (pos, slot) => (COMPAT[pos] || []).includes(slot);
+const ovrIn = (pl, slot) => pl[2] - (pl[1] === slot ? 0 : ADAPT_MALUS);
+
+/* Ogni casella ha ruolo e posizione sul campo (x%, y%). */
+const FORMATIONS = [
+  { key:'4-4-2', desc:'Due punte, fasce larghe', slots:[
+    ['POR',50,91],['DD',85,73],['DC',65,76],['DC',35,76],['DS',15,73],
+    ['ED',86,48],['MC',63,50],['MC',37,50],['ES',14,48],['PC',62,20],['PC',38,20]]},
+  { key:'4-3-3', desc:'Tridente e regista basso', slots:[
+    ['POR',50,91],['DD',85,73],['DC',65,76],['DC',35,76],['DS',15,73],
+    ['MED',50,58],['MC',73,46],['MC',27,46],['ED',82,20],['PC',50,14],['ES',18,20]]},
+  { key:'3-5-2', desc:'Tre dietro, quinti alti', slots:[
+    ['POR',50,91],['DC',72,78],['DC',50,80],['DC',28,78],
+    ['ED',90,50],['MC',68,52],['MED',50,60],['MC',32,52],['ES',10,50],['PC',62,18],['PC',38,18]]},
+  { key:'4-2-3-1', desc:'Doppio filtro e trequarti', slots:[
+    ['POR',50,91],['DD',85,73],['DC',65,76],['DC',35,76],['DS',15,73],
+    ['MED',63,59],['MED',37,59],['ED',82,35],['TRQ',50,33],['ES',18,35],['PC',50,13]]},
+  { key:'3-4-3', desc:'Massimo peso offensivo', slots:[
+    ['POR',50,91],['DC',72,78],['DC',50,80],['DC',28,78],
+    ['ED',88,52],['MC',63,54],['MC',37,54],['ES',12,52],['ED',78,20],['PC',50,13],['ES',22,20]]},
+  { key:'4-3-1-2', desc:'Rombo, gioco stretto', slots:[
+    ['POR',50,91],['DD',85,73],['DC',65,76],['DC',35,76],['DS',15,73],
+    ['MED',50,61],['MC',75,50],['MC',25,50],['TRQ',50,36],['PC',62,15],['PC',38,15]]},
+  { key:'5-3-2', desc:'Blocco basso, ripartenze', slots:[
+    ['POR',50,91],['DD',92,66],['DC',72,78],['DC',50,80],['DC',28,78],['DS',8,66],
+    ['MED',50,56],['MC',72,47],['MC',28,47],['PC',62,17],['PC',38,17]]}
+];
+
+/* Rose storiche — [nome, ruolo, overall]. Dal 2000 a oggi, Serie A e maggiori
+   campionati europei. Overall di stima personale in stile videogioco. */
+const SQUADS = [
+{c:"Milan",y:2003,l:"Serie A",p:[["Dida","POR",86],["Cafu","DD",87],["Nesta","DC",91],["Costacurta","DC",82],["Maldini","DS",90],["Serginho","DS",80],["Gattuso","MED",84],["Pirlo","MC",87],["Seedorf","MC",87],["Ambrosini","MED",82],["Rui Costa","TRQ",87],["Kaká","TRQ",86],["Shevchenko","PC",91],["Inzaghi","PC",86],["Tomasson","PC",80]]},
+{c:"Milan",y:2007,l:"Serie A",p:[["Dida","POR",83],["Oddo","DD",80],["Nesta","DC",88],["Kaladze","DC",79],["Maldini","DS",85],["Jankulovski","DS",79],["Gattuso","MED",83],["Pirlo","MC",88],["Seedorf","MC",85],["Ambrosini","MED",80],["Kaká","TRQ",92],["Inzaghi","PC",84],["Gilardino","PC",82],["Gourcuff","TRQ",76]]},
+{c:"Inter",y:2010,l:"Serie A",p:[["Julio Cesar","POR",88],["Maicon","DD",88],["Lucio","DC",87],["Samuel","DC",86],["Chivu","DS",82],["Zanetti","DD",86],["Cambiasso","MED",85],["Thiago Motta","MC",84],["Stankovic","MC",83],["Muntari","MC",79],["Sneijder","TRQ",89],["Pandev","ES",82],["Eto'o","PC",89],["Milito","PC",87]]},
+{c:"Inter",y:2021,l:"Serie A",p:[["Handanovic","POR",84],["Skriniar","DC",85],["De Vrij","DC",85],["Bastoni","DC",84],["Hakimi","DD",84],["Young","DS",78],["Perisic","ES",84],["Barella","MC",86],["Brozovic","MED",85],["Vidal","MC",81],["Eriksen","TRQ",84],["Lukaku","PC",87],["Lautaro","PC",85],["Sanchez","PC",82]]},
+{c:"Juventus",y:2015,l:"Serie A",p:[["Buffon","POR",89],["Lichtsteiner","DD",82],["Bonucci","DC",86],["Barzagli","DC",85],["Chiellini","DC",87],["Evra","DS",81],["Pogba","MC",87],["Vidal","MC",87],["Pirlo","MC",86],["Marchisio","MC",84],["Pereyra","TRQ",79],["Tevez","PC",88],["Morata","PC",82],["Llorente","PC",80]]},
+{c:"Juventus",y:2020,l:"Serie A",p:[["Szczesny","POR",85],["Cuadrado","DD",83],["Bonucci","DC",85],["De Ligt","DC",84],["Alex Sandro","DS",83],["Pjanic","MC",85],["Matuidi","MED",82],["Bentancur","MC",80],["Ramsey","TRQ",81],["Dybala","TRQ",88],["Ronaldo","PC",93],["Higuain","PC",84],["Douglas Costa","ED",84]]},
+{c:"Roma",y:2001,l:"Serie A",p:[["Antonioli","POR",79],["Cafu","DD",85],["Samuel","DC",84],["Aldair","DC",82],["Zago","DC",78],["Candela","DS",80],["Emerson","MED",84],["Tommasi","MC",81],["Assuncao","MC",78],["Totti","TRQ",89],["Nakata","TRQ",82],["Batistuta","PC",88],["Montella","PC",84],["Delvecchio","PC",78]]},
+{c:"Lazio",y:2000,l:"Serie A",p:[["Peruzzi","POR",84],["Nesta","DC",87],["Mihajlovic","DC",83],["Negro","DC",79],["Pancaro","DS",79],["Conceição","ED",82],["Simeone","MC",83],["Almeyda","MED",81],["Veron","MC",88],["Stankovic","MC",80],["Nedved","ES",87],["Mancini","TRQ",82],["Salas","PC",85],["Boksic","PC",84]]},
+{c:"Napoli",y:2023,l:"Serie A",p:[["Meret","POR",82],["Di Lorenzo","DD",84],["Rrahmani","DC",82],["Kim","DC",85],["Mario Rui","DS",79],["Olivera","DS",78],["Anguissa","MED",84],["Lobotka","MED",85],["Zielinski","MC",84],["Elmas","MC",79],["Politano","ED",82],["Kvaratskhelia","ES",87],["Osimhen","PC",88],["Raspadori","PC",79]]},
+{c:"Manchester United",y:2008,l:"Premier League",p:[["Van der Sar","POR",86],["Neville","DD",80],["Ferdinand","DC",88],["Vidic","DC",87],["Evra","DS",84],["Ronaldo","ED",91],["Scholes","MC",86],["Carrick","MC",83],["Hargreaves","MED",82],["Anderson","MC",79],["Giggs","ES",85],["Nani","ED",80],["Rooney","PC",87],["Tevez","PC",85]]},
+{c:"Arsenal",y:2004,l:"Premier League",p:[["Lehmann","POR",82],["Lauren","DD",80],["Campbell","DC",86],["Touré","DC",83],["Ashley Cole","DS",85],["Ljungberg","ED",83],["Vieira","MED",89],["Gilberto Silva","MED",81],["Edu","MC",79],["Pires","ES",87],["Bergkamp","TRQ",87],["Reyes","ES",81],["Henry","PC",92],["Wiltord","PC",79]]},
+{c:"Chelsea",y:2005,l:"Premier League",p:[["Cech","POR",87],["Ferreira","DD",79],["Terry","DC",88],["Carvalho","DC",85],["Gallas","DS",83],["Makelele","MED",86],["Lampard","MC",89],["Essien","MC",85],["Robben","ES",87],["Duff","ED",84],["Joe Cole","ES",83],["Drogba","PC",88],["Gudjohnsen","PC",82],["Crespo","PC",84]]},
+{c:"Chelsea",y:2021,l:"Premier League",p:[["Mendy","POR",84],["James","DD",82],["Rüdiger","DC",84],["Thiago Silva","DC",85],["Azpilicueta","DD",82],["Chilwell","DS",82],["Kanté","MED",88],["Jorginho","MED",84],["Kovacic","MC",83],["Mount","TRQ",83],["Pulisic","ES",81],["Havertz","PC",82],["Werner","PC",82]]},
+{c:"Liverpool",y:2019,l:"Premier League",p:[["Alisson","POR",89],["Alexander-Arnold","DD",85],["Van Dijk","DC",91],["Matip","DC",82],["Robertson","DS",86],["Fabinho","MED",86],["Henderson","MC",84],["Wijnaldum","MC",83],["Milner","MC",79],["Salah","ED",89],["Mané","ES",88],["Firmino","PC",86],["Origi","PC",77]]},
+{c:"Manchester City",y:2023,l:"Premier League",p:[["Ederson","POR",88],["Walker","DD",84],["Dias","DC",88],["Stones","DC",84],["Aké","DS",82],["Rodri","MED",89],["De Bruyne","MC",91],["Gündogan","MC",85],["Bernardo Silva","ED",87],["Foden","ED",85],["Grealish","ES",84],["Haaland","PC",91],["Álvarez","PC",82]]},
+{c:"Leicester",y:2016,l:"Premier League",p:[["Schmeichel","POR",81],["Simpson","DD",76],["Morgan","DC",78],["Huth","DC",78],["Fuchs","DS",77],["Mahrez","ED",86],["Kanté","MED",85],["Drinkwater","MC",78],["Albrighton","ES",76],["Vardy","PC",85],["Okazaki","PC",77],["Ulloa","PC",74]]},
+{c:"Tottenham",y:2019,l:"Premier League",p:[["Lloris","POR",84],["Trippier","DD",80],["Alderweireld","DC",85],["Vertonghen","DC",84],["Rose","DS",80],["Sissoko","MED",81],["Winks","MC",77],["Dele Alli","MC",83],["Eriksen","TRQ",86],["Son","ES",87],["Lucas Moura","ED",82],["Kane","PC",89],["Llorente","PC",76]]},
+{c:"Real Madrid",y:2002,l:"Liga",p:[["Casillas","POR",84],["Salgado","DD",80],["Hierro","DC",85],["Helguera","DC",82],["Roberto Carlos","DS",89],["Makelele","MED",85],["Guti","MC",83],["Zidane","TRQ",94],["Figo","ED",91],["McManaman","ED",80],["Solari","ES",79],["Raúl","PC",90],["Ronaldo","PC",93],["Morientes","PC",84]]},
+{c:"Real Madrid",y:2017,l:"Liga",p:[["Keylor Navas","POR",84],["Carvajal","DD",85],["Ramos","DC",90],["Varane","DC",86],["Marcelo","DS",87],["Casemiro","MED",87],["Kroos","MC",89],["Modric","MC",90],["Isco","TRQ",86],["Bale","ED",88],["Asensio","ED",83],["Ronaldo","ES",94],["Benzema","PC",86],["Morata","PC",82]]},
+{c:"Real Madrid",y:2024,l:"Liga",p:[["Courtois","POR",89],["Carvajal","DD",85],["Rüdiger","DC",87],["Alaba","DC",85],["Mendy","DS",82],["Tchouaméni","MED",84],["Camavinga","MED",84],["Valverde","MC",88],["Kroos","MC",88],["Modric","MC",87],["Bellingham","TRQ",90],["Rodrygo","ED",85],["Vinícius","ES",91],["Joselu","PC",78]]},
+{c:"Barcelona",y:2009,l:"Liga",p:[["Valdés","POR",84],["Dani Alves","DD",88],["Puyol","DC",87],["Piqué","DC",85],["Márquez","DC",82],["Abidal","DS",83],["Busquets","MED",83],["Touré Yaya","MED",83],["Xavi","MC",91],["Iniesta","MC",90],["Messi","ED",94],["Henry","ES",86],["Eto'o","PC",89],["Bojan","PC",76]]},
+{c:"Barcelona",y:2015,l:"Liga",p:[["Ter Stegen","POR",85],["Dani Alves","DD",85],["Piqué","DC",87],["Mascherano","DC",85],["Jordi Alba","DS",85],["Busquets","MED",88],["Rakitic","MC",85],["Iniesta","MC",88],["Xavi","MC",85],["Rafinha","TRQ",78],["Messi","ED",94],["Neymar","ES",89],["Suárez","PC",90],["Pedro","ED",81]]},
+{c:"Atlético Madrid",y:2014,l:"Liga",p:[["Courtois","POR",87],["Juanfran","DD",82],["Godín","DC",87],["Miranda","DC",84],["Filipe Luís","DS",84],["Tiago","MED",80],["Gabi","MED",81],["Koke","MC",84],["Raúl García","MC",79],["Arda Turan","TRQ",85],["Diego Costa","PC",87],["Villa","PC",84],["Adrián","ED",78]]},
+{c:"Valencia",y:2001,l:"Liga",p:[["Cañizares","POR",84],["Angloma","DD",79],["Ayala","DC",86],["Pellegrino","DC",80],["Carboni","DS",80],["Albelda","MED",82],["Baraja","MC",83],["Mendieta","MC",87],["Kily González","ES",82],["Angulo","ED",81],["Aimar","TRQ",84],["Sánchez","PC",82],["Carew","PC",80]]},
+{c:"Sevilla",y:2006,l:"Liga",p:[["Palop","POR",80],["Dani Alves","DD",83],["Javi Navarro","DC",79],["Escudé","DC",78],["Puerta","DS",78],["David Castedo","DD",76],["Renato","MED",81],["Poulsen","MED",80],["Jesús Navas","ED",83],["Adriano","ES",81],["Saviola","TRQ",82],["Kanouté","PC",85],["Luís Fabiano","PC",84]]},
+{c:"Bayern München",y:2013,l:"Bundesliga",p:[["Neuer","POR",90],["Lahm","DD",88],["Boateng","DC",85],["Dante","DC",83],["Alaba","DS",85],["Schweinsteiger","MC",88],["Javi Martínez","MED",85],["Kroos","MC",84],["Robben","ED",89],["Ribéry","ES",90],["Müller","TRQ",87],["Mandzukic","PC",84],["Gómez","PC",83]]},
+{c:"Bayern München",y:2020,l:"Bundesliga",p:[["Neuer","POR",89],["Pavard","DD",82],["Boateng","DC",84],["Alaba","DC",86],["Davies","DS",85],["Kimmich","MC",89],["Goretzka","MC",85],["Thiago","MC",87],["Gnabry","ED",85],["Coman","ES",84],["Müller","TRQ",86],["Perisic","ES",82],["Lewandowski","PC",91]]},
+{c:"Borussia Dortmund",y:2013,l:"Bundesliga",p:[["Weidenfeller","POR",82],["Piszczek","DD",82],["Hummels","DC",87],["Subotic","DC",83],["Schmelzer","DS",80],["Gündogan","MC",84],["Bender","MED",81],["Blaszczykowski","ED",82],["Grosskreutz","ED",78],["Reus","ES",86],["Götze","TRQ",85],["Lewandowski","PC",88],["Schieber","PC",74]]},
+{c:"Bayer Leverkusen",y:2024,l:"Bundesliga",p:[["Hradecky","POR",82],["Tah","DC",84],["Hincapié","DC",82],["Tapsoba","DC",82],["Frimpong","DD",84],["Grimaldo","DS",85],["Xhaka","MED",85],["Palacios","MC",82],["Andrich","MED",80],["Wirtz","TRQ",88],["Adli","MC",80],["Boniface","PC",82],["Schick","PC",82]]},
+{c:"Paris Saint-Germain",y:2020,l:"Ligue 1",p:[["Keylor Navas","POR",85],["Kehrer","DD",78],["Marquinhos","DC",86],["Kimpembe","DC",83],["Bernat","DS",80],["Verratti","MC",87],["Paredes","MED",81],["Herrera","MC",80],["Di María","ED",86],["Neymar","ES",91],["Sarabia","TRQ",80],["Mbappé","PC",90],["Icardi","PC",84]]},
+{c:"Monaco",y:2017,l:"Ligue 1",p:[["Subasic","POR",82],["Sidibé","DD",80],["Glik","DC",81],["Jemerson","DC",79],["Benjamin Mendy","DS",80],["Fabinho","MED",83],["Bakayoko","MED",82],["Moutinho","MC",83],["Bernardo Silva","ED",84],["Lemar","ES",83],["Mbappé","PC",84],["Falcao","PC",85],["Germain","PC",76]]},
+{c:"Porto",y:2004,l:"Primeira Liga",p:[["Baía","POR",82],["Paulo Ferreira","DD",80],["Ricardo Carvalho","DC",85],["Jorge Costa","DC",79],["Nuno Valente","DS",78],["Costinha","MED",81],["Maniche","MC",83],["Pedro Mendes","MC",78],["Deco","TRQ",88],["Alenichev","ES",80],["Carlos Alberto","ED",78],["McCarthy","PC",82],["Derlei","PC",80]]},
+{c:"Ajax",y:2019,l:"Eredivisie",p:[["Onana","POR",82],["Mazraoui","DD",78],["De Ligt","DC",84],["Blind","DC",81],["Tagliafico","DS",80],["De Jong","MC",85],["Schöne","MED",78],["Van de Beek","MC",82],["Ziyech","ED",85],["Neres","ES",81],["Tadic","TRQ",84],["Dolberg","PC",78],["Huntelaar","PC",77]]}
+];
+
+/* Generatore con seme: lo stesso codice sfida dà a entrambi i partecipanti
+   la stessa sequenza di squadre, così il confronto è sulla scelta, non sul
+   sorteggio. */
+function hashSeed(str){
+  let h = 2166136261;
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function duelRng(seed){
+  let a = seed >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function shuffleOrder(seed){
+  const rnd = duelRng(hashSeed(seed));
+  const order = SQUADS.map((_,i) => i);
+  for(let i = order.length - 1; i > 0; i--){
+    const j = Math.floor(rnd() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
+
+/* Stato della sfida in corso sul dispositivo: non è nell'archivio finché non
+   si completa un turno di 11, solo allora diventa un record condiviso. */
+const D = { screen:'menu', formation:null, code:null, order:[], cursor:0, current:null, squad:[], role:null, duelId:null, opponentId:null };
+
+K.duel = id => 'duel-' + id;
+
+async function loadDuels(){
+  S.duels = {};
+  (await Store.list('duel-')).forEach(({ key, value }) => { S.duels[key.slice('duel-'.length)] = value; });
+}
+const myDuels = () => {
+  const me = myPlayer();
+  if(!me) return [];
+  return Object.values(S.duels || {}).filter(d => d.challengerId === me.id || d.opponentId === me.id);
+};
+const pendingForMe = () => { const me = myPlayer(); return me ? myDuels().filter(d => d.status === 'pending' && d.opponentId === me.id) : []; };
+const waitingMine   = () => { const me = myPlayer(); return me ? myDuels().filter(d => d.status === 'pending' && d.challengerId === me.id) : []; };
+const doneMine      = () => myDuels().filter(d => d.status === 'done');
+function rivalOf(d){ const me = myPlayer(); return me && d.challengerId === me.id ? d.opponentId : d.challengerId; }
+function opponentGroups(){
+  const map = {};
+  doneMine().forEach(d => { const r = rivalOf(d); (map[r] = map[r] || []).push(d); });
+  Object.values(map).forEach(arr => arr.sort((a,b) => new Date(b.completedAt) - new Date(a.completedAt)));
+  return map;
+}
+
+/* ---- regole di riempimento, identiche a quelle di un modulo qualsiasi ---- */
+function openSlotsD(){
+  const need = {};
+  D.formation.slots.forEach(s => { need[s[0]] = (need[s[0]] || 0) + 1; });
+  D.squad.forEach(x => { need[x.slot] -= 1; });
+  return Object.keys(need).filter(r => need[r] > 0);
+}
+function slotForD(pl){
+  const open = openSlotsD();
+  if(open.includes(pl[1])) return pl[1];
+  return open.find(r => canFill(pl[1], r)) || null;
+}
+const usableD = sq => sq.p.some(pl => slotForD(pl) !== null);
+const totalD = () => D.squad.reduce((s,x) => s + ovrIn(x.pl, x.slot), 0);
+function liveChips(){
+  return D.squad.map(x => ({ slot:x.slot, name:x.pl[0], role:x.pl[1], ovr: ovrIn(x.pl, x.slot), club:x.squad.c, year:x.squad.y }));
+}
+/* Salta le rose che non hanno più nessun ruolo utile: nessun turno morto. */
+function nextSquadD(){
+  while(D.cursor < D.order.length){
+    const sq = SQUADS[D.order[D.cursor++]];
+    if(usableD(sq)){ D.current = sq; return true; }
+  }
+  D.current = null;
+  return false;
+}
+
+/* ---- ciclo di vita di una sfida ---- */
+function startDuel(opponentId, formation){
+  D.opponentId = opponentId; D.formation = formation; D.code = generateCode(); D.role = 'challenger'; D.duelId = null;
+  D.order = shuffleOrder(D.code); D.cursor = 0; D.squad = []; D.screen = 'draft';
+  nextSquadD();
+}
+function respondToDuel(rec){
+  D.opponentId = rec.challengerId; D.formation = FORMATIONS.find(f => f.key === rec.formation);
+  D.code = rec.seed; D.role = 'opponent'; D.duelId = rec.id;
+  D.order = shuffleOrder(D.code); D.cursor = 0; D.squad = []; D.screen = 'draft';
+  nextSquadD();
+}
+async function finalizeAsChallenger(){
+  const rec = {
+    id: randomHex(6), challengerId: myPlayer().id, opponentId: D.opponentId, formation: D.formation.key, seed: D.code,
+    status: 'pending',
+    challengerSquad: liveChips(), challengerTotal: totalD(),
+    opponentSquad: null, opponentTotal: null, winnerId: null,
+    createdAt: new Date().toISOString(), completedAt: null
+  };
+  await Store.set(K.duel(rec.id), rec);
+  S.duels[rec.id] = rec; D.duelId = rec.id; D.screen = 'sent'; render();
+}
+async function finalizeAsOpponent(){
+  const rec = S.duels[D.duelId];
+  if(!rec){ toast('Sfida non trovata: forse è stata ritirata.', 'err'); D.screen = 'menu'; render(); return; }
+  rec.opponentSquad = liveChips(); rec.opponentTotal = totalD();
+  rec.status = 'done'; rec.completedAt = new Date().toISOString();
+  rec.winnerId = rec.challengerTotal === rec.opponentTotal ? null : (rec.challengerTotal > rec.opponentTotal ? rec.challengerId : rec.opponentId);
+  await Store.set(K.duel(rec.id), rec); S.duels[rec.id] = rec; D.screen = 'result'; render();
+}
+function chooseD(pl){
+  const slot = slotForD(pl);
+  if(!slot) return;
+  D.squad.push({ slot, pl, squad: D.current });
+  if(D.squad.length === 11){ D.role === 'challenger' ? finalizeAsChallenger() : finalizeAsOpponent(); return; }
+  if(!nextSquadD()){
+    toast('Rose esaurite: la formazione resta incompleta.', 'err');
+    D.role === 'challenger' ? finalizeAsChallenger() : finalizeAsOpponent();
+    return;
+  }
+  render(true);
+}
+async function declineDuel(rec){
+  if(!await confirmBox('Rifiuto la sfida di ' + (player(rec.challengerId)?.name || '?') + '. Non potrà più essere accettata.')) return;
+  await Store.del(K.duel(rec.id)); delete S.duels[rec.id]; toast('Sfida rifiutata.', ''); render();
+}
+
+/* ---- pezzi di interfaccia riutilizzati fra estrazione e risultato ---- */
+function fieldElD(chips, formation, highlightNext){
+  const box = el(`<div class="field-wrap"><div class="midline"></div><div class="midcircle"></div></div>`);
+  const used = {};
+  formation.slots.forEach(([role, x, y]) => {
+    used[role] = used[role] || 0;
+    const mine = chips.filter(c => c.slot === role)[used[role]];
+    used[role] += 1;
+    const isNext = highlightNext && !mine && openSlotsD().includes(role);
+    box.appendChild(el(`
+      <div class="slot ${mine ? 'filled' : ''} ${isNext ? 'next' : ''}" style="left:${x}%; top:${y}%;">
+        <div class="badge">${mine ? mine.ovr : ''}</div>
+        ${mine ? `<div class="nm">${esc(mine.name)}</div><div class="sq">${esc(mine.club)} ${mine.year}</div>`
+                : `<div class="rl">${role}</div>`}
+      </div>`));
+  });
+  return box;
+}
+function rosterTable(chips){
+  return el(`<table><thead><tr><th>Casella</th><th>Giocatore</th><th>Da</th><th style="text-align:right;">Ovr</th></tr></thead>
+    <tbody>${chips.map(c => `<tr><td class="num">${c.slot}</td>
+      <td><strong>${esc(c.name)}</strong>${c.slot !== c.role ? ' <span class="tag pink">adattato</span>' : ''}</td>
+      <td class="num">${esc(c.club)} ${c.year}</td>
+      <td class="num" style="text-align:right; color:var(--amber); font-family:'Anton',sans-serif; font-size:1.02rem;">${c.ovr}</td></tr>`).join('')}
+    </tbody></table>`);
+}
+
+/* ---- schermata: il menu della sfida ---- */
+function viewDuelMenu(){
+  const wrap = el(`<div class="stack"></div>`);
+  const me = myPlayer();
+  if(!me){
+    wrap.appendChild(el(`<div class="empty">Il tuo account non è collegato a nessun partecipante: chiedi all'organizzatore di collegarlo per poter sfidare qualcuno.</div>`));
+    return wrap;
+  }
+
+  wrap.appendChild(el(`<div class="banner">Sfidi un avversario a comporre l'undici più forte: stesso modulo, stesse squadre nello stesso ordine per entrambi — a decidere è solo chi sceglie meglio, non la fortuna del sorteggio. Lo storico fra te e ogni avversario lo vedete solo voi due.</div>`));
+
+  const toRespond = pendingForMe();
+  if(toRespond.length){
+    const p = el(`<div class="panel"><div class="panel-head"><h2>Sfide da rispondere</h2><span class="eyebrow">${toRespond.length}</span></div><div class="panel-body"><div class="board"></div></div></div>`);
+    const board = p.querySelector('.board');
+    toRespond.forEach(rec => {
+      const row = el(`<div class="req pending">
+        <div><div class="p-name">${esc(player(rec.challengerId)?.name || '?')}</div>
+          <div class="p-sub">ti sfida · modulo ${esc(rec.formation)} · ${fmtDate(rec.createdAt)}</div></div>
+        <div><span class="tag pending">in attesa della tua risposta</span></div>
+        <div class="p-actions"></div></div>`);
+      const acts = row.querySelector('.p-actions');
+      const go = el(`<button class="btn btn-sm btn-primary">Gioca la tua sfida</button>`);
+      go.onclick = () => { respondToDuel(rec); render(true); };
+      const no = el(`<button class="btn btn-sm btn-ghost">Rifiuta</button>`);
+      no.onclick = () => declineDuel(rec);
+      acts.append(go, no);
+      board.appendChild(row);
+    });
+    wrap.appendChild(p);
+  }
+
+  const waiting = waitingMine();
+  if(waiting.length){
+    const p = el(`<div class="panel"><div class="panel-head"><h2>In attesa dell'avversario</h2></div><div class="panel-body"><div class="board"></div></div></div>`);
+    const board = p.querySelector('.board');
+    waiting.forEach(rec => {
+      board.appendChild(el(`<div class="req pending">
+        <div><div class="p-name">${esc(player(rec.opponentId)?.name || '?')}</div>
+          <div class="p-sub">modulo ${esc(rec.formation)} · inviata ${fmtDate(rec.createdAt)}</div></div>
+        <div><span class="tag mute">tuo totale ${rec.challengerTotal}</span></div>
+        <div></div></div>`));
+    });
+    wrap.appendChild(p);
+  }
+
+  const avail = (S.core.players || []).filter(p => p.id !== me.id && S.claims[p.id]);
+  const start = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Sfida un avversario</h2></div>
+      <div class="panel-body">
+        ${avail.length ? `<p class="note">Scegli chi sfidare e il modulo: si parte subito, il pronostico si costruisce turno per turno.</p>
+          <p class="note-dim" style="margin-bottom:-6px;">Avversario</p>
+          <div class="opp-grid" id="opp-grid"></div>
+          <p class="note-dim" style="margin-bottom:-6px;">Modulo</p>
+          <div class="form-grid" id="form-grid"></div>
+          <button class="btn btn-primary" id="go-duel" style="width:100%;" disabled>Scegli avversario e modulo</button>`
+          : `<div class="empty">Nessun altro partecipante ha ancora un account. Aspetta che qualcuno acceda per poterlo sfidare.</div>`}
+      </div>
+    </div>`);
+  if(avail.length){
+    let chosenOpp = null, chosenForm = null;
+    const oppGrid = start.querySelector('#opp-grid');
+    avail.forEach(p => {
+      const b = el(`<button class="opp-card"><span class="av">${esc((p.name.trim()[0] || '?'))}</span>${esc(p.name)}</button>`);
+      b.onclick = () => { chosenOpp = p.id; oppGrid.querySelectorAll('.opp-card').forEach(x => x.classList.toggle('on', x === b)); sync(); };
+      oppGrid.appendChild(b);
+    });
+    const formGrid = start.querySelector('#form-grid');
+    FORMATIONS.forEach(f => {
+      const b = el(`<button class="form-card"><span class="fm">${f.key}</span><span class="fd">${esc(f.desc)}</span></button>`);
+      b.onclick = () => { chosenForm = f; formGrid.querySelectorAll('.form-card').forEach(x => x.classList.toggle('on', x === b)); sync(); };
+      formGrid.appendChild(b);
+    });
+    const btn = start.querySelector('#go-duel');
+    function sync(){
+      btn.disabled = !(chosenOpp && chosenForm);
+      btn.textContent = (chosenOpp && chosenForm) ? 'Sfida ' + player(chosenOpp).name + ' a ' + chosenForm.key : 'Scegli avversario e modulo';
+    }
+    btn.onclick = () => { startDuel(chosenOpp, chosenForm); render(true); };
+  }
+  wrap.appendChild(start);
+
+  const groups = opponentGroups();
+  const rivalIds = Object.keys(groups);
+  if(rivalIds.length){
+    const hist = el(`<div class="panel"><div class="panel-head"><h2>Storico degli scontri</h2></div><div class="panel-body"></div></div>`);
+    const body = hist.querySelector('.panel-body');
+    rivalIds.sort((a,b) => (player(a)?.name || '').localeCompare(player(b)?.name || '')).forEach(rid => {
+      const list = groups[rid];
+      let w = 0, dr = 0, l = 0;
+      list.forEach(d => { if(!d.winnerId) dr++; else if(d.winnerId === me.id) w++; else l++; });
+      const det = el(`<details class="mini-hist"><summary>${esc(player(rid)?.name || '?')} — ${w}V ${dr}P ${l}S</summary></details>`);
+      det.appendChild(el(`<table><thead><tr><th>Data</th><th>Modulo</th><th>Tu</th><th>Lui/Lei</th><th style="text-align:right;">Esito</th></tr></thead>
+        <tbody>${list.map(d => {
+          const myTot = d.challengerId === me.id ? d.challengerTotal : d.opponentTotal;
+          const rTot  = d.challengerId === me.id ? d.opponentTotal  : d.challengerTotal;
+          const outcome = !d.winnerId ? '<span class="tag mute">pareggio</span>' : d.winnerId === me.id ? '<span class="tag ok">vinta</span>' : '<span class="tag ko">persa</span>';
+          return `<tr><td class="num">${fmtDate(d.completedAt)}</td><td class="num">${esc(d.formation)}</td>
+            <td class="num">${myTot}</td><td class="num">${rTot}</td><td style="text-align:right;">${outcome}</td></tr>`;
+        }).join('')}</tbody></table>`));
+      body.appendChild(det);
+    });
+    wrap.appendChild(hist);
+  }
+  return wrap;
+}
+
+/* ---- schermata: l'estrazione, turno per turno ---- */
+function viewDuelDraft(){
+  const wrap = el(`<div class="stack"></div>`);
+  const turn = D.squad.length + 1;
+  const sq = D.current;
+  const rivalName = player(D.opponentId)?.name || '?';
+
+  const draw = el(`
+    <div class="panel"><div class="panel-body">
+      <p class="note">Sfida contro <strong>${esc(rivalName)}</strong> · modulo ${esc(D.formation.key)}</p>
+      <div class="draw">
+        <div class="kicker">Turno ${turn} di 11 · è uscita</div>
+        <div class="club" id="duel-club">${esc(sq.c)} <span class="yr">${sq.y}</span></div>
+        <div class="league">${esc(sq.l)} · ${sq.p.length} giocatori in rosa</div>
+      </div>
+      <p class="note" style="margin-top:14px;">Caselle ancora libere:
+        ${openSlotsD().map(r => `<span class="tag mute">${esc(ROLE_NAME[r])}</span>`).join(' ')}</p>
+      <div class="picks"></div>
+    </div></div>`);
+  const picks = draw.querySelector('.picks');
+  const rows = sq.p.map(pl => ({ pl, slot: slotForD(pl) })).sort((a,b) => (a.slot ? 0 : 1) - (b.slot ? 0 : 1) || b.pl[2] - a.pl[2]);
+  rows.forEach(({ pl, slot }) => {
+    const adapt = slot && slot !== pl[1];
+    const b = el(`
+      <button class="pick ${adapt ? 'adapt' : ''}" ${slot ? '' : 'disabled'}>
+        <span class="ovr">${slot ? ovrIn(pl, slot) : pl[2]}</span>
+        <span class="nm">${esc(pl[0])}
+          <span class="rl">${slot
+            ? (adapt ? `${pl[1]} → ${slot} · adattato −${ADAPT_MALUS}` : ROLE_NAME[pl[1]])
+            : `${ROLE_NAME[pl[1]]} · casella piena`}</span></span></button>`);
+    if(slot) b.onclick = () => chooseD(pl);
+    picks.appendChild(b);
+  });
+
+  const right = el(`
+    <div class="panel">
+      <div class="panel-head"><div><span class="eyebrow">codice ${esc(D.code)}</span><h2>La tua formazione</h2></div>
+        <span class="pill">${D.squad.length}/11</span></div>
+      <div class="panel-body"></div>
+    </div>`);
+  right.querySelector('.panel-body').appendChild(fieldElD(liveChips(), D.formation, true));
+  right.querySelector('.panel-body').appendChild(el(
+    `<p class="note-dim" style="text-align:center;">Totale parziale <strong class="mono" style="color:var(--amber);">${totalD()}</strong></p>`));
+
+  const two = el(`<div class="grid-2"></div>`);
+  two.appendChild(draw); two.appendChild(right);
+  wrap.appendChild(two);
+
+  const ab = el(`<div class="btn-row"><button class="btn btn-ghost">Abbandona la sfida</button></div>`);
+  ab.querySelector('button').onclick = async () => {
+    if(!await confirmBox("Abbandoni questa sfida? Se eri tu a rispondere, resterà da giocare per un'altra volta.")) return;
+    D.screen = 'menu'; D.squad = []; render();
+  };
+  wrap.appendChild(ab);
+  return wrap;
+}
+
+/* ---- schermata: sfida inviata, in attesa dell'avversario ---- */
+function viewDuelSent(){
+  const wrap = el(`<div class="stack"></div>`);
+  wrap.appendChild(el(`<div class="panel"><div class="panel-body" style="text-align:center; padding:32px 20px;">
+    <h2 style="font-size:1.4rem;">Sfida inviata</h2>
+    <p class="note" style="margin-top:8px;">Hai chiuso con <strong class="mono" style="color:var(--amber);">${totalD()}</strong> di overall contro ${esc(player(D.opponentId)?.name || '?')}. Saprai il risultato quando risponderà.</p>
+    <button class="btn btn-primary" id="back" style="margin-top:16px;">Torna alle sfide</button>
+  </div></div>`));
+  wrap.querySelector('#back').onclick = () => { D.screen = 'menu'; D.squad = []; render(); };
+  return wrap;
+}
+
+/* ---- schermata: verdetto della sfida ---- */
+function viewDuelResult(){
+  const wrap = el(`<div class="stack"></div>`);
+  const rec = S.duels[D.duelId];
+  const me = myPlayer();
+  const myTot = D.role === 'opponent' ? rec.opponentTotal : rec.challengerTotal;
+  const rTot  = D.role === 'opponent' ? rec.challengerTotal : rec.opponentTotal;
+  const outcome = !rec.winnerId ? 'pareggio' : rec.winnerId === me.id ? 'hai vinto' : 'hai perso';
+  const cls = !rec.winnerId ? 'mute' : rec.winnerId === me.id ? 'ok' : 'ko';
+
+  wrap.appendChild(el(`<div class="panel"><div class="panel-body" style="text-align:center; padding:28px 20px;">
+    <span class="tag ${cls}" style="font-size:0.8rem; padding:6px 14px;">${outcome}</span>
+    <h2 style="font-size:1.6rem; margin-top:10px;">${myTot} — ${rTot}</h2>
+    <p class="note">contro ${esc(player(D.opponentId)?.name || '?')} · modulo ${esc(rec.formation)}</p>
+  </div></div>`));
+
+  const formation = FORMATIONS.find(f => f.key === rec.formation);
+  const mineChips  = D.role === 'opponent' ? rec.opponentSquad  : rec.challengerSquad;
+  const rivalChips = D.role === 'opponent' ? rec.challengerSquad : rec.opponentSquad;
+  const two = el(`<div class="grid-2"></div>`);
+  [ ['La tua rosa', mineChips], [(esc(player(D.opponentId)?.name || 'Avversario')) + ' — la sua rosa', rivalChips] ]
+    .forEach(([title, chips]) => {
+      const p = el(`<div class="panel"><div class="panel-head"><h2>${title}</h2></div><div class="panel-body"></div></div>`);
+      p.querySelector('.panel-body').appendChild(fieldElD(chips, formation, false));
+      two.appendChild(p);
+    });
+  wrap.appendChild(two);
+
+  const rt = el(`<div class="panel"><div class="panel-head"><h2>La tua rosa in dettaglio</h2></div><div class="panel-body" style="padding:0;"><div class="table-scroll"></div></div></div>`);
+  rt.querySelector('.table-scroll').appendChild(rosterTable(mineChips));
+  wrap.appendChild(rt);
+
+  const back = el(`<button class="btn btn-primary" style="width:100%;">Torna alle sfide</button>`);
+  back.onclick = () => { D.screen = 'menu'; D.squad = []; render(); };
+  wrap.appendChild(back);
+  return wrap;
+}
+
+function viewDuelRoot(){
+  if(D.screen === 'draft')  return viewDuelDraft();
+  if(D.screen === 'sent')   return viewDuelSent();
+  if(D.screen === 'result') return viewDuelResult();
+  return viewDuelMenu();
+}
+/* Il sorteggio si vede: il nome scorre un attimo prima di fermarsi. */
+function rollRevealD(){
+  const clubEl = document.getElementById('duel-club');
+  if(!clubEl || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = clubEl.closest('.draw');
+  box.classList.add('rolling');
+  const real = clubEl.innerHTML;
+  let n = 0;
+  const t = setInterval(() => {
+    const s = SQUADS[Math.floor(Math.random() * SQUADS.length)];
+    clubEl.innerHTML = `${esc(s.c)} <span class="yr">${s.y}</span>`;
+    if(++n > 9){ clearInterval(t); clubEl.innerHTML = real; box.classList.remove('rolling'); }
+  }, 55);
+}
+
+/* =========================================================================
+   19. RENDER PRINCIPALE
+   ========================================================================= */
+function renderWho(){
+  const box = document.getElementById('who');
+  box.innerHTML = '';
+
+  if(!S.me){
+    const btn = el(`<button class="who-login-btn">Accedi</button>`);
+    btn.onclick = () => {
+      S.gateTab = 'login';
+      render();
+      document.getElementById('li-user')?.focus();
+    };
+    box.appendChild(btn);
+    return;
+  }
+
+  const btn = el(`
+    <button class="who-btn" title="Clicca per uscire">
+      <span class="badge-user ${S.me.role === 'admin' ? 'admin' : ''}">${esc(S.me.displayName || S.me.username)} · ${S.me.role === 'admin' ? 'organizzatore' : 'partecipante'}</span>
+      <span class="logout-hint">esci ↦</span>
+    </button>`);
+  btn.onclick = logout;
+  box.appendChild(btn);
+  if(S.offline) box.appendChild(el(`<span class="who-role" style="color:var(--ko); font-size:0.75rem;">archivio offline</span>`));
+}
+function tabsFor(){
+  const mine = myPlayer() ? [{ k:'mine', l:'I miei pronostici' }] : [];
+  const duel = myPlayer() ? [{ k:'duel', l:'Undici 1v1', c: pendingForMe().length }] : [];
+  if(isAdmin()){
+    return [...mine, ...duel,
+            { k:'requests', l:'Richieste', c: totalPending() }, { k:'results', l:'Esiti' },
+            { k:'board', l:'Classifiche' }, { k:'calendar', l:'Calendario' }, { k:'players', l:'Partecipanti' },
+            { k:'excel', l:'File Excel' }, { k:'settings', l:'Impostazioni' }];
+  }
+  return [...mine, ...duel, { k:'board', l:'Classifiche' }, { k:'calendar', l:'Calendario' }, { k:'settings', l:'Impostazioni' }];
+}
+function render(reveal){
+  renderWho();
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  document.getElementById('foot').textContent =
+    'FantaList · 2 Last Man Standing + WhoWin?' + (S.core?.fileName ? ' · ' + S.core.fileName : '') + ' · archivio: ' + Store.mode();
+
+  if(!S.me){ app.appendChild(renderGate()); return; }
+
+  const tabs = tabsFor();
+  if(!S.tab || !tabs.find(t => t.k === S.tab)) S.tab = tabs[0].k;
+  const bar = el(`<div class="tabs"></div>`);
+  tabs.forEach(t => {
+    const b = el(`<button class="tab ${S.tab === t.k ? 'on' : ''}">${t.l}${t.c ? `<span class="count">${t.c}</span>` : ''}</button>`);
+    b.onclick = () => { S.tab = t.k; render(); };
+    bar.appendChild(b);
+  });
+  app.appendChild(bar);
+
+  const empty = !S.core || !S.core.players.length;
+  if(empty && S.tab !== 'settings' && S.tab !== 'calendar'){
+    const w = el(`<div class="stack"></div>`);
+    if(isAdmin()){
+      w.appendChild(el(`
+        <div class="panel"><div class="panel-body">
+          <span class="eyebrow">passo 2 di 2</span>
+          <h2 style="font-size:1.5rem; margin:4px 0 8px;">Apri i minigiochi</h2>
+          <p class="note">Carica il file Excel della lega: da lì escono partecipanti, squadre e le giornate già giocate di tutti e tre i minigiochi.</p>
+        </div></div>`));
+      w.appendChild(importPanel(false));
+    } else {
+      w.appendChild(el(`<div class="empty">L'organizzatore non ha ancora aperto i minigiochi. Torna più tardi.</div>`));
+    }
+    app.appendChild(w);
+    return;
+  }
+
+  if(isAdmin() && !empty && S.tab !== 'settings' && S.tab !== 'duel') app.appendChild(scoreboard());
+
+  const views = { mine: viewMine, duel: viewDuelRoot, requests: viewRequests, results: viewResults,
+                  board: viewBoard, calendar: viewCalendar, players: viewPlayers, excel: viewExcel, settings: viewSettings };
+  app.appendChild((views[S.tab] || viewMine)());
+  if(reveal && S.tab === 'duel' && D.screen === 'draft') rollRevealD();
+}
+
+/* =========================================================================
+   20. AVVIO
+   ========================================================================= */
+async function boot(){
+  Store.init();
+  try{
+    await loadUsers();
+    await loadClaims();
+    await restoreSession();
+    await loadCore();
+    await loadGames();
+    await loadRound();
+    await loadDuels();
+  }catch(e){
+    S.offline = true;
+    toast('Archivio non raggiungibile: ' + e.message, 'err');
+  }
+  if(!S.core && S.me) { S.core = emptyCore(); }
+  render();
+  setInterval(async () => {
+    const a = document.activeElement;
+    if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    if(document.querySelector('.overlay')) return;
+    if(S.me) await refresh(true);
+  }, 8000);
+}
+boot();
+
+</script>
+</body>
+</html>
