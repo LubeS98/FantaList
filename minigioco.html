@@ -1670,6 +1670,7 @@ function renderPublicHome(){
     </div>`));
 
   wrap.appendChild(fantacalcioRulesEl());
+  wrap.appendChild(minigamesRulesEl());
 
   return wrap;
 }
@@ -2688,17 +2689,16 @@ function fantacalcioRulesEl(){
   return wrap;
 }
 
-function viewHelp(){
+function minigamesRulesEl(){
   const wrap = el(`<div class="stack"></div>`);
 
   wrap.appendChild(el(`
     <div class="panel"><div class="panel-body">
       <span class="eyebrow">come funziona la lega</span>
-      <h2 style="font-size:1.6rem; margin:4px 0 10px;">Regolamento e guida al sito</h2>
+      <h2 style="font-size:1.6rem; margin:4px 0 10px;">Regolamento dei minigiochi</h2>
       <p class="note">Tre minigiochi paralleli, tutti sulle stesse 20 squadre di Serie A: due <strong>Last Man Standing</strong> a eliminazione (andata e ritorno) e un <strong>WhoWin?</strong> che copre l'intera stagione. Puoi partecipare a tutti e tre insieme: le squadre disponibili sono indipendenti da un minigioco all'altro.</p>
     </div></div>`));
 
-  /* ---- REGOLAMENTO ---- */
   const reg = el(`<div class="panel"><div class="panel-head"><h2>Regolamento</h2></div><div class="panel-body"></div></div>`);
   const rb = reg.querySelector('.panel-body');
 
@@ -2732,6 +2732,11 @@ function viewHelp(){
     <p>Ogni pronostico va confermato dall'organizzatore prima di contare (a meno che non abbia attivato l'approvazione automatica). Finché è "in attesa" puoi ancora cambiare scelta; se viene respinto, ne scegli un'altra.</p>`));
 
   wrap.appendChild(reg);
+  return wrap;
+}
+function viewHelp(){
+  const wrap = el(`<div class="stack"></div>`);
+  wrap.appendChild(minigamesRulesEl());
 
   /* ---- GUIDA PER I PARTECIPANTI ---- */
   const guide = el(`<div class="panel"><div class="panel-head"><h2>Guida — per chi partecipa</h2></div><div class="panel-body"></div></div>`);
