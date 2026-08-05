@@ -800,6 +800,7 @@ const S = {
   reqs: {},       // gameKey -> { playerId: richiesta della giornata corrente }
   results: {},    // teamId -> 'win' | 'lose'   (CONDIVISI: valgono per tutti i minigiochi)
   duels: {},      // id -> sfida 1v1 (Undici Leggendario)
+  gduels: {},     // id -> sfida 1v1 (Indovina il Calciatore)
   users: [], claims: {}, me: null,
   tab: null, gameTab: 'lms_a', boardGame: 'whowin',
   boardSort: 'wins', boardDir: 'desc', boardOpen: {},
@@ -935,6 +936,33 @@ async function loadClaims(){
 async function loadUsers(){
   S.users = (await Store.list('user-')).map(x => x.value);
 }
+/* ---- RIALLINEAMENTO PARTECIPANTE ↔ ACCOUNT ----
+   L'aggancio è scritto in due posti: il campo playerId dentro l'account e la
+   chiave claim-<playerId>. Un azzeramento cancella le seconde ma lascia i
+   primi, e da lì la lista avversari e la tabella accessi si svuotano pur
+   essendoci gli account. L'account è la fonte attendibile: le claim mancanti
+   le riscrivo da lì. */
+async function reconcileClaims(){
+  let fixed = 0;
+  for(const u of (S.users || [])){
+    if(!u.playerId || !u.username) continue;
+    if(S.claims[u.playerId] === u.username) continue;
+    /* se due account rivendicano lo stesso partecipante vince quello il cui
+       nome utente corrisponde al nome nel file della lega */
+    const owner = S.claims[u.playerId];
+    if(owner && owner === String(u.playerId).replace(/^p-/, '')) continue;
+    await Store.set(K.claim(u.playerId), u.username);
+    S.claims[u.playerId] = u.username;
+    fixed++;
+  }
+  return fixed;
+}
+/* Autoriparazione minima: chi accede riscrive il proprio aggancio se manca. */
+async function ensureMyClaim(){
+  if(!S.me?.playerId || S.claims[S.me.playerId] === S.me.username) return;
+  await Store.set(K.claim(S.me.playerId), S.me.username);
+  S.claims[S.me.playerId] = S.me.username;
+}
 async function refresh(silent = true){
   try{
     await loadCore();
@@ -942,6 +970,7 @@ async function refresh(silent = true){
     await loadRound();
     await loadClaims();
     await loadDuels();
+    await loadGuessDuels();
     S.offline = false;
     if(isAdmin()) await loadUsers();
   }catch(e){
@@ -1165,7 +1194,16 @@ async function wipeAll(){
   for(let r = 1; r <= SEASON_ROUNDS; r++){
     for(const { key: k } of await Store.list(K.resPrefix(r))) await Store.del(k);
   }
+  /* Scollego anche gli account dai partecipanti: cancellare solo le claim
+     lasciava account con un playerId che non esiste più, e la lista avversari
+     smetteva di vederli. */
   for(const p of (S.core?.players || [])) await Store.del(K.claim(p.id));
+  for(const u of (S.users || [])){
+    if(!u.playerId) continue;
+    u.playerId = null;
+    await Store.set(K.user(u.username), u);
+  }
+  S.claims = {};
   S.core = emptyCore();
   await saveCore();
   if(S.me){ S.me.playerId = null; await Store.set(K.user(S.me.username), S.me); }
@@ -1242,6 +1280,7 @@ function logout(){
   localStorage.removeItem(SESSION_KEY);
   S.me = null; S.tab = null;
   D.screen = 'menu'; D.squad = [];
+  GD.screen = 'menu'; GD.guesses = []; GD.solved = false;
   render();
 }
 async function changePassword(username, newPassword){
@@ -1512,7 +1551,7 @@ async function importCalendarOnly(file){
   const matches = parseCalendarSheet(wb);
   if(!matches) throw new Error('Non trovo un foglio "Calendario" con le colonne Giornata, Casa, Trasferta.');
   if(!S.core) S.core = emptyCore();
-  S.core.calendar = matches.map(m => ({ round:m.round, home:m.home, away:m.away, date:m.date }));
+  S.core.calendar = matches.map(m => ({ round:m.round, home:m.home, away:m.away, date:m.date, result:m.result || '' }));
   await saveCore();
 
   let applied = 0;
@@ -1529,8 +1568,8 @@ async function importCalendarOnly(file){
 }
 function writeCalendarSheet(wb){
   const sn = wb.SheetNames.find(n => /calendario/i.test(n)) || 'Calendario';
-  const aoa = [['Giornata','Casa','Trasferta','Data']];
-  (S.core.calendar || []).forEach(m => aoa.push([m.round, m.home, m.away, m.date || '']));
+  const aoa = [['Giornata','Casa','Trasferta','Data','Risultato']];
+  (S.core.calendar || []).forEach(m => aoa.push([m.round, m.home, m.away, m.date || '', m.result || '']));
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   if(!wb.SheetNames.includes(sn)) wb.SheetNames.push(sn);
   wb.Sheets[sn] = ws;
@@ -2298,10 +2337,31 @@ function fixturesListEl(round, editable){
           <span class="fx-vs">vs</span>
           <span class="fx-team"><span class="dot" style="background:${a.color}"></span>${esc(m.away)}</span>
           ${m.date ? `<span class="fx-date mono">${esc(m.date)}</span>` : ''}
+          ${editable ? `<input type="text" class="fx-res mono" value="${esc(m.result || '')}" placeholder="2-1"
+                          style="width:66px; padding:6px 8px; text-align:center; font-size:0.82rem;">` : ''}
+          ${!editable && m.result ? `<span class="tag mute mono">${esc(m.result)}</span>` : ''}
           ${esito ? `<span class="tag ok">${esc(esito)}</span>` : ''}
           ${editable ? `<button class="btn btn-sm btn-ghost fx-rm">Rimuovi</button>` : ''}
         </div>`);
       if(editable){
+        const ri = row.querySelector('.fx-res');
+        /* Scrivendo il risultato di una partita della giornata in corso,
+           l'esito delle due squadre viene segnato subito: vale per tutti
+           i minigiochi, esattamente come l'import del calendario. */
+        ri.onchange = async () => {
+          const v = ri.value.trim();
+          m.result = v;
+          await saveCore();
+          if(v && round === S.core.round){
+            const o = parseScore(v);
+            if(o){
+              await writeTeamResult(teamByName(m.home).id, o.home, round);
+              await writeTeamResult(teamByName(m.away).id, o.away, round);
+              toast('Risultato salvato: esiti aggiornati.', 'ok');
+            } else toast('Formato non riconosciuto: scrivi per esempio 2-1.', 'err');
+          }
+          render();
+        };
         row.querySelector('.fx-rm').onclick = async () => {
           const idx = S.core.calendar.findIndex(x => x === m);
           if(idx >= 0) S.core.calendar.splice(idx, 1);
@@ -2941,27 +3001,35 @@ function viewDuelMenu(){
     wrap.appendChild(p);
   }
 
-  const avail = (S.core.players || []).filter(p => p.id !== me.id && S.claims[p.id]);
+  const all = (S.core.players || []).filter(p => p.id !== me.id);
+  const avail = all.filter(p => S.claims[p.id]);
+  const noAcc = all.filter(p => !S.claims[p.id]);
   const start = el(`
     <div class="panel">
       <div class="panel-head"><h2>Sfida un avversario</h2></div>
       <div class="panel-body">
-        ${avail.length ? `<p class="note">Scegli chi sfidare e il modulo: si parte subito, il pronostico si costruisce turno per turno.</p>
+        ${all.length ? `<p class="note">Scegli chi sfidare e il modulo: si parte subito, la formazione si costruisce turno per turno.</p>
           <p class="note-dim" style="margin-bottom:-6px;">Avversario</p>
           <div class="opp-grid" id="opp-grid"></div>
+          ${noAcc.length ? `<p class="note-dim">${noAcc.map(p => esc(p.name)).join(', ')} ${noAcc.length === 1 ? 'non ha' : 'non hanno'} ancora un accesso: ${noAcc.length === 1 ? 'non può' : 'non possono'} rispondere a una sfida.</p>` : ''}
           <p class="note-dim" style="margin-bottom:-6px;">Modulo</p>
           <div class="form-grid" id="form-grid"></div>
           <button class="btn btn-primary" id="go-duel" style="width:100%;" disabled>Scegli avversario e modulo</button>`
-          : `<div class="empty">Nessun altro partecipante ha ancora un account. Aspetta che qualcuno acceda per poterlo sfidare.</div>`}
+          : `<div class="empty">Non ci sono altri partecipanti nella lega.</div>`}
       </div>
     </div>`);
-  if(avail.length){
+  if(all.length){
     let chosenOpp = null, chosenForm = null;
     const oppGrid = start.querySelector('#opp-grid');
     avail.forEach(p => {
       const b = el(`<button class="opp-card"><span class="av">${esc((p.name.trim()[0] || '?'))}</span>${esc(p.name)}</button>`);
       b.onclick = () => { chosenOpp = p.id; oppGrid.querySelectorAll('.opp-card').forEach(x => x.classList.toggle('on', x === b)); sync(); };
       oppGrid.appendChild(b);
+    });
+    noAcc.forEach(p => {
+      oppGrid.appendChild(el(`<button class="opp-card" disabled title="Non ha ancora un accesso">
+        <span class="av">${esc((p.name.trim()[0] || '?'))}</span>${esc(p.name)}
+        <span class="tag mute" style="margin-left:auto;">no accesso</span></button>`));
     });
     const formGrid = start.querySelector('#form-grid');
     FORMATIONS.forEach(f => {
@@ -2988,14 +3056,20 @@ function viewDuelMenu(){
       let w = 0, dr = 0, l = 0;
       list.forEach(d => { if(!d.winnerId) dr++; else if(d.winnerId === me.id) w++; else l++; });
       const det = el(`<details class="mini-hist"><summary>${esc(player(rid)?.name || '?')} — ${w}V ${dr}P ${l}S</summary></details>`);
-      det.appendChild(el(`<table><thead><tr><th>Data</th><th>Modulo</th><th>Tu</th><th>Lui/Lei</th><th style="text-align:right;">Esito</th></tr></thead>
+      const tbl = el(`<table><thead><tr><th>Data</th><th>Modulo</th><th>Tu</th><th>Lui/Lei</th><th style="text-align:right;">Esito</th><th></th></tr></thead>
         <tbody>${list.map(d => {
           const myTot = d.challengerId === me.id ? d.challengerTotal : d.opponentTotal;
           const rTot  = d.challengerId === me.id ? d.opponentTotal  : d.challengerTotal;
           const outcome = !d.winnerId ? '<span class="tag mute">pareggio</span>' : d.winnerId === me.id ? '<span class="tag ok">vinta</span>' : '<span class="tag ko">persa</span>';
-          return `<tr><td class="num">${fmtDate(d.completedAt)}</td><td class="num">${esc(d.formation)}</td>
-            <td class="num">${myTot}</td><td class="num">${rTot}</td><td style="text-align:right;">${outcome}</td></tr>`;
-        }).join('')}</tbody></table>`));
+          return `<tr data-id="${esc(d.id)}"><td class="num">${fmtDate(d.completedAt)}</td><td class="num">${esc(d.formation)}</td>
+            <td class="num">${myTot}</td><td class="num">${rTot}</td><td style="text-align:right;">${outcome}</td>
+            <td style="text-align:right;"><button class="btn btn-sm btn-ghost" data-view>Vedi le rose</button></td></tr>`;
+        }).join('')}</tbody></table>`);
+      tbl.querySelectorAll('[data-view]').forEach(btn => {
+        const id = btn.closest('tr').dataset.id;
+        btn.onclick = () => { D.duelId = id; D.screen = 'result'; render(); };
+      });
+      det.appendChild(tbl);
       body.appendChild(det);
     });
     wrap.appendChild(hist);
@@ -3072,27 +3146,39 @@ function viewDuelSent(){
   return wrap;
 }
 
-/* ---- schermata: verdetto della sfida ---- */
+/* ---- schermata: verdetto della sfida ----
+   Dipende solo dal record salvato (chi è challenger/opponent nel database),
+   non da come l'ho vissuta io in diretta: così la si può riaprire da qui o
+   dallo storico, in qualunque momento, da entrambi gli sfidanti. */
 function viewDuelResult(){
   const wrap = el(`<div class="stack"></div>`);
   const rec = S.duels[D.duelId];
   const me = myPlayer();
-  const myTot = D.role === 'opponent' ? rec.opponentTotal : rec.challengerTotal;
-  const rTot  = D.role === 'opponent' ? rec.challengerTotal : rec.opponentTotal;
+  if(!rec){
+    wrap.appendChild(el(`<div class="empty">Sfida non trovata: forse è stata ritirata.</div>`));
+    const back = el(`<button class="btn btn-primary" style="width:100%;">Torna alle sfide</button>`);
+    back.onclick = () => { D.screen = 'menu'; render(); };
+    wrap.appendChild(back);
+    return wrap;
+  }
+  const iAmChallenger = rec.challengerId === me.id;
+  const myTot   = iAmChallenger ? rec.challengerTotal : rec.opponentTotal;
+  const rTot    = iAmChallenger ? rec.opponentTotal   : rec.challengerTotal;
+  const rivalId = iAmChallenger ? rec.opponentId      : rec.challengerId;
   const outcome = !rec.winnerId ? 'pareggio' : rec.winnerId === me.id ? 'hai vinto' : 'hai perso';
   const cls = !rec.winnerId ? 'mute' : rec.winnerId === me.id ? 'ok' : 'ko';
 
   wrap.appendChild(el(`<div class="panel"><div class="panel-body" style="text-align:center; padding:28px 20px;">
     <span class="tag ${cls}" style="font-size:0.8rem; padding:6px 14px;">${outcome}</span>
     <h2 style="font-size:1.6rem; margin-top:10px;">${myTot} — ${rTot}</h2>
-    <p class="note">contro ${esc(player(D.opponentId)?.name || '?')} · modulo ${esc(rec.formation)}</p>
+    <p class="note">contro ${esc(player(rivalId)?.name || '?')} · modulo ${esc(rec.formation)}</p>
   </div></div>`));
 
   const formation = FORMATIONS.find(f => f.key === rec.formation);
-  const mineChips  = D.role === 'opponent' ? rec.opponentSquad  : rec.challengerSquad;
-  const rivalChips = D.role === 'opponent' ? rec.challengerSquad : rec.opponentSquad;
+  const mineChips  = iAmChallenger ? rec.challengerSquad : rec.opponentSquad;
+  const rivalChips = iAmChallenger ? rec.opponentSquad   : rec.challengerSquad;
   const two = el(`<div class="grid-2"></div>`);
-  [ ['La tua rosa', mineChips], [(esc(player(D.opponentId)?.name || 'Avversario')) + ' — la sua rosa', rivalChips] ]
+  [ ['La tua rosa', mineChips], [(esc(player(rivalId)?.name || 'Avversario')) + ' — la sua rosa', rivalChips] ]
     .forEach(([title, chips]) => {
       const p = el(`<div class="panel"><div class="panel-head"><h2>${title}</h2></div><div class="panel-body"></div></div>`);
       p.querySelector('.panel-body').appendChild(fieldElD(chips, formation, false));
@@ -3103,6 +3189,9 @@ function viewDuelResult(){
   const rt = el(`<div class="panel"><div class="panel-head"><h2>La tua rosa in dettaglio</h2></div><div class="panel-body" style="padding:0;"><div class="table-scroll"></div></div></div>`);
   rt.querySelector('.table-scroll').appendChild(rosterTable(mineChips));
   wrap.appendChild(rt);
+  const rt2 = el(`<div class="panel"><div class="panel-head"><h2>${esc(player(rivalId)?.name || 'Avversario')} in dettaglio</h2></div><div class="panel-body" style="padding:0;"><div class="table-scroll"></div></div></div>`);
+  rt2.querySelector('.table-scroll').appendChild(rosterTable(rivalChips));
+  wrap.appendChild(rt2);
 
   const back = el(`<button class="btn btn-primary" style="width:100%;">Torna alle sfide</button>`);
   back.onclick = () => { D.screen = 'menu'; D.squad = []; render(); };
@@ -3129,6 +3218,485 @@ function rollRevealD(){
     clubEl.innerHTML = `${esc(s.c)} <span class="yr">${s.y}</span>`;
     if(++n > 9){ clearInterval(t); clubEl.innerHTML = real; box.classList.remove('rolling'); }
   }, 55);
+}
+
+
+/* =========================================================================
+   22. INDOVINA IL CALCIATORE — SFIDA 1V1
+   -------------------------------------------------------------------------
+   Due partecipanti, lo stesso calciatore misterioso, dieci mosse a testa:
+   vince chi lo trova in meno tentativi. Il misterioso non lo sceglie chi
+   lancia la sfida — lo estrae il seme, uguale per entrambi — altrimenti lo
+   sfidante partirebbe conoscendo già la risposta.
+   Come per l'Undici 1v1, lo storico di ogni coppia lo vedono solo i due.
+   ========================================================================= */
+const GUESS_MAX = 10;
+
+/* Archivio dei calciatori: [nome, nazione, continente, ruolo, club, campionato, anno] */
+const GUESS_DB = [
+["Gianluigi Buffon","Italia","EU","POR","Juventus","Serie A",1978],
+["Iker Casillas","Spagna","EU","POR","Real Madrid","Liga",1981],
+["Manuel Neuer","Germania","EU","POR","Bayern München","Bundesliga",1986],
+["Petr Cech","Rep. Ceca","EU","POR","Chelsea","Premier League",1982],
+["Alisson Becker","Brasile","SA","POR","Liverpool","Premier League",1992],
+["Thibaut Courtois","Belgio","EU","POR","Real Madrid","Liga",1992],
+["Ederson","Brasile","SA","POR","Manchester City","Premier League",1993],
+["Samir Handanovic","Slovenia","EU","POR","Inter","Serie A",1984],
+["Keylor Navas","Costa Rica","NA","POR","Real Madrid","Liga",1986],
+["Wojciech Szczesny","Polonia","EU","POR","Juventus","Serie A",1990],
+["Paolo Maldini","Italia","EU","DIF","Milan","Serie A",1968],
+["Alessandro Nesta","Italia","EU","DIF","Milan","Serie A",1976],
+["Fabio Cannavaro","Italia","EU","DIF","Real Madrid","Liga",1973],
+["Giorgio Chiellini","Italia","EU","DIF","Juventus","Serie A",1984],
+["Leonardo Bonucci","Italia","EU","DIF","Juventus","Serie A",1987],
+["Sergio Ramos","Spagna","EU","DIF","Real Madrid","Liga",1986],
+["Gerard Piqué","Spagna","EU","DIF","Barcelona","Liga",1987],
+["Carles Puyol","Spagna","EU","DIF","Barcelona","Liga",1978],
+["Virgil van Dijk","Olanda","EU","DIF","Liverpool","Premier League",1991],
+["Rio Ferdinand","Inghilterra","EU","DIF","Manchester United","Premier League",1978],
+["Nemanja Vidic","Serbia","EU","DIF","Manchester United","Premier League",1981],
+["John Terry","Inghilterra","EU","DIF","Chelsea","Premier League",1980],
+["Thiago Silva","Brasile","SA","DIF","Paris Saint-Germain","Ligue 1",1984],
+["Diego Godín","Uruguay","SA","DIF","Atlético Madrid","Liga",1986],
+["Mats Hummels","Germania","EU","DIF","Borussia Dortmund","Bundesliga",1988],
+["Jérôme Boateng","Germania","EU","DIF","Bayern München","Bundesliga",1988],
+["Roberto Carlos","Brasile","SA","DIF","Real Madrid","Liga",1973],
+["Cafu","Brasile","SA","DIF","Milan","Serie A",1970],
+["Dani Alves","Brasile","SA","DIF","Barcelona","Liga",1983],
+["Philipp Lahm","Germania","EU","DIF","Bayern München","Bundesliga",1983],
+["Ashley Cole","Inghilterra","EU","DIF","Chelsea","Premier League",1980],
+["Marcelo","Brasile","SA","DIF","Real Madrid","Liga",1988],
+["Jordi Alba","Spagna","EU","DIF","Barcelona","Liga",1989],
+["Andrew Robertson","Scozia","EU","DIF","Liverpool","Premier League",1994],
+["Trent Alexander-Arnold","Inghilterra","EU","DIF","Liverpool","Premier League",1998],
+["Achraf Hakimi","Marocco","AF","DIF","Paris Saint-Germain","Ligue 1",1998],
+["Alessandro Bastoni","Italia","EU","DIF","Inter","Serie A",1999],
+["Rúben Dias","Portogallo","EU","DIF","Manchester City","Premier League",1997],
+["Kalidou Koulibaly","Senegal","AF","DIF","Napoli","Serie A",1991],
+["Alphonso Davies","Canada","NA","DIF","Bayern München","Bundesliga",2000],
+["Andrea Pirlo","Italia","EU","CEN","Milan","Serie A",1979],
+["Gennaro Gattuso","Italia","EU","CEN","Milan","Serie A",1978],
+["Clarence Seedorf","Olanda","EU","CEN","Milan","Serie A",1976],
+["Xavi","Spagna","EU","CEN","Barcelona","Liga",1980],
+["Andrés Iniesta","Spagna","EU","CEN","Barcelona","Liga",1984],
+["Sergio Busquets","Spagna","EU","CEN","Barcelona","Liga",1988],
+["Luka Modric","Croazia","EU","CEN","Real Madrid","Liga",1985],
+["Toni Kroos","Germania","EU","CEN","Real Madrid","Liga",1990],
+["Casemiro","Brasile","SA","CEN","Real Madrid","Liga",1992],
+["Zinédine Zidane","Francia","EU","CEN","Real Madrid","Liga",1972],
+["Steven Gerrard","Inghilterra","EU","CEN","Liverpool","Premier League",1980],
+["Frank Lampard","Inghilterra","EU","CEN","Chelsea","Premier League",1978],
+["Paul Scholes","Inghilterra","EU","CEN","Manchester United","Premier League",1974],
+["Patrick Vieira","Francia","EU","CEN","Arsenal","Premier League",1976],
+["Claude Makelele","Francia","EU","CEN","Chelsea","Premier League",1973],
+["N'Golo Kanté","Francia","EU","CEN","Chelsea","Premier League",1991],
+["Kevin De Bruyne","Belgio","EU","CEN","Manchester City","Premier League",1991],
+["Rodri","Spagna","EU","CEN","Manchester City","Premier League",1996],
+["Bastian Schweinsteiger","Germania","EU","CEN","Bayern München","Bundesliga",1984],
+["Joshua Kimmich","Germania","EU","CEN","Bayern München","Bundesliga",1995],
+["Marco Verratti","Italia","EU","CEN","Paris Saint-Germain","Ligue 1",1992],
+["Paul Pogba","Francia","EU","CEN","Juventus","Serie A",1993],
+["Arturo Vidal","Cile","SA","CEN","Juventus","Serie A",1987],
+["Nicolò Barella","Italia","EU","CEN","Inter","Serie A",1997],
+["Marcelo Brozovic","Croazia","EU","CEN","Inter","Serie A",1992],
+["Frenkie de Jong","Olanda","EU","CEN","Barcelona","Liga",1997],
+["Jude Bellingham","Inghilterra","EU","CEN","Real Madrid","Liga",2003],
+["Federico Valverde","Uruguay","SA","CEN","Real Madrid","Liga",1998],
+["Florian Wirtz","Germania","EU","CEN","Bayer Leverkusen","Bundesliga",2003],
+["Deco","Portogallo","EU","CEN","Barcelona","Liga",1977],
+["Francesco Totti","Italia","EU","ATT","Roma","Serie A",1976],
+["Alessandro Del Piero","Italia","EU","ATT","Juventus","Serie A",1974],
+["Roberto Baggio","Italia","EU","ATT","Brescia","Serie A",1967],
+["Filippo Inzaghi","Italia","EU","ATT","Milan","Serie A",1973],
+["Andriy Shevchenko","Ucraina","EU","ATT","Milan","Serie A",1976],
+["Gabriel Batistuta","Argentina","SA","ATT","Fiorentina","Serie A",1969],
+["Ronaldo","Brasile","SA","ATT","Real Madrid","Liga",1976],
+["Ronaldinho","Brasile","SA","ATT","Barcelona","Liga",1980],
+["Kaká","Brasile","SA","ATT","Milan","Serie A",1982],
+["Lionel Messi","Argentina","SA","ATT","Barcelona","Liga",1987],
+["Cristiano Ronaldo","Portogallo","EU","ATT","Real Madrid","Liga",1985],
+["Luis Suárez","Uruguay","SA","ATT","Barcelona","Liga",1987],
+["Neymar","Brasile","SA","ATT","Paris Saint-Germain","Ligue 1",1992],
+["Kylian Mbappé","Francia","EU","ATT","Paris Saint-Germain","Ligue 1",1998],
+["Erling Haaland","Norvegia","EU","ATT","Manchester City","Premier League",2000],
+["Robert Lewandowski","Polonia","EU","ATT","Bayern München","Bundesliga",1988],
+["Thierry Henry","Francia","EU","ATT","Arsenal","Premier League",1977],
+["Dennis Bergkamp","Olanda","EU","ATT","Arsenal","Premier League",1969],
+["Didier Drogba","Costa d'Avorio","AF","ATT","Chelsea","Premier League",1978],
+["Wayne Rooney","Inghilterra","EU","ATT","Manchester United","Premier League",1985],
+["Samuel Eto'o","Camerun","AF","ATT","Barcelona","Liga",1981],
+["Diego Milito","Argentina","SA","ATT","Inter","Serie A",1979],
+["Zlatan Ibrahimovic","Svezia","EU","ATT","Milan","Serie A",1981],
+["Raúl","Spagna","EU","ATT","Real Madrid","Liga",1977],
+["David Villa","Spagna","EU","ATT","Barcelona","Liga",1981],
+["Fernando Torres","Spagna","EU","ATT","Liverpool","Premier League",1984],
+["Sergio Agüero","Argentina","SA","ATT","Manchester City","Premier League",1988],
+["Mohamed Salah","Egitto","AF","ATT","Liverpool","Premier League",1992],
+["Sadio Mané","Senegal","AF","ATT","Liverpool","Premier League",1992],
+["Harry Kane","Inghilterra","EU","ATT","Tottenham","Premier League",1993],
+["Son Heung-min","Corea del Sud","AS","ATT","Tottenham","Premier League",1992],
+["Karim Benzema","Francia","EU","ATT","Real Madrid","Liga",1987],
+["Antoine Griezmann","Francia","EU","ATT","Atlético Madrid","Liga",1991],
+["Arjen Robben","Olanda","EU","ATT","Bayern München","Bundesliga",1984],
+["Franck Ribéry","Francia","EU","ATT","Bayern München","Bundesliga",1983],
+["Thomas Müller","Germania","EU","ATT","Bayern München","Bundesliga",1989],
+["Marco Reus","Germania","EU","ATT","Borussia Dortmund","Bundesliga",1989],
+["Luis Figo","Portogallo","EU","ATT","Real Madrid","Liga",1972],
+["Pavel Nedved","Rep. Ceca","EU","ATT","Juventus","Serie A",1972],
+["Alexis Sánchez","Cile","SA","ATT","Inter","Serie A",1988],
+["Romelu Lukaku","Belgio","EU","ATT","Inter","Serie A",1993],
+["Lautaro Martínez","Argentina","SA","ATT","Inter","Serie A",1997],
+["Victor Osimhen","Nigeria","AF","ATT","Napoli","Serie A",1998],
+["Khvicha Kvaratskhelia","Georgia","EU","ATT","Napoli","Serie A",2001],
+["Vinícius Júnior","Brasile","SA","ATT","Real Madrid","Liga",2000],
+["Riyad Mahrez","Algeria","AF","ATT","Leicester","Premier League",1991],
+["Jamie Vardy","Inghilterra","EU","ATT","Leicester","Premier League",1987],
+["Edinson Cavani","Uruguay","SA","ATT","Paris Saint-Germain","Ligue 1",1987],
+["Radamel Falcao","Colombia","SA","ATT","Monaco","Ligue 1",1986],
+["Hakan Sükür","Turchia","EU","ATT","Galatasaray","Altro",1971]
+];
+const guessByName = n => GUESS_DB.find(p => slug(p[0]) === slug(n)) || null;
+const ROLE_LONG = { POR:'Portiere', DIF:'Difensore', CEN:'Centrocampista', ATT:'Attaccante' };
+
+/* Il misterioso esce dal seme: uguale per i due sfidanti, ignoto a entrambi
+   quando lanciano la sfida. */
+function answerForSeed(seed){
+  return GUESS_DB[Math.floor(duelRng(hashSeed('gd:' + seed))() * GUESS_DB.length)];
+}
+
+/* Riscontro alla Wordle: verde uguale, ambra vicino, grigio no. */
+function guessFeedback(g, target){
+  return [
+    { label:'Nazione', value:g[1], state: g[1] === target[1] ? 'ok' : (g[2] === target[2] ? 'near' : 'no'),
+      hint: g[1] === target[1] ? '' : (g[2] === target[2] ? 'stesso continente' : '') },
+    { label:'Ruolo', value:ROLE_LONG[g[3]], state: g[3] === target[3] ? 'ok' : 'no', hint:'' },
+    { label:'Club', value:g[4], state: g[4] === target[4] ? 'ok' : (g[5] === target[5] ? 'near' : 'no'),
+      hint: g[4] === target[4] ? '' : (g[5] === target[5] ? 'stesso campionato' : '') },
+    { label:'Nato nel', value:String(g[6]),
+      state: g[6] === target[6] ? 'ok' : (Math.abs(g[6] - target[6]) <= 3 ? 'near' : 'no'),
+      hint: g[6] === target[6] ? '' : (g[6] > target[6] ? '↑ il misterioso è più vecchio' : '↓ il misterioso è più giovane') }
+  ];
+}
+
+K.gduel = id => 'gduel-' + id;
+
+async function loadGuessDuels(){
+  S.gduels = {};
+  (await Store.list('gduel-')).forEach(({ key, value }) => { S.gduels[key.slice('gduel-'.length)] = value; });
+}
+const myGDuels = () => {
+  const me = myPlayer();
+  if(!me) return [];
+  return Object.values(S.gduels || {}).filter(d => d.challengerId === me.id || d.opponentId === me.id);
+};
+const gPendingForMe = () => { const me = myPlayer(); return me ? myGDuels().filter(d => d.status === 'pending' && d.opponentId === me.id) : []; };
+const gWaitingMine  = () => { const me = myPlayer(); return me ? myGDuels().filter(d => d.status === 'pending' && d.challengerId === me.id) : []; };
+const gDoneMine     = () => myGDuels().filter(d => d.status === 'done');
+function gRivalOf(d){ const me = myPlayer(); return me && d.challengerId === me.id ? d.opponentId : d.challengerId; }
+function gOpponentGroups(){
+  const map = {};
+  gDoneMine().forEach(d => { const r = gRivalOf(d); (map[r] = map[r] || []).push(d); });
+  Object.values(map).forEach(arr => arr.sort((a,b) => new Date(b.completedAt) - new Date(a.completedAt)));
+  return map;
+}
+/* Chi non trova il calciatore conta come peggiore di chiunque l'abbia trovato. */
+const gMoves = (solved, guesses) => solved ? guesses.length : GUESS_MAX + 1;
+const gLabel = (solved, n) => solved ? n + (n === 1 ? ' mossa' : ' mosse') : 'non trovato';
+
+/* Stato della sfida in corso su questo dispositivo. */
+const GD = { screen:'menu', duelId:null, opponentId:null, role:null, seed:null, guesses:[], solved:false };
+
+function startGuessDuel(opponentId){
+  GD.opponentId = opponentId; GD.role = 'challenger'; GD.duelId = null;
+  GD.seed = generateCode(); GD.guesses = []; GD.solved = false; GD.screen = 'play';
+}
+function respondGuessDuel(rec){
+  GD.opponentId = rec.challengerId; GD.role = 'opponent'; GD.duelId = rec.id;
+  GD.seed = rec.seed; GD.guesses = []; GD.solved = false; GD.screen = 'play';
+}
+const gTarget = () => answerForSeed(GD.seed);
+const gOver = () => GD.solved || GD.guesses.length >= GUESS_MAX;
+
+async function finalizeGuessChallenger(){
+  const rec = {
+    id: randomHex(6), challengerId: myPlayer().id, opponentId: GD.opponentId, seed: GD.seed,
+    status: 'pending',
+    challengerGuesses: GD.guesses.slice(), challengerSolved: GD.solved,
+    opponentGuesses: null, opponentSolved: null, winnerId: null,
+    createdAt: new Date().toISOString(), completedAt: null
+  };
+  await Store.set(K.gduel(rec.id), rec);
+  S.gduels[rec.id] = rec; GD.duelId = rec.id; GD.screen = 'sent'; render();
+}
+async function finalizeGuessOpponent(){
+  const rec = S.gduels[GD.duelId];
+  if(!rec){ toast('Sfida non trovata: forse è stata ritirata.', 'err'); GD.screen = 'menu'; render(); return; }
+  rec.opponentGuesses = GD.guesses.slice(); rec.opponentSolved = GD.solved;
+  rec.status = 'done'; rec.completedAt = new Date().toISOString();
+  const cm = gMoves(rec.challengerSolved, rec.challengerGuesses);
+  const om = gMoves(rec.opponentSolved, rec.opponentGuesses);
+  rec.winnerId = cm === om ? null : (cm < om ? rec.challengerId : rec.opponentId);
+  await Store.set(K.gduel(rec.id), rec);
+  S.gduels[rec.id] = rec; GD.screen = 'result'; render();
+}
+async function submitGuess(name){
+  const target = gTarget();
+  const gp = guessByName(name);
+  if(!gp){ toast("Calciatore non presente nell'archivio: scegline uno dall'elenco.", 'err'); return; }
+  if(GD.guesses.some(x => slug(x) === slug(gp[0]))){ toast('Hai già provato con questo nome.', 'err'); return; }
+  GD.guesses.push(gp[0]);
+  if(slug(gp[0]) === slug(target[0])) GD.solved = true;
+  if(gOver()){
+    GD.role === 'challenger' ? await finalizeGuessChallenger() : await finalizeGuessOpponent();
+    return;
+  }
+  toast('Non è lui: guarda gli indizi.', '');
+  render();
+}
+async function declineGuessDuel(rec){
+  if(!await confirmBox('Rifiuto la sfida di ' + (player(rec.challengerId)?.name || '?') + '. Non potrà più essere accettata.')) return;
+  await Store.del(K.gduel(rec.id)); delete S.gduels[rec.id]; toast('Sfida rifiutata.', ''); render();
+}
+
+/* ---- tabella dei tentativi, riusata in partita e nel confronto finale ---- */
+function guessTable(guesses, target){
+  const t = el(`<div class="table-scroll"><table>
+    <thead><tr><th>#</th><th>Tentativo</th><th>Nazione</th><th>Ruolo</th><th>Club</th><th>Nato nel</th></tr></thead>
+    <tbody></tbody></table></div>`);
+  const tb = t.querySelector('tbody');
+  guesses.forEach((gn, i) => {
+    const gp = guessByName(gn);
+    if(!gp) return;
+    const fb = guessFeedback(gp, target);
+    const cell = f => `<td><span class="tag ${f.state === 'ok' ? 'ok' : f.state === 'near' ? 'pending' : 'ko'}">${esc(f.value)}</span>${f.hint ? `<div class="p-sub">${esc(f.hint)}</div>` : ''}</td>`;
+    tb.appendChild(el(`<tr><td class="num">${i+1}</td><td><strong>${esc(gn)}</strong></td>${fb.map(cell).join('')}</tr>`));
+  });
+  return t;
+}
+
+/* ---- schermata: menu delle sfide ---- */
+function viewGuessMenu(){
+  const wrap = el(`<div class="stack"></div>`);
+  const me = myPlayer();
+  if(!me){
+    wrap.appendChild(el(`<div class="empty">Il tuo account non è collegato a nessun partecipante: chiedi all'organizzatore di collegarlo.</div>`));
+    return wrap;
+  }
+  wrap.appendChild(el(`<div class="banner">Stesso calciatore misterioso per tutti e due, <strong>${GUESS_MAX} mosse</strong> a testa: vince chi lo scopre in meno tentativi. Il misterioso lo estrae la sfida, non lo sceglie chi la lancia. Lo storico fra te e ogni avversario lo vedete solo voi due.</div>`));
+
+  const toRespond = gPendingForMe();
+  if(toRespond.length){
+    const p = el(`<div class="panel"><div class="panel-head"><h2>Sfide da rispondere</h2><span class="eyebrow">${toRespond.length}</span></div><div class="panel-body"><div class="board"></div></div></div>`);
+    const board = p.querySelector('.board');
+    toRespond.forEach(rec => {
+      const row = el(`<div class="req pending">
+        <div><div class="p-name">${esc(player(rec.challengerId)?.name || '?')}</div>
+          <div class="p-sub">ti sfida · ${fmtDate(rec.createdAt)}</div></div>
+        <div><span class="tag pending">tocca a te</span></div>
+        <div class="p-actions"></div></div>`);
+      const acts = row.querySelector('.p-actions');
+      const go = el(`<button class="btn btn-sm btn-primary">Gioca</button>`);
+      go.onclick = () => { respondGuessDuel(rec); render(); };
+      const no = el(`<button class="btn btn-sm btn-ghost">Rifiuta</button>`);
+      no.onclick = () => declineGuessDuel(rec);
+      acts.append(go, no);
+      board.appendChild(row);
+    });
+    wrap.appendChild(p);
+  }
+
+  const waiting = gWaitingMine();
+  if(waiting.length){
+    const p = el(`<div class="panel"><div class="panel-head"><h2>In attesa dell'avversario</h2></div><div class="panel-body"><div class="board"></div></div></div>`);
+    const board = p.querySelector('.board');
+    waiting.forEach(rec => {
+      board.appendChild(el(`<div class="req pending">
+        <div><div class="p-name">${esc(player(rec.opponentId)?.name || '?')}</div>
+          <div class="p-sub">inviata ${fmtDate(rec.createdAt)}</div></div>
+        <div><span class="tag mute">tu: ${esc(gLabel(rec.challengerSolved, rec.challengerGuesses.length))}</span></div>
+        <div></div></div>`));
+    });
+    wrap.appendChild(p);
+  }
+
+  const all = (S.core.players || []).filter(p => p.id !== me.id);
+  const avail = all.filter(p => S.claims[p.id]);
+  const noAcc = all.filter(p => !S.claims[p.id]);
+  const start = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Sfida un avversario</h2></div>
+      <div class="panel-body">
+        ${all.length ? `<p class="note">Scegli chi sfidare: parti subito tu, poi tocca a lui sullo stesso misterioso.</p>
+          <div class="opp-grid" id="g-opp"></div>
+          ${noAcc.length ? `<p class="note-dim">${noAcc.map(p => esc(p.name)).join(', ')} ${noAcc.length === 1 ? 'non ha' : 'non hanno'} ancora un accesso.</p>` : ''}
+          <button class="btn btn-primary" id="g-go" style="width:100%;" disabled>Scegli un avversario</button>`
+          : `<div class="empty">Non ci sono altri partecipanti nella lega.</div>`}
+      </div>
+    </div>`);
+  if(all.length){
+    let chosen = null;
+    const grid = start.querySelector('#g-opp');
+    const btn = start.querySelector('#g-go');
+    avail.forEach(p => {
+      const b = el(`<button class="opp-card"><span class="av">${esc(p.name.trim()[0] || '?')}</span>${esc(p.name)}</button>`);
+      b.onclick = () => {
+        chosen = p.id;
+        grid.querySelectorAll('.opp-card').forEach(x => x.classList.toggle('on', x === b));
+        btn.disabled = false; btn.textContent = 'Sfida ' + p.name;
+      };
+      grid.appendChild(b);
+    });
+    noAcc.forEach(p => grid.appendChild(el(`<button class="opp-card" disabled>
+      <span class="av">${esc(p.name.trim()[0] || '?')}</span>${esc(p.name)}
+      <span class="tag mute" style="margin-left:auto;">no accesso</span></button>`)));
+    btn.onclick = () => { if(chosen){ startGuessDuel(chosen); render(); } };
+  }
+  wrap.appendChild(start);
+
+  const groups = gOpponentGroups();
+  const rivals = Object.keys(groups);
+  if(rivals.length){
+    const hist = el(`<div class="panel"><div class="panel-head"><h2>Storico degli scontri</h2></div><div class="panel-body"></div></div>`);
+    const body = hist.querySelector('.panel-body');
+    rivals.sort((a,b) => (player(a)?.name || '').localeCompare(player(b)?.name || '')).forEach(rid => {
+      const list = groups[rid];
+      let w = 0, dr = 0, l = 0;
+      list.forEach(d => { if(!d.winnerId) dr++; else if(d.winnerId === me.id) w++; else l++; });
+      const det = el(`<details class="mini-hist"><summary>${esc(player(rid)?.name || '?')} — ${w}V ${dr}P ${l}S</summary></details>`);
+      const tbl = el(`<table><thead><tr><th>Data</th><th>Misterioso</th><th>Tu</th><th>Lui/Lei</th><th style="text-align:right;">Esito</th><th></th></tr></thead>
+        <tbody>${list.map(d => {
+          const iAmCh = d.challengerId === me.id;
+          const mine = iAmCh ? gLabel(d.challengerSolved, d.challengerGuesses.length) : gLabel(d.opponentSolved, d.opponentGuesses.length);
+          const his  = iAmCh ? gLabel(d.opponentSolved, d.opponentGuesses.length) : gLabel(d.challengerSolved, d.challengerGuesses.length);
+          const out = !d.winnerId ? '<span class="tag mute">pareggio</span>' : d.winnerId === me.id ? '<span class="tag ok">vinta</span>' : '<span class="tag ko">persa</span>';
+          return `<tr data-id="${esc(d.id)}"><td class="num">${fmtDate(d.completedAt)}</td>
+            <td>${esc(answerForSeed(d.seed)[0])}</td><td class="num">${mine}</td><td class="num">${his}</td>
+            <td style="text-align:right;">${out}</td>
+            <td style="text-align:right;"><button class="btn btn-sm btn-ghost" data-view>Vedi i tentativi</button></td></tr>`;
+        }).join('')}</tbody></table>`);
+      tbl.querySelectorAll('[data-view]').forEach(btn => {
+        const id = btn.closest('tr').dataset.id;
+        btn.onclick = () => { GD.duelId = id; GD.screen = 'result'; render(); };
+      });
+      det.appendChild(tbl);
+      body.appendChild(det);
+    });
+    wrap.appendChild(hist);
+  }
+  return wrap;
+}
+
+/* ---- schermata: la partita ---- */
+function viewGuessPlay(){
+  const wrap = el(`<div class="stack"></div>`);
+  const target = gTarget();
+  const left = GUESS_MAX - GD.guesses.length;
+  const rival = player(GD.opponentId)?.name || '?';
+
+  const panel = el(`
+    <div class="panel">
+      <div class="panel-head">
+        <div><span class="eyebrow">sfida contro ${esc(rival)}</span><h2>Chi è il misterioso?</h2></div>
+        <span class="pill ${left <= 3 ? 'pink' : ''}">${left} moss${left === 1 ? 'a' : 'e'} rimast${left === 1 ? 'a' : 'e'}</span>
+      </div>
+      <div class="panel-body"></div>
+    </div>`);
+  const body = panel.querySelector('.panel-body');
+
+  if(GD.role === 'opponent'){
+    const rec = S.gduels[GD.duelId];
+    if(rec) body.appendChild(el(`<div class="banner">${esc(rival)} ha chiuso con <strong>${esc(gLabel(rec.challengerSolved, rec.challengerGuesses.length))}</strong>: devi fare meglio.</div>`));
+  }
+
+  if(GD.guesses.length) body.appendChild(guessTable(GD.guesses, target));
+  else body.appendChild(el(`<p class="note">Nessun tentativo ancora. Ogni nome che provi ti dice quanto sei vicino su nazione, ruolo, club e anno di nascita.</p>`));
+
+  const already = new Set(GD.guesses.map(slug));
+  const box = el(`
+    <div>
+      <label class="field"><span>Tentativo ${GD.guesses.length + 1} di ${GUESS_MAX}</span>
+        <input type="text" id="gi" list="g-list" placeholder="scrivi un nome" autocomplete="off"></label>
+      <datalist id="g-list">${GUESS_DB.filter(x => !already.has(slug(x[0]))).map(x => `<option value="${esc(x[0])}">`).join('')}</datalist>
+      <button class="btn btn-primary" id="gg" style="width:100%; margin-top:10px;">Prova</button>
+    </div>`);
+  const go = () => submitGuess(box.querySelector('#gi').value.trim());
+  box.querySelector('#gg').onclick = go;
+  box.querySelector('#gi').onkeydown = e => { if(e.key === 'Enter') go(); };
+  body.appendChild(box);
+  wrap.appendChild(panel);
+
+  const ab = el(`<div class="btn-row"><button class="btn btn-ghost">Abbandona la sfida</button></div>`);
+  ab.querySelector('button').onclick = async () => {
+    if(!await confirmBox('Abbandoni? I tentativi fatti finora vanno persi.')) return;
+    GD.screen = 'menu'; GD.guesses = []; GD.solved = false; render();
+  };
+  wrap.appendChild(ab);
+  return wrap;
+}
+
+/* ---- schermata: sfida inviata ---- */
+function viewGuessSent(){
+  const wrap = el(`<div class="stack"></div>`);
+  wrap.appendChild(el(`<div class="panel"><div class="panel-body" style="text-align:center; padding:32px 20px;">
+    <h2 style="font-size:1.4rem;">${GD.solved ? 'Trovato' : 'Mosse finite'}</h2>
+    <p class="note" style="margin-top:8px;">Hai chiuso con <strong class="mono" style="color:var(--amber);">${esc(gLabel(GD.solved, GD.guesses.length))}</strong>.
+      Saprai il risultato quando ${esc(player(GD.opponentId)?.name || 'il tuo avversario')} avrà giocato: fino ad allora il misterioso resta segreto.</p>
+    <button class="btn btn-primary" id="back" style="margin-top:16px;">Torna alle sfide</button>
+  </div></div>`));
+  wrap.querySelector('#back').onclick = () => { GD.screen = 'menu'; GD.guesses = []; GD.solved = false; render(); };
+  return wrap;
+}
+
+/* ---- schermata: verdetto, riapribile da entrambi in ogni momento ---- */
+function viewGuessResult(){
+  const wrap = el(`<div class="stack"></div>`);
+  const rec = S.gduels[GD.duelId];
+  const me = myPlayer();
+  if(!rec){
+    wrap.appendChild(el(`<div class="empty">Sfida non trovata.</div>`));
+    const b = el(`<button class="btn btn-primary" style="width:100%;">Torna alle sfide</button>`);
+    b.onclick = () => { GD.screen = 'menu'; render(); };
+    wrap.appendChild(b);
+    return wrap;
+  }
+  const iAmCh = rec.challengerId === me.id;
+  const rivalId = iAmCh ? rec.opponentId : rec.challengerId;
+  const target = answerForSeed(rec.seed);
+  const mineG = iAmCh ? rec.challengerGuesses : rec.opponentGuesses;
+  const mineS = iAmCh ? rec.challengerSolved  : rec.opponentSolved;
+  const hisG  = iAmCh ? rec.opponentGuesses   : rec.challengerGuesses;
+  const hisS  = iAmCh ? rec.opponentSolved    : rec.challengerSolved;
+  const outcome = !rec.winnerId ? 'pareggio' : rec.winnerId === me.id ? 'hai vinto' : 'hai perso';
+  const cls = !rec.winnerId ? 'mute' : rec.winnerId === me.id ? 'ok' : 'ko';
+
+  wrap.appendChild(el(`<div class="panel"><div class="panel-body" style="text-align:center; padding:28px 20px;">
+    <span class="tag ${cls}" style="font-size:0.8rem; padding:6px 14px;">${outcome}</span>
+    <h2 style="font-size:1.6rem; margin-top:10px;">${esc(gLabel(mineS, mineG.length))} — ${esc(gLabel(hisS, hisG.length))}</h2>
+    <p class="note">contro ${esc(player(rivalId)?.name || '?')}</p>
+    <p class="note" style="margin-top:10px;">Il misterioso era <strong style="color:var(--amber);">${esc(target[0])}</strong>
+      — ${esc(target[1])}, ${esc(ROLE_LONG[target[3]])}, ${esc(target[4])}, ${target[6]}.</p>
+  </div></div>`));
+
+  const two = el(`<div class="grid-2"></div>`);
+  [ ['I tuoi tentativi', mineG], [esc(player(rivalId)?.name || 'Avversario') + ' — i suoi tentativi', hisG] ]
+    .forEach(([title, gs]) => {
+      const p = el(`<div class="panel"><div class="panel-head"><h2>${title}</h2></div><div class="panel-body" style="padding:0;"></div></div>`);
+      p.querySelector('.panel-body').appendChild(gs.length ? guessTable(gs, target) : el(`<div class="empty">Nessun tentativo.</div>`));
+      two.appendChild(p);
+    });
+  wrap.appendChild(two);
+
+  const back = el(`<button class="btn btn-primary" style="width:100%;">Torna alle sfide</button>`);
+  back.onclick = () => { GD.screen = 'menu'; GD.guesses = []; GD.solved = false; render(); };
+  wrap.appendChild(back);
+  return wrap;
+}
+
+function viewGuessRoot(){
+  if(GD.screen === 'play')   return viewGuessPlay();
+  if(GD.screen === 'sent')   return viewGuessSent();
+  if(GD.screen === 'result') return viewGuessResult();
+  return viewGuessMenu();
 }
 
 /* =========================================================================
@@ -3161,13 +3729,14 @@ function renderWho(){
 function tabsFor(){
   const mine = myPlayer() ? [{ k:'mine', l:'I miei pronostici' }] : [];
   const duel = myPlayer() ? [{ k:'duel', l:'Undici 1v1', c: pendingForMe().length }] : [];
+  const guess = myPlayer() ? [{ k:'indovina', l:'Indovina 1v1', c: gPendingForMe().length }] : [];
   if(isAdmin()){
-    return [...mine, ...duel,
+    return [...mine, ...duel, ...guess,
             { k:'requests', l:'Richieste', c: totalPending() }, { k:'results', l:'Esiti' },
             { k:'board', l:'Classifiche' }, { k:'calendar', l:'Calendario' }, { k:'players', l:'Partecipanti' },
             { k:'excel', l:'File Excel' }, { k:'settings', l:'Impostazioni' }];
   }
-  return [...mine, ...duel, { k:'board', l:'Classifiche' }, { k:'calendar', l:'Calendario' }, { k:'settings', l:'Impostazioni' }];
+  return [...mine, ...duel, ...guess, { k:'board', l:'Classifiche' }, { k:'calendar', l:'Calendario' }, { k:'settings', l:'Impostazioni' }];
 }
 function render(reveal){
   renderWho();
@@ -3206,9 +3775,10 @@ function render(reveal){
     return;
   }
 
-  if(isAdmin() && !empty && S.tab !== 'settings' && S.tab !== 'duel') app.appendChild(scoreboard());
+  if(isAdmin() && !empty && !['settings','duel','indovina'].includes(S.tab)) app.appendChild(scoreboard());
 
-  const views = { mine: viewMine, duel: viewDuelRoot, requests: viewRequests, results: viewResults,
+  const views = { mine: viewMine, duel: viewDuelRoot, indovina: viewGuessRoot,
+                  requests: viewRequests, results: viewResults,
                   board: viewBoard, calendar: viewCalendar, players: viewPlayers, excel: viewExcel, settings: viewSettings };
   app.appendChild((views[S.tab] || viewMine)());
   if(reveal && S.tab === 'duel' && D.screen === 'draft') rollRevealD();
@@ -3223,10 +3793,14 @@ async function boot(){
     await loadUsers();
     await loadClaims();
     await restoreSession();
+    const fixed = await reconcileClaims();
+    if(fixed) toast(fixed + ' collegamenti fra partecipanti e accessi ripristinati.', 'ok');
+    await ensureMyClaim();
     await loadCore();
     await loadGames();
     await loadRound();
     await loadDuels();
+    await loadGuessDuels();
   }catch(e){
     S.offline = true;
     toast('Archivio non raggiungibile: ' + e.message, 'err');
