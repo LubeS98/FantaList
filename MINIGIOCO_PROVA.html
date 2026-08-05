@@ -476,6 +476,35 @@ details.mini-hist[open]>summary::before{content:'\25BE ';}
 .opp-card .av{width:30px; height:30px; border-radius:50%; background:rgba(255,182,39,0.14); color:var(--amber);
   display:flex; align-items:center; justify-content:center; font-family:'Anton',sans-serif; font-size:0.85rem;
   flex:none; text-transform:uppercase;}
+
+/* ---------- INDOVINA: GRIGLIA A COLONNE ---------- */
+.gg-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:4px;}
+.gg-row{display:grid; grid-template-columns:150px repeat(7,minmax(96px,1fr)); gap:4px; min-width:760px; margin-bottom:4px;}
+.gg-head .gg-cell{background:transparent; border:none; font-family:'Space Mono',monospace; font-size:0.6rem;
+  letter-spacing:0.1em; text-transform:uppercase; color:var(--chalk-mute); padding:2px 6px; min-height:0;}
+.gg-cell{display:flex; flex-direction:column; justify-content:center; gap:2px; padding:8px 9px;
+  border-radius:var(--radius-sm); background:rgba(8,31,24,0.55); border:1px solid var(--line);
+  font-size:0.76rem; min-height:46px; text-align:center; align-items:center;}
+.gg-name{flex-direction:row; gap:8px; justify-content:flex-start; text-align:left; font-weight:600; font-size:0.84rem;}
+.gg-name .gg-n{font-family:'Space Mono',monospace; font-size:0.64rem; color:var(--chalk-mute); flex:none;}
+.gg-v{line-height:1.15;}
+.gg-arrow{font-weight:700;}
+.gg-h{font-family:'Space Mono',monospace; font-size:0.55rem; color:var(--chalk-mute); line-height:1.1;}
+.gg-ok{background:rgba(87,201,138,0.18); border-color:rgba(87,201,138,0.55); color:#CFF3E0;}
+.gg-near{background:rgba(255,182,39,0.16); border-color:rgba(255,182,39,0.5); color:var(--amber-soft);}
+.gg-no{opacity:0.62;}
+
+/* ---------- RICERCA CON SUGGERIMENTI ---------- */
+.sugg{display:flex; flex-direction:column; gap:4px; margin-top:8px;}
+.sugg-item{display:flex; align-items:baseline; gap:9px; text-align:left; padding:10px 13px;
+  background:rgba(8,31,24,0.55); border:1px solid var(--line); color:var(--chalk);
+  border-radius:var(--radius-sm); font-size:0.88rem;}
+.sugg-item:hover{border-color:var(--amber); background:rgba(255,182,39,0.07); transform:translateX(2px);}
+.sugg-sub{font-family:'Space Mono',monospace; font-size:0.64rem; color:var(--chalk-mute); margin-left:auto; text-align:right;}
+@media (max-width:820px){
+  .gg-row{grid-template-columns:128px repeat(7,minmax(84px,1fr)); min-width:700px;}
+  .gg-cell{font-size:0.7rem; padding:7px;}
+}
 </style>
 </head>
 <body>
@@ -787,6 +816,7 @@ function emptyCore(){
     fileName: null,
     originalB64: null,
     sheetNames: {},        // gameKey -> nome del foglio da cui è stato letto
+    guessDb: [],           // archivio calciatori per Indovina, se importato
     calendar: DEFAULT_CALENDAR.slice()   // [{round, home, away}] — calendario Serie A
   };
 }
@@ -1280,7 +1310,7 @@ function logout(){
   localStorage.removeItem(SESSION_KEY);
   S.me = null; S.tab = null;
   D.screen = 'menu'; D.squad = [];
-  GD.screen = 'menu'; GD.guesses = []; GD.solved = false;
+  GD.screen = 'menu'; GD.guesses = []; GD.solved = false; GD.sugg = [];
   render();
 }
 async function changePassword(username, newPassword){
@@ -3224,157 +3254,223 @@ function rollRevealD(){
 /* =========================================================================
    22. INDOVINA IL CALCIATORE — SFIDA 1V1
    -------------------------------------------------------------------------
-   Due partecipanti, lo stesso calciatore misterioso, dieci mosse a testa:
-   vince chi lo trova in meno tentativi. Il misterioso non lo sceglie chi
-   lancia la sfida — lo estrae il seme, uguale per entrambi — altrimenti lo
-   sfidante partirebbe conoscendo già la risposta.
-   Come per l'Undici 1v1, lo storico di ogni coppia lo vedono solo i due.
+   Struttura ripresa dal "Who am I?" di Transfermarkt: si tira a indovinare
+   un calciatore e ogni tentativo restituisce il confronto su sette dati —
+   nazionalità, campionato, club, ruolo, età, numero di maglia e valore di
+   mercato. Verde uguale, ambra vicino, grigio lontano; sui numeri anche la
+   freccia che dice da che parte andare.
+   Qui però è una sfida fra due: stesso misterioso, dieci mosse a testa,
+   vince chi ci arriva prima. Il misterioso lo estrae il seme della sfida,
+   non chi la lancia, che altrimenti partirebbe conoscendo la risposta.
    ========================================================================= */
 const GUESS_MAX = 10;
 
-/* Archivio dei calciatori: [nome, nazione, continente, ruolo, club, campionato, anno] */
-const GUESS_DB = [
-["Gianluigi Buffon","Italia","EU","POR","Juventus","Serie A",1978],
-["Iker Casillas","Spagna","EU","POR","Real Madrid","Liga",1981],
-["Manuel Neuer","Germania","EU","POR","Bayern München","Bundesliga",1986],
-["Petr Cech","Rep. Ceca","EU","POR","Chelsea","Premier League",1982],
-["Alisson Becker","Brasile","SA","POR","Liverpool","Premier League",1992],
-["Thibaut Courtois","Belgio","EU","POR","Real Madrid","Liga",1992],
-["Ederson","Brasile","SA","POR","Manchester City","Premier League",1993],
-["Samir Handanovic","Slovenia","EU","POR","Inter","Serie A",1984],
-["Keylor Navas","Costa Rica","NA","POR","Real Madrid","Liga",1986],
-["Wojciech Szczesny","Polonia","EU","POR","Juventus","Serie A",1990],
-["Paolo Maldini","Italia","EU","DIF","Milan","Serie A",1968],
-["Alessandro Nesta","Italia","EU","DIF","Milan","Serie A",1976],
-["Fabio Cannavaro","Italia","EU","DIF","Real Madrid","Liga",1973],
-["Giorgio Chiellini","Italia","EU","DIF","Juventus","Serie A",1984],
-["Leonardo Bonucci","Italia","EU","DIF","Juventus","Serie A",1987],
-["Sergio Ramos","Spagna","EU","DIF","Real Madrid","Liga",1986],
-["Gerard Piqué","Spagna","EU","DIF","Barcelona","Liga",1987],
-["Carles Puyol","Spagna","EU","DIF","Barcelona","Liga",1978],
-["Virgil van Dijk","Olanda","EU","DIF","Liverpool","Premier League",1991],
-["Rio Ferdinand","Inghilterra","EU","DIF","Manchester United","Premier League",1978],
-["Nemanja Vidic","Serbia","EU","DIF","Manchester United","Premier League",1981],
-["John Terry","Inghilterra","EU","DIF","Chelsea","Premier League",1980],
-["Thiago Silva","Brasile","SA","DIF","Paris Saint-Germain","Ligue 1",1984],
-["Diego Godín","Uruguay","SA","DIF","Atlético Madrid","Liga",1986],
-["Mats Hummels","Germania","EU","DIF","Borussia Dortmund","Bundesliga",1988],
-["Jérôme Boateng","Germania","EU","DIF","Bayern München","Bundesliga",1988],
-["Roberto Carlos","Brasile","SA","DIF","Real Madrid","Liga",1973],
-["Cafu","Brasile","SA","DIF","Milan","Serie A",1970],
-["Dani Alves","Brasile","SA","DIF","Barcelona","Liga",1983],
-["Philipp Lahm","Germania","EU","DIF","Bayern München","Bundesliga",1983],
-["Ashley Cole","Inghilterra","EU","DIF","Chelsea","Premier League",1980],
-["Marcelo","Brasile","SA","DIF","Real Madrid","Liga",1988],
-["Jordi Alba","Spagna","EU","DIF","Barcelona","Liga",1989],
-["Andrew Robertson","Scozia","EU","DIF","Liverpool","Premier League",1994],
-["Trent Alexander-Arnold","Inghilterra","EU","DIF","Liverpool","Premier League",1998],
-["Achraf Hakimi","Marocco","AF","DIF","Paris Saint-Germain","Ligue 1",1998],
-["Alessandro Bastoni","Italia","EU","DIF","Inter","Serie A",1999],
-["Rúben Dias","Portogallo","EU","DIF","Manchester City","Premier League",1997],
-["Kalidou Koulibaly","Senegal","AF","DIF","Napoli","Serie A",1991],
-["Alphonso Davies","Canada","NA","DIF","Bayern München","Bundesliga",2000],
-["Andrea Pirlo","Italia","EU","CEN","Milan","Serie A",1979],
-["Gennaro Gattuso","Italia","EU","CEN","Milan","Serie A",1978],
-["Clarence Seedorf","Olanda","EU","CEN","Milan","Serie A",1976],
-["Xavi","Spagna","EU","CEN","Barcelona","Liga",1980],
-["Andrés Iniesta","Spagna","EU","CEN","Barcelona","Liga",1984],
-["Sergio Busquets","Spagna","EU","CEN","Barcelona","Liga",1988],
-["Luka Modric","Croazia","EU","CEN","Real Madrid","Liga",1985],
-["Toni Kroos","Germania","EU","CEN","Real Madrid","Liga",1990],
-["Casemiro","Brasile","SA","CEN","Real Madrid","Liga",1992],
-["Zinédine Zidane","Francia","EU","CEN","Real Madrid","Liga",1972],
-["Steven Gerrard","Inghilterra","EU","CEN","Liverpool","Premier League",1980],
-["Frank Lampard","Inghilterra","EU","CEN","Chelsea","Premier League",1978],
-["Paul Scholes","Inghilterra","EU","CEN","Manchester United","Premier League",1974],
-["Patrick Vieira","Francia","EU","CEN","Arsenal","Premier League",1976],
-["Claude Makelele","Francia","EU","CEN","Chelsea","Premier League",1973],
-["N'Golo Kanté","Francia","EU","CEN","Chelsea","Premier League",1991],
-["Kevin De Bruyne","Belgio","EU","CEN","Manchester City","Premier League",1991],
-["Rodri","Spagna","EU","CEN","Manchester City","Premier League",1996],
-["Bastian Schweinsteiger","Germania","EU","CEN","Bayern München","Bundesliga",1984],
-["Joshua Kimmich","Germania","EU","CEN","Bayern München","Bundesliga",1995],
-["Marco Verratti","Italia","EU","CEN","Paris Saint-Germain","Ligue 1",1992],
-["Paul Pogba","Francia","EU","CEN","Juventus","Serie A",1993],
-["Arturo Vidal","Cile","SA","CEN","Juventus","Serie A",1987],
-["Nicolò Barella","Italia","EU","CEN","Inter","Serie A",1997],
-["Marcelo Brozovic","Croazia","EU","CEN","Inter","Serie A",1992],
-["Frenkie de Jong","Olanda","EU","CEN","Barcelona","Liga",1997],
-["Jude Bellingham","Inghilterra","EU","CEN","Real Madrid","Liga",2003],
-["Federico Valverde","Uruguay","SA","CEN","Real Madrid","Liga",1998],
-["Florian Wirtz","Germania","EU","CEN","Bayer Leverkusen","Bundesliga",2003],
-["Deco","Portogallo","EU","CEN","Barcelona","Liga",1977],
-["Francesco Totti","Italia","EU","ATT","Roma","Serie A",1976],
-["Alessandro Del Piero","Italia","EU","ATT","Juventus","Serie A",1974],
-["Roberto Baggio","Italia","EU","ATT","Brescia","Serie A",1967],
-["Filippo Inzaghi","Italia","EU","ATT","Milan","Serie A",1973],
-["Andriy Shevchenko","Ucraina","EU","ATT","Milan","Serie A",1976],
-["Gabriel Batistuta","Argentina","SA","ATT","Fiorentina","Serie A",1969],
-["Ronaldo","Brasile","SA","ATT","Real Madrid","Liga",1976],
-["Ronaldinho","Brasile","SA","ATT","Barcelona","Liga",1980],
-["Kaká","Brasile","SA","ATT","Milan","Serie A",1982],
-["Lionel Messi","Argentina","SA","ATT","Barcelona","Liga",1987],
-["Cristiano Ronaldo","Portogallo","EU","ATT","Real Madrid","Liga",1985],
-["Luis Suárez","Uruguay","SA","ATT","Barcelona","Liga",1987],
-["Neymar","Brasile","SA","ATT","Paris Saint-Germain","Ligue 1",1992],
-["Kylian Mbappé","Francia","EU","ATT","Paris Saint-Germain","Ligue 1",1998],
-["Erling Haaland","Norvegia","EU","ATT","Manchester City","Premier League",2000],
-["Robert Lewandowski","Polonia","EU","ATT","Bayern München","Bundesliga",1988],
-["Thierry Henry","Francia","EU","ATT","Arsenal","Premier League",1977],
-["Dennis Bergkamp","Olanda","EU","ATT","Arsenal","Premier League",1969],
-["Didier Drogba","Costa d'Avorio","AF","ATT","Chelsea","Premier League",1978],
-["Wayne Rooney","Inghilterra","EU","ATT","Manchester United","Premier League",1985],
-["Samuel Eto'o","Camerun","AF","ATT","Barcelona","Liga",1981],
-["Diego Milito","Argentina","SA","ATT","Inter","Serie A",1979],
-["Zlatan Ibrahimovic","Svezia","EU","ATT","Milan","Serie A",1981],
-["Raúl","Spagna","EU","ATT","Real Madrid","Liga",1977],
-["David Villa","Spagna","EU","ATT","Barcelona","Liga",1981],
-["Fernando Torres","Spagna","EU","ATT","Liverpool","Premier League",1984],
-["Sergio Agüero","Argentina","SA","ATT","Manchester City","Premier League",1988],
-["Mohamed Salah","Egitto","AF","ATT","Liverpool","Premier League",1992],
-["Sadio Mané","Senegal","AF","ATT","Liverpool","Premier League",1992],
-["Harry Kane","Inghilterra","EU","ATT","Tottenham","Premier League",1993],
-["Son Heung-min","Corea del Sud","AS","ATT","Tottenham","Premier League",1992],
-["Karim Benzema","Francia","EU","ATT","Real Madrid","Liga",1987],
-["Antoine Griezmann","Francia","EU","ATT","Atlético Madrid","Liga",1991],
-["Arjen Robben","Olanda","EU","ATT","Bayern München","Bundesliga",1984],
-["Franck Ribéry","Francia","EU","ATT","Bayern München","Bundesliga",1983],
-["Thomas Müller","Germania","EU","ATT","Bayern München","Bundesliga",1989],
-["Marco Reus","Germania","EU","ATT","Borussia Dortmund","Bundesliga",1989],
-["Luis Figo","Portogallo","EU","ATT","Real Madrid","Liga",1972],
-["Pavel Nedved","Rep. Ceca","EU","ATT","Juventus","Serie A",1972],
-["Alexis Sánchez","Cile","SA","ATT","Inter","Serie A",1988],
-["Romelu Lukaku","Belgio","EU","ATT","Inter","Serie A",1993],
-["Lautaro Martínez","Argentina","SA","ATT","Inter","Serie A",1997],
-["Victor Osimhen","Nigeria","AF","ATT","Napoli","Serie A",1998],
-["Khvicha Kvaratskhelia","Georgia","EU","ATT","Napoli","Serie A",2001],
-["Vinícius Júnior","Brasile","SA","ATT","Real Madrid","Liga",2000],
-["Riyad Mahrez","Algeria","AF","ATT","Leicester","Premier League",1991],
-["Jamie Vardy","Inghilterra","EU","ATT","Leicester","Premier League",1987],
-["Edinson Cavani","Uruguay","SA","ATT","Paris Saint-Germain","Ligue 1",1987],
-["Radamel Falcao","Colombia","SA","ATT","Monaco","Ligue 1",1986],
-["Hakan Sükür","Turchia","EU","ATT","Galatasaray","Altro",1971]
+/* Archivio: [nome, nazione, continente, campionato, club, ruolo, età, numero, valore in milioni]
+   I dati fotografano ciascun calciatore nel suo periodo di riferimento.
+   Numero di maglia e valore sono i due campi più fragili: si sostituiscono
+   in blocco importando un foglio "Calciatori" dalla scheda dell'archivio. */
+const GUESS_DB_BUILTIN = [
+["Gianluigi Buffon","Italia","EU","Serie A","Juventus","Portiere",28,1,30],
+["Iker Casillas","Spagna","EU","Liga","Real Madrid","Portiere",27,1,25],
+["Manuel Neuer","Germania","EU","Bundesliga","Bayern München","Portiere",28,1,40],
+["Petr Cech","Rep. Ceca","EU","Premier League","Chelsea","Portiere",27,1,25],
+["Alisson Becker","Brasile","SA","Premier League","Liverpool","Portiere",27,1,65],
+["Thibaut Courtois","Belgio","EU","Liga","Real Madrid","Portiere",30,1,45],
+["Ederson","Brasile","SA","Premier League","Manchester City","Portiere",28,31,45],
+["Samir Handanovic","Slovenia","EU","Serie A","Inter","Portiere",32,1,20],
+["Keylor Navas","Costa Rica","NA","Liga","Real Madrid","Portiere",31,1,18],
+["Wojciech Szczesny","Polonia","EU","Serie A","Juventus","Portiere",30,1,25],
+["Gianluigi Donnarumma","Italia","EU","Ligue 1","Paris Saint-Germain","Portiere",24,99,60],
+["Marc-André ter Stegen","Germania","EU","Liga","Barcelona","Portiere",28,1,70],
+["Paolo Maldini","Italia","EU","Serie A","Milan","Terzino sinistro",34,3,20],
+["Alessandro Nesta","Italia","EU","Serie A","Milan","Difensore centrale",27,13,30],
+["Fabio Cannavaro","Italia","EU","Liga","Real Madrid","Difensore centrale",33,5,18],
+["Giorgio Chiellini","Italia","EU","Serie A","Juventus","Difensore centrale",30,3,25],
+["Leonardo Bonucci","Italia","EU","Serie A","Juventus","Difensore centrale",30,19,40],
+["Sergio Ramos","Spagna","EU","Liga","Real Madrid","Difensore centrale",28,4,40],
+["Gerard Piqué","Spagna","EU","Liga","Barcelona","Difensore centrale",28,3,45],
+["Carles Puyol","Spagna","EU","Liga","Barcelona","Difensore centrale",31,5,20],
+["Virgil van Dijk","Olanda","EU","Premier League","Liverpool","Difensore centrale",28,4,90],
+["Rio Ferdinand","Inghilterra","EU","Premier League","Manchester United","Difensore centrale",29,5,30],
+["Nemanja Vidic","Serbia","EU","Premier League","Manchester United","Difensore centrale",28,15,30],
+["John Terry","Inghilterra","EU","Premier League","Chelsea","Difensore centrale",28,26,30],
+["Thiago Silva","Brasile","SA","Ligue 1","Paris Saint-Germain","Difensore centrale",29,2,45],
+["Diego Godín","Uruguay","SA","Liga","Atlético Madrid","Difensore centrale",28,2,30],
+["Mats Hummels","Germania","EU","Bundesliga","Borussia Dortmund","Difensore centrale",26,15,40],
+["Jérôme Boateng","Germania","EU","Bundesliga","Bayern München","Difensore centrale",27,17,35],
+["Roberto Carlos","Brasile","SA","Liga","Real Madrid","Terzino sinistro",29,3,22],
+["Cafu","Brasile","SA","Serie A","Milan","Terzino destro",33,2,12],
+["Dani Alves","Brasile","SA","Liga","Barcelona","Terzino destro",28,22,35],
+["Philipp Lahm","Germania","EU","Bundesliga","Bayern München","Terzino destro",29,21,30],
+["Ashley Cole","Inghilterra","EU","Premier League","Chelsea","Terzino sinistro",27,3,25],
+["Marcelo","Brasile","SA","Liga","Real Madrid","Terzino sinistro",28,12,40],
+["Jordi Alba","Spagna","EU","Liga","Barcelona","Terzino sinistro",27,18,40],
+["Andrew Robertson","Scozia","EU","Premier League","Liverpool","Terzino sinistro",26,26,65],
+["Trent Alexander-Arnold","Inghilterra","EU","Premier League","Liverpool","Terzino destro",22,66,90],
+["Achraf Hakimi","Marocco","AF","Ligue 1","Paris Saint-Germain","Terzino destro",24,2,65],
+["Alessandro Bastoni","Italia","EU","Serie A","Inter","Difensore centrale",24,95,60],
+["Rúben Dias","Portogallo","EU","Premier League","Manchester City","Difensore centrale",25,3,75],
+["Kalidou Koulibaly","Senegal","AF","Serie A","Napoli","Difensore centrale",29,26,65],
+["Alphonso Davies","Canada","NA","Bundesliga","Bayern München","Terzino sinistro",21,19,70],
+["David Alaba","Austria","EU","Bundesliga","Bayern München","Terzino sinistro",25,27,55],
+["Kyle Walker","Inghilterra","EU","Premier League","Manchester City","Terzino destro",29,2,40],
+["Theo Hernández","Francia","EU","Serie A","Milan","Terzino sinistro",25,19,50],
+["Andrea Pirlo","Italia","EU","Serie A","Milan","Mediano",27,21,30],
+["Gennaro Gattuso","Italia","EU","Serie A","Milan","Mediano",27,8,20],
+["Clarence Seedorf","Olanda","EU","Serie A","Milan","Centrocampista",28,10,22],
+["Xavi","Spagna","EU","Liga","Barcelona","Centrocampista",29,6,45],
+["Andrés Iniesta","Spagna","EU","Liga","Barcelona","Centrocampista",27,8,60],
+["Sergio Busquets","Spagna","EU","Liga","Barcelona","Mediano",27,5,50],
+["Luka Modric","Croazia","EU","Liga","Real Madrid","Centrocampista",29,10,50],
+["Toni Kroos","Germania","EU","Liga","Real Madrid","Centrocampista",27,8,70],
+["Casemiro","Brasile","SA","Liga","Real Madrid","Mediano",27,14,70],
+["Zinédine Zidane","Francia","EU","Liga","Real Madrid","Trequartista",30,5,45],
+["Steven Gerrard","Inghilterra","EU","Premier League","Liverpool","Centrocampista",28,8,45],
+["Frank Lampard","Inghilterra","EU","Premier League","Chelsea","Centrocampista",29,8,40],
+["Paul Scholes","Inghilterra","EU","Premier League","Manchester United","Centrocampista",28,18,30],
+["Patrick Vieira","Francia","EU","Premier League","Arsenal","Mediano",27,4,35],
+["Claude Makelele","Francia","EU","Premier League","Chelsea","Mediano",31,4,18],
+["N'Golo Kanté","Francia","EU","Premier League","Chelsea","Mediano",27,7,80],
+["Kevin De Bruyne","Belgio","EU","Premier League","Manchester City","Centrocampista",28,17,100],
+["Rodri","Spagna","EU","Premier League","Manchester City","Mediano",27,16,110],
+["Bastian Schweinsteiger","Germania","EU","Bundesliga","Bayern München","Centrocampista",28,31,40],
+["Joshua Kimmich","Germania","EU","Bundesliga","Bayern München","Centrocampista",25,6,80],
+["Ilkay Gündogan","Germania","EU","Premier League","Manchester City","Centrocampista",30,8,45],
+["Marco Verratti","Italia","EU","Ligue 1","Paris Saint-Germain","Centrocampista",27,6,60],
+["Paul Pogba","Francia","EU","Serie A","Juventus","Centrocampista",23,10,70],
+["Arturo Vidal","Cile","SA","Serie A","Juventus","Centrocampista",27,23,45],
+["Nicolò Barella","Italia","EU","Serie A","Inter","Centrocampista",25,23,75],
+["Marcelo Brozovic","Croazia","EU","Serie A","Inter","Mediano",28,77,55],
+["Frenkie de Jong","Olanda","EU","Liga","Barcelona","Centrocampista",23,21,90],
+["Jude Bellingham","Inghilterra","EU","Liga","Real Madrid","Trequartista",20,5,180],
+["Federico Valverde","Uruguay","SA","Liga","Real Madrid","Centrocampista",24,15,100],
+["Florian Wirtz","Germania","EU","Bundesliga","Bayer Leverkusen","Trequartista",21,10,130],
+["Deco","Portogallo","EU","Liga","Barcelona","Trequartista",28,20,35],
+["Francesco Totti","Italia","EU","Serie A","Roma","Trequartista",30,10,30],
+["Alessandro Del Piero","Italia","EU","Serie A","Juventus","Trequartista",28,10,35],
+["Roberto Baggio","Italia","EU","Serie A","Brescia","Trequartista",33,10,12],
+["Filippo Inzaghi","Italia","EU","Serie A","Milan","Punta",30,9,18],
+["Andriy Shevchenko","Ucraina","EU","Serie A","Milan","Punta",27,7,45],
+["Gabriel Batistuta","Argentina","SA","Serie A","Fiorentina","Punta",29,9,30],
+["Ronaldo","Brasile","SA","Liga","Real Madrid","Punta",26,9,60],
+["Ronaldinho","Brasile","SA","Liga","Barcelona","Ala sinistra",25,10,70],
+["Kaká","Brasile","SA","Serie A","Milan","Trequartista",25,22,80],
+["Lionel Messi","Argentina","SA","Liga","Barcelona","Ala destra",25,10,180],
+["Cristiano Ronaldo","Portogallo","EU","Liga","Real Madrid","Ala sinistra",27,7,120],
+["Luis Suárez","Uruguay","SA","Liga","Barcelona","Punta",28,9,90],
+["Neymar","Brasile","SA","Ligue 1","Paris Saint-Germain","Ala sinistra",25,10,180],
+["Kylian Mbappé","Francia","EU","Ligue 1","Paris Saint-Germain","Punta",22,7,180],
+["Erling Haaland","Norvegia","EU","Premier League","Manchester City","Punta",22,9,180],
+["Robert Lewandowski","Polonia","EU","Bundesliga","Bayern München","Punta",29,9,100],
+["Thierry Henry","Francia","EU","Premier League","Arsenal","Punta",26,14,50],
+["Dennis Bergkamp","Olanda","EU","Premier League","Arsenal","Trequartista",29,10,25],
+["Didier Drogba","Costa d'Avorio","AF","Premier League","Chelsea","Punta",28,11,40],
+["Wayne Rooney","Inghilterra","EU","Premier League","Manchester United","Punta",24,10,50],
+["Samuel Eto'o","Camerun","AF","Liga","Barcelona","Punta",27,9,50],
+["Diego Milito","Argentina","SA","Serie A","Inter","Punta",30,22,25],
+["Zlatan Ibrahimovic","Svezia","EU","Serie A","Milan","Punta",29,11,45],
+["Raúl","Spagna","EU","Liga","Real Madrid","Punta",26,7,40],
+["David Villa","Spagna","EU","Liga","Barcelona","Punta",29,7,40],
+["Fernando Torres","Spagna","EU","Premier League","Liverpool","Punta",25,9,50],
+["Sergio Agüero","Argentina","SA","Premier League","Manchester City","Punta",27,10,65],
+["Mohamed Salah","Egitto","AF","Premier League","Liverpool","Ala destra",27,11,150],
+["Sadio Mané","Senegal","AF","Premier League","Liverpool","Ala sinistra",27,10,120],
+["Harry Kane","Inghilterra","EU","Premier League","Tottenham","Punta",25,10,150],
+["Son Heung-min","Corea del Sud","AS","Premier League","Tottenham","Ala sinistra",28,7,85],
+["Karim Benzema","Francia","EU","Liga","Real Madrid","Punta",29,9,60],
+["Antoine Griezmann","Francia","EU","Liga","Atlético Madrid","Trequartista",27,7,150],
+["Arjen Robben","Olanda","EU","Bundesliga","Bayern München","Ala destra",29,10,45],
+["Franck Ribéry","Francia","EU","Bundesliga","Bayern München","Ala sinistra",30,7,45],
+["Thomas Müller","Germania","EU","Bundesliga","Bayern München","Trequartista",26,25,75],
+["Marco Reus","Germania","EU","Bundesliga","Borussia Dortmund","Ala sinistra",26,11,60],
+["Luis Figo","Portogallo","EU","Liga","Real Madrid","Ala destra",29,10,40],
+["Pavel Nedved","Rep. Ceca","EU","Serie A","Juventus","Ala sinistra",30,11,35],
+["Alexis Sánchez","Cile","SA","Premier League","Arsenal","Ala sinistra",27,7,60],
+["Romelu Lukaku","Belgio","EU","Serie A","Inter","Punta",27,9,90],
+["Lautaro Martínez","Argentina","SA","Serie A","Inter","Punta",25,10,85],
+["Victor Osimhen","Nigeria","AF","Serie A","Napoli","Punta",24,9,110],
+["Khvicha Kvaratskhelia","Georgia","EU","Serie A","Napoli","Ala sinistra",22,77,85],
+["Vinícius Júnior","Brasile","SA","Liga","Real Madrid","Ala sinistra",23,7,150],
+["Riyad Mahrez","Algeria","AF","Premier League","Leicester","Ala destra",25,26,40],
+["Jamie Vardy","Inghilterra","EU","Premier League","Leicester","Punta",29,9,30],
+["Edinson Cavani","Uruguay","SA","Ligue 1","Paris Saint-Germain","Punta",29,9,60],
+["Radamel Falcao","Colombia","SA","Ligue 1","Monaco","Punta",28,9,45]
 ];
-const guessByName = n => GUESS_DB.find(p => slug(p[0]) === slug(n)) || null;
-const ROLE_LONG = { POR:'Portiere', DIF:'Difensore', CEN:'Centrocampista', ATT:'Attaccante' };
+/* Se l'organizzatore ha importato un archivio suo, comanda quello. */
+const guessDb = () => (S.core?.guessDb?.length ? S.core.guessDb : GUESS_DB_BUILTIN);
 
-/* Il misterioso esce dal seme: uguale per i due sfidanti, ignoto a entrambi
-   quando lanciano la sfida. */
+/* Il reparto serve al riscontro "ambra": un terzino destro tentato su un
+   terzino sinistro è più vicino di un attaccante. */
+const REPARTO = {
+  'Portiere':'POR',
+  'Difensore centrale':'DIF', 'Terzino destro':'DIF', 'Terzino sinistro':'DIF',
+  'Mediano':'CEN', 'Centrocampista':'CEN', 'Trequartista':'CEN',
+  'Ala destra':'ATT', 'Ala sinistra':'ATT', 'Punta':'ATT'
+};
+const repartoOf = r => REPARTO[r] || '?';
+const fmtVal = v => v >= 1 ? v + ' mln €' : Math.round(v * 1000) + ' mila €';
+
+/* ---- RICERCA CHE AIUTA A SCRIVERE ----
+   "Buffon" deve bastare per Gianluigi Buffon: cerco sul nome intero e su
+   ogni singola parola, così funziona sia col nome che col cognome. */
+function nameMatches(q, name){
+  const nq = slug(q);
+  if(!nq) return false;
+  const ns = slug(name);
+  return ns.includes(nq) || ns.split('-').some(tok => tok.startsWith(nq));
+}
+function searchPlayers(q, exclude = new Set()){
+  const nq = slug(q);
+  if(!nq) return [];
+  return guessDb()
+    .filter(p => !exclude.has(slug(p[0])) && nameMatches(q, p[0]))
+    .map(p => {
+      const ns = slug(p[0]), toks = ns.split('-');
+      /* prima le corrispondenze esatte, poi quelle che aprono una parola
+         (il cognome), poi il resto */
+      const rank = ns === nq ? 0 : toks.some(t => t === nq) ? 1 : toks.some(t => t.startsWith(nq)) ? 2 : 3;
+      return { p, rank };
+    })
+    .sort((a,b) => a.rank - b.rank || a.p[0].localeCompare(b.p[0]))
+    .map(x => x.p);
+}
+/* Cosa fare quando l'utente scrive e basta, senza toccare i suggerimenti. */
+function resolveGuess(q){
+  const nq = slug(q);
+  if(!nq) return { kind:'vuoto' };
+  const exact = guessDb().find(p => slug(p[0]) === nq);
+  if(exact) return { kind:'ok', player: exact };      // "Ronaldo" resta Ronaldo
+  const hits = searchPlayers(q);
+  if(!hits.length) return { kind:'nessuno' };
+  if(hits.length === 1) return { kind:'ok', player: hits[0] };
+  return { kind:'ambiguo', hits };
+}
+const guessByName = n => guessDb().find(p => slug(p[0]) === slug(n)) || null;
+
+/* Il misterioso esce dal seme: uguale per i due sfidanti, ignoto a entrambi. */
 function answerForSeed(seed){
-  return GUESS_DB[Math.floor(duelRng(hashSeed('gd:' + seed))() * GUESS_DB.length)];
+  const db = guessDb();
+  return db[Math.floor(duelRng(hashSeed('gd:' + seed))() * db.length)];
 }
 
-/* Riscontro alla Wordle: verde uguale, ambra vicino, grigio no. */
-function guessFeedback(g, target){
+/* ---- RISCONTRO SULLE SETTE COLONNE ---- */
+function guessFeedback(g, t){
+  const num = (gv, tv, tol, unit) => ({
+    value: unit ? unit(gv) : String(gv),
+    state: gv === tv ? 'ok' : (Math.abs(gv - tv) <= tol ? 'near' : 'no'),
+    arrow: gv === tv ? '' : (gv > tv ? '↓' : '↑')
+  });
   return [
-    { label:'Nazione', value:g[1], state: g[1] === target[1] ? 'ok' : (g[2] === target[2] ? 'near' : 'no'),
-      hint: g[1] === target[1] ? '' : (g[2] === target[2] ? 'stesso continente' : '') },
-    { label:'Ruolo', value:ROLE_LONG[g[3]], state: g[3] === target[3] ? 'ok' : 'no', hint:'' },
-    { label:'Club', value:g[4], state: g[4] === target[4] ? 'ok' : (g[5] === target[5] ? 'near' : 'no'),
-      hint: g[4] === target[4] ? '' : (g[5] === target[5] ? 'stesso campionato' : '') },
-    { label:'Nato nel', value:String(g[6]),
-      state: g[6] === target[6] ? 'ok' : (Math.abs(g[6] - target[6]) <= 3 ? 'near' : 'no'),
-      hint: g[6] === target[6] ? '' : (g[6] > target[6] ? '↑ il misterioso è più vecchio' : '↓ il misterioso è più giovane') }
+    { label:'Nazione', value:g[1], state: g[1] === t[1] ? 'ok' : (g[2] === t[2] ? 'near' : 'no'), arrow:'',
+      hint: g[1] !== t[1] && g[2] === t[2] ? 'stesso continente' : '' },
+    { label:'Campionato', value:g[3], state: g[3] === t[3] ? 'ok' : 'no', arrow:'', hint:'' },
+    { label:'Club', value:g[4], state: g[4] === t[4] ? 'ok' : (g[3] === t[3] ? 'near' : 'no'), arrow:'',
+      hint: g[4] !== t[4] && g[3] === t[3] ? 'stesso campionato' : '' },
+    { label:'Ruolo', value:g[5], state: g[5] === t[5] ? 'ok' : (repartoOf(g[5]) === repartoOf(t[5]) ? 'near' : 'no'), arrow:'',
+      hint: g[5] !== t[5] && repartoOf(g[5]) === repartoOf(t[5]) ? 'stesso reparto' : '' },
+    { label:'Età',    hint:'', ...num(g[6], t[6], 2) },
+    { label:'Maglia', hint:'', ...num(g[7], t[7], 3) },
+    { label:'Valore', hint:'', ...num(g[8], t[8], Math.max(5, t[8] * 0.25), fmtVal) }
   ];
 }
 
@@ -3399,28 +3495,31 @@ function gOpponentGroups(){
   Object.values(map).forEach(arr => arr.sort((a,b) => new Date(b.completedAt) - new Date(a.completedAt)));
   return map;
 }
-/* Chi non trova il calciatore conta come peggiore di chiunque l'abbia trovato. */
+/* Il misterioso è scritto nella sfida: se l'archivio cambia dopo, le partite
+   già giocate restano leggibili. Le vecchie sfide ricadono sul seme. */
+const gAnswerOf = rec => guessByName(rec.answer) || answerForSeed(rec.seed);
 const gMoves = (solved, guesses) => solved ? guesses.length : GUESS_MAX + 1;
 const gLabel = (solved, n) => solved ? n + (n === 1 ? ' mossa' : ' mosse') : 'non trovato';
 
-/* Stato della sfida in corso su questo dispositivo. */
-const GD = { screen:'menu', duelId:null, opponentId:null, role:null, seed:null, guesses:[], solved:false };
+const GD = { screen:'menu', duelId:null, opponentId:null, role:null, seed:null, answer:null, guesses:[], solved:false, sugg:[] };
 
 function startGuessDuel(opponentId){
   GD.opponentId = opponentId; GD.role = 'challenger'; GD.duelId = null;
-  GD.seed = generateCode(); GD.guesses = []; GD.solved = false; GD.screen = 'play';
+  GD.seed = generateCode(); GD.answer = answerForSeed(GD.seed)[0];
+  GD.guesses = []; GD.solved = false; GD.sugg = []; GD.screen = 'play';
 }
 function respondGuessDuel(rec){
   GD.opponentId = rec.challengerId; GD.role = 'opponent'; GD.duelId = rec.id;
-  GD.seed = rec.seed; GD.guesses = []; GD.solved = false; GD.screen = 'play';
+  GD.seed = rec.seed; GD.answer = gAnswerOf(rec)[0];
+  GD.guesses = []; GD.solved = false; GD.sugg = []; GD.screen = 'play';
 }
-const gTarget = () => answerForSeed(GD.seed);
+const gTarget = () => guessByName(GD.answer) || answerForSeed(GD.seed);
 const gOver = () => GD.solved || GD.guesses.length >= GUESS_MAX;
 
 async function finalizeGuessChallenger(){
   const rec = {
-    id: randomHex(6), challengerId: myPlayer().id, opponentId: GD.opponentId, seed: GD.seed,
-    status: 'pending',
+    id: randomHex(6), challengerId: myPlayer().id, opponentId: GD.opponentId,
+    seed: GD.seed, answer: GD.answer, status: 'pending',
     challengerGuesses: GD.guesses.slice(), challengerSolved: GD.solved,
     opponentGuesses: null, opponentSolved: null, winnerId: null,
     createdAt: new Date().toISOString(), completedAt: null
@@ -3439,42 +3538,56 @@ async function finalizeGuessOpponent(){
   await Store.set(K.gduel(rec.id), rec);
   S.gduels[rec.id] = rec; GD.screen = 'result'; render();
 }
-async function submitGuess(name){
-  const target = gTarget();
-  const gp = guessByName(name);
-  if(!gp){ toast("Calciatore non presente nell'archivio: scegline uno dall'elenco.", 'err'); return; }
-  if(GD.guesses.some(x => slug(x) === slug(gp[0]))){ toast('Hai già provato con questo nome.', 'err'); return; }
-  GD.guesses.push(gp[0]);
-  if(slug(gp[0]) === slug(target[0])) GD.solved = true;
+async function playGuess(pl){
+  if(GD.guesses.some(x => slug(x) === slug(pl[0]))){ toast('Hai già provato con questo nome.', 'err'); return; }
+  GD.guesses.push(pl[0]);
+  GD.sugg = [];
+  if(slug(pl[0]) === slug(gTarget()[0])) GD.solved = true;
   if(gOver()){
     GD.role === 'challenger' ? await finalizeGuessChallenger() : await finalizeGuessOpponent();
     return;
   }
-  toast('Non è lui: guarda gli indizi.', '');
   render();
+}
+async function submitGuessText(q){
+  const r = resolveGuess(q);
+  if(r.kind === 'vuoto'){ toast('Scrivi un nome.', 'err'); return; }
+  if(r.kind === 'nessuno'){ toast("Nessun calciatore con questo nome nell'archivio.", 'err'); return; }
+  if(r.kind === 'ambiguo'){
+    GD.sugg = r.hits.slice(0, 8);
+    toast('Più calciatori corrispondono: scegli quale.', '');
+    render();
+    return;
+  }
+  await playGuess(r.player);
 }
 async function declineGuessDuel(rec){
   if(!await confirmBox('Rifiuto la sfida di ' + (player(rec.challengerId)?.name || '?') + '. Non potrà più essere accettata.')) return;
   await Store.del(K.gduel(rec.id)); delete S.gduels[rec.id]; toast('Sfida rifiutata.', ''); render();
 }
 
-/* ---- tabella dei tentativi, riusata in partita e nel confronto finale ---- */
-function guessTable(guesses, target){
-  const t = el(`<div class="table-scroll"><table>
-    <thead><tr><th>#</th><th>Tentativo</th><th>Nazione</th><th>Ruolo</th><th>Club</th><th>Nato nel</th></tr></thead>
-    <tbody></tbody></table></div>`);
-  const tb = t.querySelector('tbody');
+/* ---- griglia dei tentativi, come la tabella a colonne di Transfermarkt ---- */
+function guessGrid(guesses, target){
+  const box = el(`<div class="gg-wrap"></div>`);
+  const cols = ['Giocatore','Nazione','Campionato','Club','Ruolo','Età','Maglia','Valore'];
+  box.appendChild(el(`<div class="gg-row gg-head">${cols.map(c => `<div class="gg-cell">${esc(c)}</div>`).join('')}</div>`));
   guesses.forEach((gn, i) => {
     const gp = guessByName(gn);
     if(!gp) return;
     const fb = guessFeedback(gp, target);
-    const cell = f => `<td><span class="tag ${f.state === 'ok' ? 'ok' : f.state === 'near' ? 'pending' : 'ko'}">${esc(f.value)}</span>${f.hint ? `<div class="p-sub">${esc(f.hint)}</div>` : ''}</td>`;
-    tb.appendChild(el(`<tr><td class="num">${i+1}</td><td><strong>${esc(gn)}</strong></td>${fb.map(cell).join('')}</tr>`));
+    box.appendChild(el(`
+      <div class="gg-row">
+        <div class="gg-cell gg-name"><span class="gg-n">${i+1}</span>${esc(gp[0])}</div>
+        ${fb.map(f => `<div class="gg-cell gg-${f.state}">
+            <span class="gg-v">${esc(f.value)}${f.arrow ? ` <span class="gg-arrow">${f.arrow}</span>` : ''}</span>
+            ${f.hint ? `<span class="gg-h">${esc(f.hint)}</span>` : ''}
+          </div>`).join('')}
+      </div>`));
   });
-  return t;
+  return box;
 }
 
-/* ---- schermata: menu delle sfide ---- */
+/* ---- schermata: menu ---- */
 function viewGuessMenu(){
   const wrap = el(`<div class="stack"></div>`);
   const me = myPlayer();
@@ -3482,7 +3595,7 @@ function viewGuessMenu(){
     wrap.appendChild(el(`<div class="empty">Il tuo account non è collegato a nessun partecipante: chiedi all'organizzatore di collegarlo.</div>`));
     return wrap;
   }
-  wrap.appendChild(el(`<div class="banner">Stesso calciatore misterioso per tutti e due, <strong>${GUESS_MAX} mosse</strong> a testa: vince chi lo scopre in meno tentativi. Il misterioso lo estrae la sfida, non lo sceglie chi la lancia. Lo storico fra te e ogni avversario lo vedete solo voi due.</div>`));
+  wrap.appendChild(el(`<div class="banner">Stesso calciatore misterioso per tutti e due, <strong>${GUESS_MAX} mosse</strong> a testa: vince chi lo scopre in meno tentativi. Ogni tentativo confronta nazione, campionato, club, ruolo, età, numero di maglia e valore di mercato. Lo storico fra te e ogni avversario lo vedete solo voi due.</div>`));
 
   const toRespond = gPendingForMe();
   if(toRespond.length){
@@ -3509,13 +3622,11 @@ function viewGuessMenu(){
   if(waiting.length){
     const p = el(`<div class="panel"><div class="panel-head"><h2>In attesa dell'avversario</h2></div><div class="panel-body"><div class="board"></div></div></div>`);
     const board = p.querySelector('.board');
-    waiting.forEach(rec => {
-      board.appendChild(el(`<div class="req pending">
-        <div><div class="p-name">${esc(player(rec.opponentId)?.name || '?')}</div>
-          <div class="p-sub">inviata ${fmtDate(rec.createdAt)}</div></div>
-        <div><span class="tag mute">tu: ${esc(gLabel(rec.challengerSolved, rec.challengerGuesses.length))}</span></div>
-        <div></div></div>`));
-    });
+    waiting.forEach(rec => board.appendChild(el(`<div class="req pending">
+      <div><div class="p-name">${esc(player(rec.opponentId)?.name || '?')}</div>
+        <div class="p-sub">inviata ${fmtDate(rec.createdAt)}</div></div>
+      <div><span class="tag mute">tu: ${esc(gLabel(rec.challengerSolved, rec.challengerGuesses.length))}</span></div>
+      <div></div></div>`)));
     wrap.appendChild(p);
   }
 
@@ -3524,7 +3635,7 @@ function viewGuessMenu(){
   const noAcc = all.filter(p => !S.claims[p.id]);
   const start = el(`
     <div class="panel">
-      <div class="panel-head"><h2>Sfida un avversario</h2></div>
+      <div class="panel-head"><h2>Sfida un avversario</h2><span class="eyebrow">${guessDb().length} calciatori in archivio</span></div>
       <div class="panel-body">
         ${all.length ? `<p class="note">Scegli chi sfidare: parti subito tu, poi tocca a lui sullo stesso misterioso.</p>
           <div class="opp-grid" id="g-opp"></div>
@@ -3535,15 +3646,11 @@ function viewGuessMenu(){
     </div>`);
   if(all.length){
     let chosen = null;
-    const grid = start.querySelector('#g-opp');
-    const btn = start.querySelector('#g-go');
+    const grid = start.querySelector('#g-opp'), btn = start.querySelector('#g-go');
     avail.forEach(p => {
       const b = el(`<button class="opp-card"><span class="av">${esc(p.name.trim()[0] || '?')}</span>${esc(p.name)}</button>`);
-      b.onclick = () => {
-        chosen = p.id;
-        grid.querySelectorAll('.opp-card').forEach(x => x.classList.toggle('on', x === b));
-        btn.disabled = false; btn.textContent = 'Sfida ' + p.name;
-      };
+      b.onclick = () => { chosen = p.id; grid.querySelectorAll('.opp-card').forEach(x => x.classList.toggle('on', x === b));
+        btn.disabled = false; btn.textContent = 'Sfida ' + p.name; };
       grid.appendChild(b);
     });
     noAcc.forEach(p => grid.appendChild(el(`<button class="opp-card" disabled>
@@ -3552,6 +3659,8 @@ function viewGuessMenu(){
     btn.onclick = () => { if(chosen){ startGuessDuel(chosen); render(); } };
   }
   wrap.appendChild(start);
+
+  if(isAdmin()) wrap.appendChild(guessDbPanel());
 
   const groups = gOpponentGroups();
   const rivals = Object.keys(groups);
@@ -3570,13 +3679,13 @@ function viewGuessMenu(){
           const his  = iAmCh ? gLabel(d.opponentSolved, d.opponentGuesses.length) : gLabel(d.challengerSolved, d.challengerGuesses.length);
           const out = !d.winnerId ? '<span class="tag mute">pareggio</span>' : d.winnerId === me.id ? '<span class="tag ok">vinta</span>' : '<span class="tag ko">persa</span>';
           return `<tr data-id="${esc(d.id)}"><td class="num">${fmtDate(d.completedAt)}</td>
-            <td>${esc(answerForSeed(d.seed)[0])}</td><td class="num">${mine}</td><td class="num">${his}</td>
+            <td>${esc(gAnswerOf(d)[0])}</td><td class="num">${mine}</td><td class="num">${his}</td>
             <td style="text-align:right;">${out}</td>
             <td style="text-align:right;"><button class="btn btn-sm btn-ghost" data-view>Vedi i tentativi</button></td></tr>`;
         }).join('')}</tbody></table>`);
-      tbl.querySelectorAll('[data-view]').forEach(btn => {
-        const id = btn.closest('tr').dataset.id;
-        btn.onclick = () => { GD.duelId = id; GD.screen = 'result'; render(); };
+      tbl.querySelectorAll('[data-view]').forEach(b => {
+        const id = b.closest('tr').dataset.id;
+        b.onclick = () => { GD.duelId = id; GD.screen = 'result'; render(); };
       });
       det.appendChild(tbl);
       body.appendChild(det);
@@ -3584,6 +3693,69 @@ function viewGuessMenu(){
     wrap.appendChild(hist);
   }
   return wrap;
+}
+
+/* ---- archivio sostituibile dall'organizzatore ---- */
+function guessDbPanel(){
+  const custom = !!S.core?.guessDb?.length;
+  const p = el(`
+    <div class="panel">
+      <div class="panel-head"><h2>Archivio dei calciatori</h2>
+        <span class="tag ${custom ? 'ok' : 'mute'}">${custom ? 'tuo' : 'di serie'}</span></div>
+      <div class="panel-body">
+        <p class="note">Il gioco usa ${custom ? `il tuo archivio (${S.core.guessDb.length} calciatori)` : `l'archivio di serie (${GUESS_DB_BUILTIN.length} calciatori)`}.
+          Per sostituirlo carica un .xlsx con un foglio <span class="mono">Calciatori</span> e le colonne
+          <span class="mono">Nome, Nazione, Continente, Campionato, Club, Ruolo, Età, Maglia, Valore</span>.</p>
+        <p class="note-dim">Numero di maglia e valore di mercato dell'archivio di serie sono stime: se vuoi che il gioco sia preciso, mettici i dati veri.
+          Ruoli ammessi: ${Object.keys(REPARTO).join(', ')}. Continenti: EU, SA, AF, NA, AS.</p>
+        <input type="file" id="gdb-file" accept=".xlsx,.xlsm">
+        ${custom ? `<button class="btn btn-ghost" id="gdb-reset" style="margin-top:10px;">Torna all'archivio di serie</button>` : ''}
+      </div>
+    </div>`);
+  p.querySelector('#gdb-file').onchange = async e => {
+    const f = e.target.files[0];
+    if(!f) return;
+    try{
+      const r = await importGuessDb(f);
+      toast(`Archivio aggiornato: ${r.count} calciatori.`, 'ok'); render();
+    }catch(err){ toast(err.message, 'err'); e.target.value = ''; }
+  };
+  const rb = p.querySelector('#gdb-reset');
+  if(rb) rb.onclick = async () => {
+    if(!await confirmBox("Torno all'archivio di serie? Il tuo viene scartato.")) return;
+    S.core.guessDb = []; await saveCore(); toast('Archivio di serie ripristinato.', 'ok'); render();
+  };
+  return p;
+}
+async function importGuessDb(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array' });
+  const sn = wb.SheetNames.find(n => /calciator|giocator|archivio/i.test(n));
+  if(!sn) throw new Error('Non trovo un foglio "Calciatori".');
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval:'' });
+  const pick = (r, ...names) => {
+    for(const k of Object.keys(r)) if(names.some(n => new RegExp('^' + n + '$', 'i').test(String(k).trim()))) return r[k];
+    return '';
+  };
+  const out = [];
+  rows.forEach(r => {
+    const nome = String(pick(r, 'nome', 'calciatore', 'giocatore')).trim();
+    if(!nome) return;
+    out.push([ nome,
+      String(pick(r, 'nazione', 'nazionalit.', 'paese')).trim() || '—',
+      String(pick(r, 'continente')).trim().toUpperCase() || 'EU',
+      String(pick(r, 'campionato', 'lega', 'league')).trim() || '—',
+      String(pick(r, 'club', 'squadra')).trim() || '—',
+      String(pick(r, 'ruolo', 'posizione')).trim() || 'Punta',
+      parseInt(pick(r, 'et.', 'anni'), 10) || 0,
+      parseInt(pick(r, 'maglia', 'numero'), 10) || 0,
+      Number(String(pick(r, 'valore', 'valore di mercato')).replace(',', '.')) || 0 ]);
+  });
+  if(out.length < 10) throw new Error('Servono almeno 10 calciatori: nel foglio ne ho trovati ' + out.length + '.');
+  if(!S.core) S.core = emptyCore();
+  S.core.guessDb = out;
+  await saveCore();
+  return { count: out.length };
 }
 
 /* ---- schermata: la partita ---- */
@@ -3608,27 +3780,45 @@ function viewGuessPlay(){
     if(rec) body.appendChild(el(`<div class="banner">${esc(rival)} ha chiuso con <strong>${esc(gLabel(rec.challengerSolved, rec.challengerGuesses.length))}</strong>: devi fare meglio.</div>`));
   }
 
-  if(GD.guesses.length) body.appendChild(guessTable(GD.guesses, target));
-  else body.appendChild(el(`<p class="note">Nessun tentativo ancora. Ogni nome che provi ti dice quanto sei vicino su nazione, ruolo, club e anno di nascita.</p>`));
-
+  /* riga di ricerca con suggerimenti: basta il cognome */
   const already = new Set(GD.guesses.map(slug));
-  const box = el(`
+  const search = el(`
     <div>
       <label class="field"><span>Tentativo ${GD.guesses.length + 1} di ${GUESS_MAX}</span>
-        <input type="text" id="gi" list="g-list" placeholder="scrivi un nome" autocomplete="off"></label>
-      <datalist id="g-list">${GUESS_DB.filter(x => !already.has(slug(x[0]))).map(x => `<option value="${esc(x[0])}">`).join('')}</datalist>
-      <button class="btn btn-primary" id="gg" style="width:100%; margin-top:10px;">Prova</button>
+        <input type="text" id="gi" placeholder="scrivi anche solo il cognome, es. Buffon" autocomplete="off" autocapitalize="off"></label>
+      <div class="sugg" id="sugg"></div>
     </div>`);
-  const go = () => submitGuess(box.querySelector('#gi').value.trim());
-  box.querySelector('#gg').onclick = go;
-  box.querySelector('#gi').onkeydown = e => { if(e.key === 'Enter') go(); };
-  body.appendChild(box);
+  const inp = search.querySelector('#gi');
+  const list = search.querySelector('#sugg');
+  const paint = items => {
+    list.innerHTML = '';
+    items.slice(0, 8).forEach(p => {
+      const b = el(`<button class="sugg-item"><strong>${esc(p[0])}</strong>
+        <span class="sugg-sub">${esc(p[4])} · ${esc(p[5])}</span></button>`);
+      b.onclick = () => playGuess(p);
+      list.appendChild(b);
+    });
+  };
+  inp.oninput = () => paint(searchPlayers(inp.value, already));
+  inp.onkeydown = e => {
+    if(e.key !== 'Enter') return;
+    const items = searchPlayers(inp.value, already);
+    /* Invio con un solo candidato: lo gioco senza far cliccare nulla. */
+    if(items.length === 1) playGuess(items[0]);
+    else submitGuessText(inp.value);
+  };
+  if(GD.sugg.length) paint(GD.sugg);
+  body.appendChild(search);
+
+  if(GD.guesses.length) body.appendChild(guessGrid(GD.guesses, target));
+  else body.appendChild(el(`<p class="note">Nessun tentativo ancora. Ogni nome che provi mostra quanto sei vicino sulle sette colonne: verde uguale, ambra vicino, e la freccia dice da che parte andare.</p>`));
+
   wrap.appendChild(panel);
 
   const ab = el(`<div class="btn-row"><button class="btn btn-ghost">Abbandona la sfida</button></div>`);
   ab.querySelector('button').onclick = async () => {
     if(!await confirmBox('Abbandoni? I tentativi fatti finora vanno persi.')) return;
-    GD.screen = 'menu'; GD.guesses = []; GD.solved = false; render();
+    GD.screen = 'menu'; GD.guesses = []; GD.solved = false; GD.sugg = []; render();
   };
   wrap.appendChild(ab);
   return wrap;
@@ -3643,11 +3833,11 @@ function viewGuessSent(){
       Saprai il risultato quando ${esc(player(GD.opponentId)?.name || 'il tuo avversario')} avrà giocato: fino ad allora il misterioso resta segreto.</p>
     <button class="btn btn-primary" id="back" style="margin-top:16px;">Torna alle sfide</button>
   </div></div>`));
-  wrap.querySelector('#back').onclick = () => { GD.screen = 'menu'; GD.guesses = []; GD.solved = false; render(); };
+  wrap.querySelector('#back').onclick = () => { GD.screen = 'menu'; GD.guesses = []; GD.solved = false; GD.sugg = []; render(); };
   return wrap;
 }
 
-/* ---- schermata: verdetto, riapribile da entrambi in ogni momento ---- */
+/* ---- schermata: verdetto, riapribile da entrambi ---- */
 function viewGuessResult(){
   const wrap = el(`<div class="stack"></div>`);
   const rec = S.gduels[GD.duelId];
@@ -3656,12 +3846,11 @@ function viewGuessResult(){
     wrap.appendChild(el(`<div class="empty">Sfida non trovata.</div>`));
     const b = el(`<button class="btn btn-primary" style="width:100%;">Torna alle sfide</button>`);
     b.onclick = () => { GD.screen = 'menu'; render(); };
-    wrap.appendChild(b);
-    return wrap;
+    wrap.appendChild(b); return wrap;
   }
   const iAmCh = rec.challengerId === me.id;
   const rivalId = iAmCh ? rec.opponentId : rec.challengerId;
-  const target = answerForSeed(rec.seed);
+  const target = gAnswerOf(rec);
   const mineG = iAmCh ? rec.challengerGuesses : rec.opponentGuesses;
   const mineS = iAmCh ? rec.challengerSolved  : rec.opponentSolved;
   const hisG  = iAmCh ? rec.opponentGuesses   : rec.challengerGuesses;
@@ -3674,20 +3863,18 @@ function viewGuessResult(){
     <h2 style="font-size:1.6rem; margin-top:10px;">${esc(gLabel(mineS, mineG.length))} — ${esc(gLabel(hisS, hisG.length))}</h2>
     <p class="note">contro ${esc(player(rivalId)?.name || '?')}</p>
     <p class="note" style="margin-top:10px;">Il misterioso era <strong style="color:var(--amber);">${esc(target[0])}</strong>
-      — ${esc(target[1])}, ${esc(ROLE_LONG[target[3]])}, ${esc(target[4])}, ${target[6]}.</p>
+      — ${esc(target[1])}, ${esc(target[5])}, ${esc(target[4])}, ${target[6]} anni, maglia ${target[7]}, ${esc(fmtVal(target[8]))}.</p>
   </div></div>`));
 
-  const two = el(`<div class="grid-2"></div>`);
   [ ['I tuoi tentativi', mineG], [esc(player(rivalId)?.name || 'Avversario') + ' — i suoi tentativi', hisG] ]
     .forEach(([title, gs]) => {
-      const p = el(`<div class="panel"><div class="panel-head"><h2>${title}</h2></div><div class="panel-body" style="padding:0;"></div></div>`);
-      p.querySelector('.panel-body').appendChild(gs.length ? guessTable(gs, target) : el(`<div class="empty">Nessun tentativo.</div>`));
-      two.appendChild(p);
+      const p = el(`<div class="panel"><div class="panel-head"><h2>${title}</h2></div><div class="panel-body"></div></div>`);
+      p.querySelector('.panel-body').appendChild(gs.length ? guessGrid(gs, target) : el(`<div class="empty">Nessun tentativo.</div>`));
+      wrap.appendChild(p);
     });
-  wrap.appendChild(two);
 
   const back = el(`<button class="btn btn-primary" style="width:100%;">Torna alle sfide</button>`);
-  back.onclick = () => { GD.screen = 'menu'; GD.guesses = []; GD.solved = false; render(); };
+  back.onclick = () => { GD.screen = 'menu'; GD.guesses = []; GD.solved = false; GD.sugg = []; render(); };
   wrap.appendChild(back);
   return wrap;
 }
